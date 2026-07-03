@@ -24,6 +24,7 @@
 |---|---|
 | TourAPI 호출·프록시 | `.claude/skills/tourapi/SKILL.md` |
 | 추천 알고리즘 (점수·존 모델·실패 처리) | `.claude/skills/algorithm/SKILL.md` |
+| 방향 기반 여행 코스 | `.claude/skills/algorithm/SKILL.md` + `docs/course.md` |
 | 나침반·GPS 센서 | `.claude/skills/sensors/SKILL.md` |
 | PWA (manifest·service worker·배포) | `.claude/skills/pwa/SKILL.md` |
 | 제출 전 점검 | `.claude/skills/submission-check/SKILL.md` |
@@ -54,8 +55,9 @@
 ## 문서 맵
 
 - `PLAN.md` — 구현 phase 정의 (범위·DoD·검증 방법). **구현 작업의 기준 문서.**
-- `SPEC.md` — 전체 명세 v0.2. 기능·알고리즘·심사 기준 매핑·일정·리스크. **기능을 추가·변경하면 반드시 해당 절을 함께 갱신한다.**
+- `SPEC.md` — 전체 명세 v0.3. 기능·알고리즘·심사 기준 매핑·일정·리스크. **기능을 추가·변경하면 반드시 해당 절을 함께 갱신한다.**
 - `docs/ui.md` — 화면 흐름·스핀 연출·카피 톤 명세
+- `docs/course.md` — 스핀 방위 기반 2~4개 장소 코스의 구성·순서·실패 처리 규칙
 - `docs/competition.md` — 공모전 규정·심사 배점·FAQ 제약·연락처·사무국 질의 상태. 규정 판단은 이 문서 먼저.
 - `docs/zones.md` — 존-교량 접근 가능성 모델 데이터 (존 구획, 존 간 보정거리, 우회계수)
 - `docs/curation.md` — POI 인기도 티어 큐레이션 표 (분산 가중치의 원천 데이터)
@@ -64,7 +66,7 @@
 
 ## 작업 시 유의
 
-- 우선순위는 SPEC.md 10장을 따른다: MVP(스핀→8방위→추천→결과 카드→공유 카드, 여행 모드)가 끝나기 전에 2순위(도장깨기·테마 덱·축제 카드)를 시작하지 않는다.
+- 우선순위는 SPEC.md 10장을 따른다: MVP(스핀→8방위→추천→결과 카드→공유 카드, 여행 모드)가 끝나기 전에 2순위(방향 기반 여행 코스·테마 덱·축제 카드·도장깨기)를 시작하지 않는다.
 - 심사위원은 서울에서 URL만 열어 시연한다 → **여행 모드(센서 불필요)가 항상 완전 동작해야 한다.**
 - iOS Safari가 1차 검증 대상 (DeviceOrientation 권한 프롬프트, `webkitCompassHeading`).
 - 여러 에이전트가 이 저장소에서 작업한다: 작업 단위마다 커밋하고, 커밋되지 않은 다른 에이전트의 변경(git status 확인)이 있으면 해당 파일은 건드리지 않는다.
