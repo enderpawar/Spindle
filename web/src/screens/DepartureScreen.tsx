@@ -1,4 +1,4 @@
-import locateImg from '../assets/poses/locate.png'
+import locateImg from '../assets/poses/별이_curios.png'
 import { ScreenFrame, Stars } from '../components/ScreenFrame'
 import { DEPARTURES, type Departure } from '../mock/pois'
 

@@ -37,12 +37,18 @@
 
 ## 명령어
 
-(스캐폴딩 후 채울 것 — `npm run dev` / `npm run build` / `npm test` / 프록시 로컬 실행 등)
+(스캐폴딩 후 채울 것 — `npm run dev` / `npm run build` / `npm run check` / 프록시 로컬 실행 등)
+
+## 품질 게이트 (자동 강제)
+
+- `node scripts/guard.mjs` — 금지 패턴 스캐너 (locationBasedList2, 공사 지칭, 클라이언트 내 serviceKey·mapX/mapY). **git pre-commit(`.githooks/`)과 Claude Code hook이 자동 실행**하며, 위반 시 커밋·편집이 거부된다.
+- guard 위반을 우회하지 않는다: `guard-allow` 주석은 정말 오탐일 때만, 사유와 함께 사용.
+- Phase 1 이후에는 pre-commit이 `npm run check`(typecheck + lint + test + guard)까지 실행한다. **check가 깨진 상태로 커밋하지 않는다** (`--no-verify` 사용 금지).
 
 ## 구현 진행 방식
 
-- 구현 작업은 **`PLAN.md`의 phase 단위로만** 진행한다. 선행 phase의 DoD가 체크되기 전에 다음 phase를 시작하지 않고, phase 범위 밖 기능을 미리 만들지 않는다.
-- phase 시작 전 `PLAN.md` 해당 절 + 위 규약 문서 표에서 관련 문서를 읽는다. 완료 시 PLAN.md 체크박스를 갱신하고 커밋한다.
+- 구현 작업은 **`PLAN.md`의 phase 단위로만** 진행하며, 실행 절차는 **PLAN.md의 "실행 절차 (모든 에이전트 공통)" 절**을 따른다 (선행 DoD 확인 → 규약 로드 → 구현 → DoD 실검증 → 체크박스 갱신·커밋).
+- 진입점: Claude Code = `/phase N` 스킬, Codex = `spindle-phase` 스킬(`~/.codex/skills`). 어느 쪽이든 절차의 원본은 PLAN.md 하나다.
 - 화면·연출·카피는 `docs/ui.md`를 따른다. ⚠ 표시(미확정 제안) 항목은 제안값대로 구현하되 보고에 명시한다.
 
 ## 문서 맵
@@ -53,6 +59,7 @@
 - `docs/competition.md` — 공모전 규정·심사 배점·FAQ 제약·연락처·사무국 질의 상태. 규정 판단은 이 문서 먼저.
 - `docs/zones.md` — 존-교량 접근 가능성 모델 데이터 (존 구획, 존 간 보정거리, 우회계수)
 - `docs/curation.md` — POI 인기도 티어 큐레이션 표 (분산 가중치의 원천 데이터)
+- `docs/pitch.md` — 기획력·발전성 설득 근거 데이터 (기능설명서 배경·발전방향, 2차 발표 스크립트의 원천)
 - `docs/(양식1)…제안서_Spindule(이진우).pdf` — 최초 제안서 원문 (전국형)
 
 ## 작업 시 유의

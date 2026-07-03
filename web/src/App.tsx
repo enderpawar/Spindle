@@ -1,14 +1,19 @@
 import { useState } from 'react'
-import { DEPARTURES, recommend, type Departure, type DialId, type Recommendation } from './mock/pois'
+import { DEPARTURES, DIRECTIONS, recommend, type Departure, type DialId, type Poi, type Recommendation } from './mock/pois'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
+import { SpotsScreen } from './screens/SpotsScreen'
+import { SpinScreen } from './screens/SpinScreen'
+import { StampScreen } from './screens/StampScreen'
+import { SettingsScreen } from './screens/SettingsScreen'
 import { DepartureScreen } from './screens/DepartureScreen'
 import { RevealScreen } from './screens/RevealScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { ShareScreen } from './screens/ShareScreen'
+import type { NavTab } from './components/BottomNav'
 
-// ui.md 화면 흐름: S0 온보딩 → S1 홈/스핀 ⇄ S2 출발점 → S3 방위 연출 → S4 결과 → S5 공유
-export type Screen = 'onboarding' | 'home' | 'departure' | 'reveal' | 'result' | 'share'
+// 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
+export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'share'
 
 const ONBOARD_KEY = 'spindle.onboarded' // 온보딩 노출 여부만 저장 (API 데이터 아님 — 규정 무관)
 
@@ -18,6 +23,7 @@ function App() {
   const [dial, setDial] = useState<DialId>('half')
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [candidateIndex, setCandidateIndex] = useState(0)
+  const [departureReturn, setDepartureReturn] = useState<Screen>('home')
 
   const finishOnboarding = () => {
     localStorage.setItem(ONBOARD_KEY, '1')
@@ -30,18 +36,50 @@ function App() {
     setScreen('reveal')
   }
 
+  /** 명소 탭·홈 추천 카드에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
+  const openPoi = (poi: Poi) => {
+    const direction = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
+    setRec({ direction, candidates: [poi] })
+    setCandidateIndex(0)
+    setScreen('result')
+  }
+
+  const openDeparture = (from: Screen) => {
+    setDepartureReturn(from)
+    setScreen('departure')
+  }
+
+  const navigate = (tab: NavTab) => setScreen(tab)
+
   switch (screen) {
     case 'onboarding':
       return <OnboardingScreen onDone={finishOnboarding} />
+    case 'spots':
+      return <SpotsScreen onNavigate={navigate} onSelect={openPoi} />
+    case 'spin':
+      return <SpinScreen departure={departure} dial={dial} onDialChange={setDial} onOpenDeparture={() => openDeparture('spin')} onSpun={handleSpun} onNavigate={navigate} />
+    case 'stamp':
+      return <StampScreen onNavigate={navigate} />
+    case 'settings':
+      return (
+        <SettingsScreen
+          departure={departure}
+          dial={dial}
+          onDialChange={setDial}
+          onOpenDeparture={() => openDeparture('settings')}
+          onReplayOnboarding={() => setScreen('onboarding')}
+          onNavigate={navigate}
+        />
+      )
     case 'departure':
       return (
         <DepartureScreen
           selected={departure}
           onSelect={(d) => {
             setDeparture(d)
-            setScreen('home')
+            setScreen(departureReturn)
           }}
-          onBack={() => setScreen('home')}
+          onBack={() => setScreen(departureReturn)}
         />
       )
     case 'reveal':
@@ -52,22 +90,15 @@ function App() {
           rec={rec}
           candidateIndex={candidateIndex}
           onNextCandidate={() => setCandidateIndex((i) => (i + 1) % rec.candidates.length)}
-          onRespin={() => setScreen('home')}
+          onBack={() => setScreen('home')}
+          onRespin={() => setScreen('spin')}
           onShare={() => setScreen('share')}
         />
       ) : null
     case 'share':
       return rec ? <ShareScreen rec={rec} poi={rec.candidates[candidateIndex]} onBack={() => setScreen('result')} /> : null
     default:
-      return (
-        <HomeScreen
-          departure={departure}
-          dial={dial}
-          onDialChange={setDial}
-          onOpenDeparture={() => setScreen('departure')}
-          onSpun={handleSpun}
-        />
-      )
+      return <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onNavigate={navigate} />
   }
 }
 

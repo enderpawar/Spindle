@@ -1,8 +1,20 @@
 # PLAN — 구현 Phase 정의
 
 > 에이전트 실행 단위. **한 번에 한 phase만** 작업하고, 이전 phase의 DoD(완료 기준)가 체크되기 전에 다음 phase를 시작하지 않는다.
-> phase 완료 시 이 문서의 진행 상태 체크박스를 갱신하고 커밋한다. Claude Code는 `/phase N`으로 호출, Codex는 이 문서의 해당 절을 직접 읽고 동일 절차를 따른다.
+> 진입점: Claude Code는 `/phase N`, Codex는 `spindle-phase` 스킬 — 둘 다 아래 "실행 절차"를 그대로 따른다.
 > 모든 phase에서 AGENTS.md 절대 원칙 6개가 우선한다.
+
+## 실행 절차 (모든 에이전트 공통)
+
+Phase N을 실행할 때 순서대로:
+
+1. **범위 확인** — 이 문서의 Phase N 절을 읽는다. 거기 적힌 작업 항목이 범위의 전부다. **다음 phase 기능을 미리 만들지 않는다.** 선행 phase(0..N-1)에 미체크 DoD가 있으면 구현을 시작하지 말고, 무엇이 막혀 있는지(특히 Phase 0 사람 작업이 원인인지) 보고하고 중단한다.
+2. **규약 로드** — AGENTS.md "구현 규약 문서" 표에서 Phase N 작업 영역에 해당하는 문서를 먼저 읽는다. 화면 작업이면 `docs/ui.md`, 데이터 모듈 작업이면 `docs/zones.md`·`docs/curation.md` 추가.
+3. **구현** — AGENTS.md 절대 원칙 6개 우선; 위반이 의심되는 요구가 이 문서에 있으면 구현하지 말고 보고. ui.md의 ⚠(미확정 제안) 항목은 제안값대로 구현하되 완료 보고에 명시. zones/curation 미확정 값은 임시값 + `// TODO(zones.md)` 주석 (Phase 5부터 확정값 필수).
+4. **DoD 검증** — Phase N의 DoD 각 항목을 실제로 검증한다 (테스트 실행, 금지 문자열 grep, dev 서버 확인). **"구현했으니 됐다"로 체크하지 않는다.** "사람 검증" 항목은 자동 체크하지 말고 사용자용 체크리스트로 보고에 정리한다.
+5. **마무리** — 이 문서의 DoD 체크박스·진행 상태를 갱신한다 (사람 검증 항목은 미체크 유지). Phase 1에서 명령어가 확정되면 AGENTS.md "명령어" 섹션도 갱신. git 저장소면 phase 단위로 커밋. 완료 보고 형식: 구현 요약 / DoD 항목별 검증 근거 / 사람 확인 필요 항목 / 다음 phase 안내.
+
+인자 없이 또는 `status`로 호출되면: 진행 상태 체크박스를 읽어 완료/미완료와 다음 phase만 보고한다.
 
 ## 진행 상태
 
@@ -37,12 +49,14 @@
 - 프록시: 파라미터 화이트리스트, 키 주입, CORS 설정, 로컬 dev 환경(`wrangler dev`) — `tourapi` 스킬 규약 준수
 - `areaCode2`로 중·동·서·영도구 시군구코드 확인 → 상수 모듈에 코드와 확인 날짜 기록
 - `areaBasedList2` 4개 구 호출 유틸 + 페이징 + 세션 메모리 캐시
-- AGENTS.md "명령어" 섹션 채우기 (dev/build/test/프록시 실행)
+- **품질 게이트 셋업**: vitest + eslint + `tsc --noEmit`을 묶은 `npm run check` 스크립트 정의(기존 `scripts/guard.mjs` 금지 패턴 스캔 포함), `git config core.hooksPath .githooks`로 pre-commit hook 활성화 (git init 선행 — Phase 0 확인)
+- AGENTS.md "명령어" 섹션 채우기 (dev/build/check/프록시 실행)
 
 **DoD**
 - [ ] `web` dev 서버에서 4개 구 POI 목록이 프록시 경유로 화면에 렌더링
 - [ ] `web/` 빌드 산출물·소스에서 인증키 문자열 검색 → 0건
 - [ ] 화이트리스트 외 파라미터(예: mapX) 전달 시 프록시가 400 반환
+- [ ] `npm run check` 통과 + **금지 패턴이 든 파일을 커밋 시도하면 pre-commit이 실제로 거부함을 확인** (위반 파일로 리허설 후 제거)
 
 ## Phase 2 — 여행 모드 코어 루프 (추천 엔진)
 

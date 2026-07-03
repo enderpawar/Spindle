@@ -1,0 +1,16 @@
+#!/bin/sh
+# Spindle pre-commit — 도구 중립 품질 게이트 (Claude Code·Codex 어느 쪽 커밋이든 강제)
+# 활성화: git init 후 `git config core.hooksPath .githooks` (PLAN.md Phase 1 항목)
+
+set -e
+
+echo "[pre-commit] 금지 패턴 검사"
+node scripts/guard.mjs
+
+# Phase 1 스캐폴딩 후 package.json에 "check" 스크립트(typecheck+lint+test)가 생기면 실행
+if [ -f package.json ] && node -e "process.exit(require('./package.json').scripts?.check ? 0 : 1)" 2>/dev/null; then
+  echo "[pre-commit] npm run check (typecheck + lint + test)"
+  npm run check
+else
+  echo "[pre-commit] check 스크립트 없음 (Phase 1 이전) — guard만 실행"
+fi

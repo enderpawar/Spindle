@@ -17,6 +17,17 @@
   --card-ink-2: #5e7292;
   --card-line: #e4ebf7;
   --ok: #35c98e;
+
+  /* 라이트(주간) 팔레트 — Spindle Screens.dc.html 확정 홈(4a) 기준 */
+  --l-bg: #f4f8ff;
+  --l-ink: #17347f;
+  --l-ink-2: #3a4c78;
+  --l-ink-3: #8ba3cf;
+  --l-primary: #2f5cff;
+  --l-primary-deep: #1e4fd8;
+  --l-line: #dbe6fa;
+  --l-soft: #e8f0ff;
+  --l-orange: #e0603f;
 }
 
 * {
@@ -179,6 +190,44 @@ button {
   scrollbar-width: none;
 }
 
+/* ─── 라이트 테마 공용 ─── */
+.btn-blue {
+  background: linear-gradient(145deg, #3b7bf5, var(--l-primary-deep));
+  color: #fff;
+  box-shadow: 0 12px 26px -10px rgba(30, 79, 216, 0.55);
+}
+
+.l-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 14px -6px rgba(20, 40, 90, 0.3);
+  cursor: pointer;
+}
+
+.l-zone-chip {
+  flex: none;
+  padding: 9px 16px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #fff;
+  border: 1.5px solid var(--l-line);
+  color: #7089b8;
+  min-height: 38px;
+}
+.l-zone-chip.on {
+  background: var(--l-primary);
+  border-color: var(--l-primary);
+  color: #fff;
+  font-weight: 800;
+}
+
 /* ─── 키프레임 ─── */
 @keyframes fadeUp {
   from {
@@ -240,6 +289,19 @@ button {
   }
   50% {
     opacity: 0.95;
+  }
+}
+@keyframes pulseL {
+  0%,
+  100% {
+    box-shadow:
+      0 10px 22px -6px rgba(30, 79, 216, 0.6),
+      0 0 0 0 rgba(59, 123, 245, 0.45);
+  }
+  50% {
+    box-shadow:
+      0 10px 22px -6px rgba(30, 79, 216, 0.6),
+      0 0 0 18px rgba(59, 123, 245, 0);
   }
 }
 @keyframes sparkle {
