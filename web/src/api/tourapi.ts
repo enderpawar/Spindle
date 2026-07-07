@@ -28,7 +28,7 @@ export function toNumber(value: string | undefined): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** areaBasedList2 목록 아이템 중 Phase 1에서 쓰는 필드 (전부 문자열) */
+/** areaBasedList2 목록 아이템 중 사용 필드 (전부 문자열) */
 export interface AreaPoi {
   contentid: string;
   contenttypeid: string;
@@ -36,6 +36,8 @@ export interface AreaPoi {
   addr1: string;
   firstimage: string;
   sigungucode: string;
+  mapx: string; // guard-allow: TourAPI 응답의 POI 경도 읽기 — 사용자 좌표 아님, 요청 파라미터로 쓰지 않음
+  mapy: string; // guard-allow: TourAPI 응답의 POI 위도 읽기 — 단말 내 방향·거리 계산 전용
 }
 
 interface ListBody<T> {
@@ -130,6 +132,19 @@ export function fetchAreaPoisCached(
 /** 테스트용 — 세션 캐시 초기화 */
 export function clearSessionCache(): void {
   sessionCache.clear();
+}
+
+/**
+ * POI 좌표를 숫자 GeoPoint로 변환 — TourAPI 원본 좌표 필드명은 이 함수 안에만 격리하고
+ * 밖으로는 lat/lng로만 내보낸다. 좌표가 없거나 비정상인 POI는 방향 계산 불가로 제외.
+ */
+export function toEnginePoi(
+  poi: AreaPoi,
+): { contentId: string; title: string; point: { lat: number; lng: number } } | null {
+  const lng = toNumber(poi.mapx); // guard-allow: 응답 좌표 파싱 (단말 내 계산 전용)
+  const lat = toNumber(poi.mapy); // guard-allow: 응답 좌표 파싱 (단말 내 계산 전용)
+  if (lng === undefined || lat === undefined) return null;
+  return { contentId: poi.contentid, title: poi.title, point: { lat, lng } };
 }
 
 /** 원도심·영도 4개 구 POI를 병렬 조회 (세션 캐시 경유) */

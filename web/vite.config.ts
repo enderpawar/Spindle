@@ -36,6 +36,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         poiCheck: fileURLToPath(new URL('./poi-check.html', import.meta.url)), // Phase 1 검증 페이지
+        travel: fileURLToPath(new URL('./travel.html', import.meta.url)), // Phase 2 여행 모드
       },
     },
   },

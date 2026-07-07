@@ -16,6 +16,8 @@ function poi(id: number): AreaPoi {
     addr1: "부산광역시",
     firstimage: "",
     sigungucode: "15",
+    mapx: "129.0306", // guard-allow: 테스트 픽스처의 TourAPI 응답 좌표 필드 (사용자 좌표 아님)
+    mapy: "35.0985", // guard-allow: 테스트 픽스처의 TourAPI 응답 좌표 필드 (사용자 좌표 아님)
   };
 }
 
