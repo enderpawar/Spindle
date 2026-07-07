@@ -27,13 +27,15 @@ const TARGETS = [
 ];
 const EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".html", ".css", ".json", ".svelte", ".vue"]);
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", ".git", ".wrangler", "coverage"]);
+// 락파일 제외: integrity 해시(무작위 base64)가 mapX 등 패턴에 오탐된다. 코드가 아니므로 스캔 불필요.
+const SKIP_FILES = new Set(["package-lock.json"]);
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
     if (SKIP_DIRS.has(name)) continue;
     const p = join(dir, name);
     if (statSync(p).isDirectory()) yield* walk(p);
-    else if ([...EXTS].some((e) => name.endsWith(e))) yield p;
+    else if (!SKIP_FILES.has(name) && [...EXTS].some((e) => name.endsWith(e))) yield p;
   }
 }
 

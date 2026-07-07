@@ -53,10 +53,10 @@ Phase N을 실행할 때 순서대로:
 - AGENTS.md "명령어" 섹션 채우기 (dev/build/check/프록시 실행)
 
 **DoD**
-- [ ] `web` dev 서버에서 4개 구 POI 목록이 프록시 경유로 화면에 렌더링
-- [ ] `web/` 빌드 산출물·소스에서 인증키 문자열 검색 → 0건
-- [ ] 화이트리스트 외 파라미터(예: mapX) 전달 시 프록시가 400 반환
-- [ ] `npm run check` 통과 + **금지 패턴이 든 파일을 커밋 시도하면 pre-commit이 실제로 거부함을 확인** (위반 파일로 리허설 후 제거)
+- [ ] `web` dev 서버에서 4개 구 POI 목록이 프록시 경유로 화면에 렌더링 — **차단: TourAPI 키 미발급** (검증 페이지 `/poi-check.html`·프록시 준비 완료, 키를 `proxy/.dev.vars`에 넣으면 즉시 검증 가능. `regionCodes.ts`의 시군구코드도 areaCode2로 재확인 필요)
+- [ ] `web/` 빌드 산출물·소스에서 인증키 문자열 검색 → 0건 — 키 발급 후 실제 키 문자열로 재검색 (serviceKey 패턴은 web 전체 0건 확인, 2026-07-07)
+- [x] 화이트리스트 외 파라미터(예: mapX) 전달 시 프록시가 400 반환 (2026-07-07 wrangler dev + curl로 확인, `proxy/test/validate.test.ts`로도 고정)
+- [x] `npm run check` 통과 + **금지 패턴이 든 파일을 커밋 시도하면 pre-commit이 실제로 거부함을 확인** (위반 파일로 리허설 후 제거, 2026-07-07)
 
 ## Phase 2 — 여행 모드 코어 루프 (추천 엔진)
 

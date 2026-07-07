@@ -38,7 +38,13 @@
 
 ## 명령어
 
-(스캐폴딩 후 채울 것 — `npm run dev` / `npm run build` / `npm run check` / 프록시 로컬 실행 등)
+루트에서 실행 (루트 `package.json`이 `web/`·`proxy/`로 위임):
+
+- `npm run dev` — web dev 서버 (Vite). `/api`는 로컬 프록시(127.0.0.1:8787)로 전달되므로 아래 프록시도 함께 띄울 것
+- `npm run dev:proxy` — 프록시 로컬 실행 (`wrangler dev`, 포트 8787). 키는 `proxy/.dev.vars`에 (예시: `proxy/.dev.vars.example`)
+- `npm run build` — web 프로덕션 빌드 (`tsc -b && vite build`)
+- `npm run check` — 품질 게이트 전체: guard(금지 패턴) + web(typecheck·lint·test) + proxy(typecheck·test). pre-commit이 자동 실행
+- `npm run guard` — 금지 패턴 스캔만
 
 ## 품질 게이트 (자동 강제)
 

@@ -1,0 +1,12 @@
+{
+  "name": "spindle",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "npm --prefix web run dev",
+    "dev:proxy": "npm --prefix proxy run dev",
+    "build": "npm --prefix web run build",
+    "guard": "node scripts/guard.mjs",
+    "check": "node scripts/guard.mjs && npm --prefix web run check && npm --prefix proxy run check"
+  }
+}

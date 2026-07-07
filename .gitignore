@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.wrangler/
+
+# 인증키는 프록시 환경변수에만 (AGENTS.md 절대 원칙 4)
+.dev.vars
+*.local
+
+*.log

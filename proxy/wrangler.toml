@@ -1,0 +1,10 @@
+# Spindle TourAPI 프록시 — 키 주입·요청 중계만 수행, 로그 미저장 (AGENTS.md)
+# 로컬 개발: proxy/.dev.vars 파일에 TOURAPI_SERVICE_KEY=<디코딩된 키> 작성 (gitignore 대상)
+# 프로덕션: wrangler secret put TOURAPI_SERVICE_KEY (Phase 6)
+name = "spindle-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# 프로덕션 CORS 허용 오리진 (Phase 6에서 Pages 도메인으로 좁힐 것)
+# [vars]
+# ALLOWED_ORIGIN = "https://<pages-domain>"
