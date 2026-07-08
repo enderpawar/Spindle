@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fetchPoiDetailByTitleCached } from '../api/poiLookup'
 import { ScreenFrame } from '../components/ScreenFrame'
 import type { Recommendation } from '../mock/pois'
 
@@ -16,6 +17,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const { direction } = rec
   const poi = rec.candidates[candidateIndex]
   const [loading, setLoading] = useState(true)
+  const [detailImageUrl, setDetailImageUrl] = useState<string | null>(null)
+  const [detailImageLoading, setDetailImageLoading] = useState(false)
+  const [imageFailed, setImageFailed] = useState(false)
   const [navSheet, setNavSheet] = useState(false)
 
   // 목 단계: 상세 API(Phase 3 detailCommon2) 로딩을 흉내 낸 스켈레톤
@@ -24,6 +28,23 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     const timer = setTimeout(() => setLoading(false), candidateIndex === 0 ? 700 : 350)
     return () => clearTimeout(timer)
   }, [candidateIndex])
+
+  useEffect(() => {
+    let cancelled = false
+    setDetailImageUrl(null)
+    setDetailImageLoading(true)
+    setImageFailed(false)
+    fetchPoiDetailByTitleCached(poi.name)
+      .then((detail) => {
+        if (!cancelled) setDetailImageUrl(detail?.imageUrl ?? null)
+      })
+      .finally(() => {
+        if (!cancelled) setDetailImageLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [poi.name])
 
   const mapQuery = encodeURIComponent(`부산 ${poi.name}`)
   const stampDistrict = poi.district.replace(/구$/, '')
@@ -50,29 +71,55 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
           <ResultSkeleton />
         ) : (
           <div key={poi.id} className="fade-up">
-            {/* 대표 이미지 — 목 단계는 폴백(방위 색 그라디언트 + 라인 스케치) */}
+            {/* 대표 이미지 — TourAPI 상세 이미지가 있으면 표시, 없으면 방위색 폴백 */}
             <div style={{ height: 196, borderRadius: 24, position: 'relative', background: `linear-gradient(135deg, ${direction.color}, #1e4fd8 130%)`, overflow: 'hidden' }}>
-              <svg viewBox="0 0 354 196" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.42 }} preserveAspectRatio="xMidYMid slice" aria-hidden>
-                <g fill="none" stroke="#bcd7f7" strokeWidth={2}>
-                  <path d="M0 150 L50 120 L100 150 M50 120 L50 196 M110 150 L150 128 L190 150" />
-                  <rect x="230" y="110" width="22" height="86" />
-                  <rect x="258" y="88" width="26" height="108" />
-                  <rect x="290" y="120" width="20" height="76" />
-                </g>
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth={1.6} aria-hidden>
-                  <rect x="3" y="5" width="18" height="14" rx="2" />
-                  <circle cx="9" cy="11" r="2" />
-                  <path d="M3 17 l5-4 4 3 3-3 6 5" />
+              {detailImageUrl && !imageFailed ? (
+                <img
+                  src={detailImageUrl}
+                  alt={poi.name}
+                  onError={() => setImageFailed(true)}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              ) : (
+                <>
+                  <svg viewBox="0 0 354 196" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.42 }} preserveAspectRatio="xMidYMid slice" aria-hidden>
+                    <g fill="none" stroke="#bcd7f7" strokeWidth={2}>
+                      <path d="M0 150 L50 120 L100 150 M50 120 L50 196 M110 150 L150 128 L190 150" />
+                      <rect x="230" y="110" width="22" height="86" />
+                      <rect x="258" y="88" width="26" height="108" />
+                      <rect x="290" y="120" width="20" height="76" />
+                    </g>
+                  </svg>
+                  <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth={1.6} aria-hidden>
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <circle cx="9" cy="11" r="2" />
+                      <path d="M3 17 l5-4 4 3 3-3 6 5" />
+                    </svg>
+                  </div>
+                </>
+              )}
+              {detailImageUrl && !imageFailed && (
+                <svg viewBox="0 0 354 196" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.16 }} preserveAspectRatio="none" aria-hidden>
+                  <rect width="354" height="196" fill="url(#resultImageShade)" />
+                  <defs>
+                    <linearGradient id="resultImageShade" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0" stopColor="rgba(0,0,0,0)" />
+                      <stop offset="1" stopColor="rgba(0,0,0,.45)" />
+                    </linearGradient>
+                  </defs>
                 </svg>
-              </div>
+              )}
               {poi.tier === 3 && (
                 <div style={{ position: 'absolute', top: 12, left: 12, padding: '6px 12px', background: 'rgba(255,255,255,.94)', borderRadius: 14, fontSize: 11, fontWeight: 800, color: 'var(--l-orange)' }}>
                   ✦ 숨은 명소
                 </div>
               )}
-              <span style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.75)' }}>이미지 준비 중</span>
+              {(!detailImageUrl || imageFailed) && (
+                <span style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.75)' }}>
+                  {detailImageLoading ? '이미지 불러오는 중' : '대표 이미지 없음'}
+                </span>
+              )}
             </div>
 
             <div style={{ padding: '16px 2px 0' }}>
