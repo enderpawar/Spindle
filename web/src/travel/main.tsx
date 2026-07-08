@@ -10,6 +10,7 @@ import { createRoot } from "react-dom/client";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import { fetchPoiDetailCached, firstSentence, stripHtml, type PoiDetail } from "../api/details";
 import { fetchAllOldTownPois, toEnginePoi } from "../api/tourapi";
+import { buildCourse, type CourseResult, type CourseStop } from "../engine/course";
 import { SECTORS, SECTOR_KO, normalizeHeading, sectorOf, type Sector } from "../engine/compass";
 import type { GeoPoint } from "../engine/geo";
 import { HeadingSmoother } from "../engine/heading";
@@ -27,6 +28,7 @@ import {
   type RankedCandidate,
   type RecommendResult,
 } from "../engine/recommend";
+import type { TravelEstimate } from "../engine/zones";
 import { GeoFixError, getCurrentFix, type GeoErrorKind } from "../sensors/geolocation";
 import {
   isOrientationSupported,
@@ -117,7 +119,15 @@ type PoisState =
   | { status: "error"; message: string }
   | { status: "ready"; pois: readonly EnginePoi[]; demo: boolean };
 
-type Screen = "onboarding" | "home" | "origin" | "originMap" | "reveal" | "result" | "share";
+type Screen =
+  | "onboarding"
+  | "home"
+  | "origin"
+  | "originMap"
+  | "reveal"
+  | "result"
+  | "share"
+  | "course";
 
 const isDemo = new URLSearchParams(window.location.search).get("demo") === "1";
 
@@ -274,9 +284,9 @@ function CompassRose({
   );
 }
 
-function travelLabel(c: RankedCandidate): string {
-  const minutes = Math.max(1, Math.round(c.travel.minutes));
-  switch (c.travel.method) {
+function estimateLabel(estimate: TravelEstimate): string {
+  const minutes = Math.max(1, Math.round(estimate.minutes));
+  switch (estimate.method) {
     case "walk":
     case "bridge":
       return `걸어서 약 ${minutes}분`;
@@ -285,6 +295,10 @@ function travelLabel(c: RankedCandidate): string {
     case "estimate":
       return `약 ${minutes}분 (직선 근사 · 하루 나들이)`;
   }
+}
+
+function travelLabel(c: RankedCandidate): string {
+  return estimateLabel(c.travel);
 }
 
 type DetailState =
@@ -316,6 +330,49 @@ function useDetail(contentId: string | undefined, enabled: boolean): [DetailStat
     };
   }, [contentId, enabled, retryKey]);
   return [state, () => setRetryKey((k) => k + 1)];
+}
+
+type CourseDetailsState =
+  | { status: "skip" }
+  | { status: "loading" }
+  | {
+      status: "ready";
+      details: ReadonlyMap<string, PoiDetail>;
+      failedIds: ReadonlySet<string>;
+    };
+
+function useCourseDetails(contentIds: readonly string[], enabled: boolean): CourseDetailsState {
+  const [state, setState] = useState<CourseDetailsState>({ status: "skip" });
+  const key = contentIds.join("|");
+
+  useEffect(() => {
+    const ids = key === "" ? [] : key.split("|");
+    if (!enabled || ids.length === 0) {
+      setState({ status: "skip" });
+      return;
+    }
+    let cancelled = false;
+    setState({ status: "loading" });
+    Promise.allSettled(ids.map((id) => fetchPoiDetailCached(id))).then((settled) => {
+      if (cancelled) return;
+      const details = new Map<string, PoiDetail>();
+      const failedIds = new Set<string>();
+      settled.forEach((item, index) => {
+        const id = ids[index];
+        if (item.status === "fulfilled") {
+          details.set(id, item.value);
+        } else {
+          failedIds.add(id);
+        }
+      });
+      setState({ status: "ready", details, failedIds });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, key]);
+
+  return state;
 }
 
 /** 대표 이미지 없음/로드 실패 → 방위 색상 배경 + 나침반 아이콘 (ui.md S4 폴백) */
@@ -357,6 +414,127 @@ function PoiImage({ url, color, title }: { url: string | undefined; color: strin
         <FallbackImage color={color} />
       )}
     </div>
+  );
+}
+
+function PoiThumb({ url, color, title }: { url: string | undefined; color: string; title: string }) {
+  const [errored, setErrored] = useState(false);
+  const showImage = Boolean(url) && !errored;
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: 84,
+        height: 84,
+        flex: "0 0 84px",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: NAVY,
+      }}
+    >
+      {showImage ? (
+        <img
+          src={url}
+          alt={title}
+          onError={() => setErrored(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : (
+        <FallbackImage color={color} />
+      )}
+    </div>
+  );
+}
+
+function CourseStopItem({
+  stop,
+  index,
+  detail,
+  color,
+  buttonStyle,
+  onNavigate,
+}: {
+  stop: CourseStop;
+  index: number;
+  detail: PoiDetail | undefined;
+  color: string;
+  buttonStyle: CSSProperties;
+  onNavigate: () => void;
+}) {
+  const operation = detail ? operationLabel(detail, new Date()) : null;
+  return (
+    <article
+      style={{
+        display: "flex",
+        gap: 12,
+        padding: 12,
+        borderRadius: 14,
+        border: "1px solid rgba(255,255,255,0.14)",
+        background: "rgba(255,255,255,0.04)",
+      }}
+    >
+      <PoiThumb url={detail?.imageUrl} color={color} title={stop.candidate.poi.title} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          <span
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 999,
+              background: color,
+              color: "#081426",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 12,
+              fontWeight: 900,
+              flex: "0 0 24px",
+            }}
+          >
+            {index + 1}
+          </span>
+          <h2
+            style={{
+              fontSize: 17,
+              lineHeight: 1.25,
+              margin: 0,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {stop.candidate.poi.title}
+          </h2>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          <span
+            style={{
+              fontSize: 12,
+              padding: "5px 8px",
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.08)",
+            }}
+          >
+            {index === 0 ? "출발점에서 " : "이전 장소에서 "}
+            {estimateLabel(stop.leg)}
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              padding: "5px 8px",
+              borderRadius: 8,
+              background: operation?.known ? "rgba(46,204,113,0.16)" : "rgba(255,255,255,0.08)",
+              color: operation?.known ? "#7BE8A8" : "inherit",
+            }}
+          >
+            {operation?.text ?? "운영정보 확인 전"}
+          </span>
+        </div>
+        <button
+          style={{ ...buttonStyle, minHeight: 38, padding: "6px 12px", fontSize: 13 }}
+          onClick={onNavigate}
+        >
+          길찾기
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -719,8 +897,12 @@ function App() {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<RecommendResult | null>(null);
+  const [lastSpin, setLastSpin] = useState<{ origin: GeoPoint; heading: number } | null>(null);
   const [candIndex, setCandIndex] = useState(0);
+  const [course, setCourse] = useState<CourseResult | null>(null);
+  const [courseNotice, setCourseNotice] = useState<string | null>(null);
   const [navSheet, setNavSheet] = useState(false);
+  const [courseNavTitle, setCourseNavTitle] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState<"idle" | "saving" | "sharing">("idle");
   const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("travel"); // 기본 여행 모드 (심사 시연 경로)
@@ -753,7 +935,11 @@ function App() {
     });
     prevContentId.current = rec.picked?.poi.contentId ?? prevContentId.current;
     setResult(rec);
+    setLastSpin({ origin: originPoint, heading });
     setCandIndex(0);
+    setCourse(null);
+    setCourseNotice(null);
+    setCourseNavTitle(null);
     setScreen("reveal");
     if (revealTimer.current) clearTimeout(revealTimer.current);
     revealTimer.current = setTimeout(() => setScreen("result"), 2200); // S3: ~2초 후 자동 전환
@@ -845,7 +1031,10 @@ function App() {
   /** 결과 → 홈 복귀 (현장 모드면 잠금 해제 후 다시 추종 재개) */
   function backToSpin() {
     setNavSheet(false);
+    setCourseNavTitle(null);
     setShareNotice(null);
+    setCourse(null);
+    setCourseNotice(null);
     lockedRef.current = false;
     setScreen("home");
   }
@@ -874,6 +1063,29 @@ function App() {
     setOrigin({ id: "map-pick", name: "지도 선택 지점", point });
     setMapSnapNotice(null);
     setScreen("home");
+  }
+
+  function openCourse() {
+    if (!result || !current || poisState.status !== "ready" || !lastSpin) return;
+    const built = buildCourse({
+      origin: lastSpin.origin,
+      heading: lastSpin.heading,
+      dial,
+      pois: poisState.pois,
+      first: current,
+      expansion: result.expansion,
+      expansionReason: result.expansionReason,
+    });
+    if (built.status === "unavailable") {
+      setCourse(null);
+      setCourseNotice(built.reason);
+      return;
+    }
+    setNavSheet(false);
+    setShareNotice(null);
+    setCourse(built);
+    setCourseNotice(null);
+    setScreen("course");
   }
 
   // 라이브 나침반 추종 + 방위 안정 시 자동 잠금 (홈·현장·tracking일 때만 구독)
@@ -922,6 +1134,17 @@ function App() {
   const sectorMessage = result ? SECTOR_MESSAGE[result.sector] : "";
   const shareDetailLine = current ? `${originLabel} · ${travelLabel(current)}` : "";
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const courseStops = course?.status === "ready" ? course.stops : [];
+  const courseIds = courseStops.map((stop) => stop.candidate.poi.contentId);
+  const courseDetails = useCourseDetails(courseIds, screen === "course" && enableDetail);
+  const visibleCourseStops =
+    courseDetails.status === "ready"
+      ? courseStops.filter((stop) => !courseDetails.failedIds.has(stop.candidate.poi.contentId))
+      : courseStops;
+  const courseFallback =
+    courseDetails.status === "ready" &&
+    courseDetails.failedIds.size > 0 &&
+    visibleCourseStops.length < 2;
 
   async function makeShareBlob(): Promise<Blob> {
     if (!result || !current) throw new Error("공유할 결과가 없어요");
@@ -1366,6 +1589,19 @@ function App() {
                 {result.expansionReason}
               </p>
             )}
+            {courseNotice && (
+              <p
+                style={{
+                  fontSize: 14,
+                  background: "rgba(255,122,69,0.13)",
+                  border: "1px solid rgba(255,122,69,0.34)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                }}
+              >
+                {courseNotice}
+              </p>
+            )}
 
             {current ? (
               <div
@@ -1492,6 +1728,8 @@ function App() {
                   style={button}
                   onClick={() => {
                     setNavSheet(false);
+                    setCourse(null);
+                    setCourseNotice(null);
                     setCandIndex((i) => i + 1);
                   }}
                 >
@@ -1512,10 +1750,166 @@ function App() {
                   공유 카드 만들기
                 </button>
               )}
+              {current && (
+                <button style={button} onClick={openCourse}>
+                  이 방향으로 코스 짜기
+                </button>
+              )}
             </div>
 
             {navSheet && current && (
               <NavSheet title={current.poi.title} onClose={() => setNavSheet(false)} />
+            )}
+          </>
+        )}
+
+        {screen === "course" && result && course?.status === "ready" && (
+          <>
+            <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <button
+                style={{ ...button, width: 46, minHeight: 46, padding: 0 }}
+                aria-label="뒤로"
+                onClick={() => {
+                  setCourseNavTitle(null);
+                  setScreen("result");
+                }}
+              >
+                ‹
+              </button>
+              <div>
+                <p style={{ fontSize: 13, opacity: 0.68, margin: "0 0 3px" }}>
+                  {originLabel} · {DIAL_LABEL[dial]} · {result.sectorKo}쪽
+                </p>
+                <h1 style={{ fontSize: 21, lineHeight: 1.25, margin: 0 }}>
+                  이 방향으로 이어 걷기
+                </h1>
+              </div>
+            </header>
+
+            {course.reasons.map((reason) => (
+              <p
+                key={reason}
+                style={{
+                  fontSize: 14,
+                  background: "rgba(255,255,255,0.08)",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  margin: "0 0 10px",
+                }}
+              >
+                {reason}
+              </p>
+            ))}
+
+            {courseDetails.status === "ready" &&
+              courseDetails.failedIds.size > 0 &&
+              !courseFallback && (
+                <p
+                  style={{
+                    fontSize: 14,
+                    background: "rgba(255,122,69,0.13)",
+                    border: "1px solid rgba(255,122,69,0.34)",
+                    borderRadius: 8,
+                    padding: "8px 12px",
+                  }}
+                >
+                  상세 정보를 불러오지 못한 장소는 제외했어요
+                </p>
+              )}
+
+            {courseDetails.status === "loading" ? (
+              <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                {[0, 1, 2].slice(0, course.targetCount).map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      padding: 12,
+                      borderRadius: 14,
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      background: "rgba(255,255,255,0.04)",
+                    }}
+                    aria-label="코스 상세 정보를 불러오는 중"
+                  >
+                    <SkeletonBar width={84} height={84} />
+                    <div style={{ flex: 1, display: "grid", gap: 9, alignContent: "center" }}>
+                      <SkeletonBar width="64%" height={20} />
+                      <SkeletonBar width="88%" />
+                      <SkeletonBar width="42%" height={28} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : courseFallback ? (
+              <div style={{ padding: "42px 0", textAlign: "center" }}>
+                <p style={{ fontSize: 17, margin: "0 0 8px" }}>
+                  이 방향에서는 코스를 만들 장소가 부족해요
+                </p>
+                <p style={{ fontSize: 14, opacity: 0.75, margin: "0 0 18px" }}>
+                  단일 추천 결과를 그대로 볼 수 있어요
+                </p>
+                <button
+                  style={primaryButton}
+                  onClick={() => {
+                    setCourse(null);
+                    setCourseNotice("이 방향에서는 코스를 만들 장소가 부족해요");
+                    setScreen("result");
+                  }}
+                >
+                  결과로 돌아가기
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
+                  {visibleCourseStops.map((stop, index) => {
+                    const detailForStop =
+                      courseDetails.status === "ready"
+                        ? courseDetails.details.get(stop.candidate.poi.contentId)
+                        : undefined;
+                    return (
+                      <CourseStopItem
+                        key={stop.candidate.poi.contentId}
+                        stop={stop}
+                        index={index}
+                        detail={detailForStop}
+                        color={sectorColor}
+                        buttonStyle={button}
+                        onNavigate={() => setCourseNavTitle(stop.candidate.poi.title)}
+                      />
+                    );
+                  })}
+                </div>
+
+                <footer
+                  style={{
+                    marginTop: 18,
+                    padding: "14px 0 0",
+                    borderTop: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <p style={{ fontSize: 15, fontWeight: 800, margin: "0 0 4px" }}>
+                    전체 보정 이동시간 약 {Math.max(1, Math.round(course.totalMinutes))}분
+                  </p>
+                  <p style={{ fontSize: 13, lineHeight: 1.45, opacity: 0.72, margin: 0 }}>
+                    예상 이동시간이며 실제 경로와 다를 수 있어요
+                  </p>
+                </footer>
+
+                <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
+                  <button style={button} onClick={() => setScreen("result")}>
+                    결과로 돌아가기
+                  </button>
+                  <button style={primaryButton} onClick={backToSpin}>
+                    다시 돌리기
+                  </button>
+                </div>
+              </>
+            )}
+
+            {courseNavTitle && (
+              <NavSheet title={courseNavTitle} onClose={() => setCourseNavTitle(null)} />
             )}
           </>
         )}
