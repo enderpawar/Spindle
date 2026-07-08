@@ -1,6 +1,7 @@
 import pointingImg from '../assets/poses/별이_pointing.png'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { useVisited } from '../lib/visited'
 import { DIRECTIONS, POI_POOL, type Departure, type Poi } from '../mock/pois'
 import { stampProgress } from '../mock/stamps'
 
@@ -40,7 +41,8 @@ function SketchArt({ variant }: { variant: number }) {
 }
 
 export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onNavigate }: Props) {
-  const progress = stampProgress()
+  const visited = useVisited()
+  const progress = stampProgress(visited)
 
   const quickMenu = [
     {

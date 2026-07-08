@@ -2,13 +2,15 @@ import { useState } from 'react'
 import locateImg from '../assets/poses/별이_explore.png'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { useVisited } from '../lib/visited'
 import { zones } from '../mock/stamps'
 
-/** 도장깨기 · 존 수집 (디자인 3a-5) — Phase 7에서 실제 방문 기록과 연결 */
+/** 도장깨기 · 존 수집 (디자인 3a-5) — 방문 기록(lib/visited.ts, 단말 저장)과 연결 */
 export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void }) {
+  const visited = useVisited()
   const [activeZoneId, setActiveZoneId] = useState(zones[0].id)
   const zone = zones.find((z) => z.id === activeZoneId) ?? zones[0]
-  const collected = zone.slots.filter((s) => s.collected).length
+  const collected = zone.slots.filter((s) => visited.has(s.poi.id)).length
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
@@ -43,9 +45,11 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
       {/* 도장 그리드 */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '18px 20px calc(110px + env(safe-area-inset-bottom))' }}>
         <div key={zone.id} className="fade-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-          {zone.slots.map((slot) => (
+          {zone.slots.map((slot) => {
+            const isCollected = visited.has(slot.poi.id)
+            return (
             <div key={slot.poi.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              {slot.collected ? (
+              {isCollected ? (
                 <div style={{ width: 82, height: 82, borderRadius: '50%', background: 'radial-gradient(circle at 38% 32%,#5b93ff,#1e4fd8)', display: 'grid', placeItems: 'center', boxShadow: '0 10px 20px -10px rgba(30,79,216,.6)' }}>
                   <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff" aria-hidden>
                     <path d="M12 3 L14.5 9 L21 9.5 L16 13.5 L17.5 20 L12 16.5 L6.5 20 L8 13.5 L3 9.5 L9.5 9 Z" />
@@ -59,11 +63,12 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
                   </svg>
                 </div>
               )}
-              <span style={{ fontSize: 11, fontWeight: 700, color: slot.collected ? 'var(--l-ink-2)' : '#aebdd8', textAlign: 'center' }}>
-                {slot.collected ? slot.shortName : '???'}
+              <span style={{ fontSize: 11, fontWeight: 700, color: isCollected ? 'var(--l-ink-2)' : '#aebdd8', textAlign: 'center' }}>
+                {isCollected ? slot.shortName : '???'}
               </span>
             </div>
-          ))}
+            )
+          })}
         </div>
         <button className="btn btn-blue" style={{ marginTop: 20, width: '100%', height: 52, fontSize: 15 }} onClick={() => onNavigate('spin')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} aria-hidden>

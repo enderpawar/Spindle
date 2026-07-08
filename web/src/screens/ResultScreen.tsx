@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchPoiDetailByTitleCached } from '../api/poiLookup'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { markVisited, useVisited } from '../lib/visited'
 import type { Recommendation } from '../mock/pois'
 
 interface Props {
@@ -21,6 +22,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [detailImageLoading, setDetailImageLoading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
   const [navSheet, setNavSheet] = useState(false)
+  const [stampToast, setStampToast] = useState<string | null>(null)
+  const visited = useVisited()
+  const alreadyVisited = visited.has(poi.id)
 
   // 목 단계: 상세 API(Phase 3 detailCommon2) 로딩을 흉내 낸 스켈레톤
   useEffect(() => {
@@ -46,8 +50,21 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     }
   }, [poi.name])
 
+  // 도장 획득 토스트 자동 숨김
+  useEffect(() => {
+    if (!stampToast) return
+    const timer = setTimeout(() => setStampToast(null), 2600)
+    return () => clearTimeout(timer)
+  }, [stampToast])
+
   const mapQuery = encodeURIComponent(`부산 ${poi.name}`)
   const stampDistrict = poi.district.replace(/구$/, '')
+
+  // 길찾기(=방문 의사)에서 도장을 획득한다 — 새 방문일 때만 연출.
+  const openNav = () => {
+    setNavSheet(true)
+    if (markVisited(poi.id)) setStampToast(`${stampDistrict} 도장을 획득했어요!`)
+  }
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
@@ -154,15 +171,34 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 </div>
               </div>
 
-              {/* 도장 힌트 */}
+              {/* 도장 힌트 — 방문 기록(lib/visited.ts)에 따라 상태가 바뀐다 */}
               <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px dashed #b9cdf0', display: 'grid', placeItems: 'center', flex: 'none' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#b9cdf0" aria-hidden>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    border: alreadyVisited ? 'none' : '2px dashed #b9cdf0',
+                    background: alreadyVisited ? 'radial-gradient(circle at 38% 32%,#5b93ff,#1e4fd8)' : 'transparent',
+                    display: 'grid',
+                    placeItems: 'center',
+                    flex: 'none',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={alreadyVisited ? '#fff' : '#b9cdf0'} aria-hidden>
                     <path d="M12 3 L14.5 9 L21 9.5 L16 13.5 L17.5 20 L12 16.5 L6.5 20 L8 13.5 L3 9.5 L9.5 9 Z" />
                   </svg>
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-                  방문하면 <b style={{ color: 'var(--l-primary)' }}>{stampDistrict} 도장</b>을 획득해요
+                  {alreadyVisited ? (
+                    <>
+                      <b style={{ color: 'var(--l-primary)' }}>{stampDistrict} 도장</b>을 받았어요
+                    </>
+                  ) : (
+                    <>
+                      방문하면 <b style={{ color: 'var(--l-primary)' }}>{stampDistrict} 도장</b>을 획득해요
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -185,7 +221,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
       {/* 하단 액션 바 */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', display: 'flex', gap: 12, background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
-        <button className="btn btn-blue" style={{ flex: 1, height: 56, fontSize: 16 }} onClick={() => setNavSheet(true)} disabled={loading}>
+        <button className="btn btn-blue" style={{ flex: 1, height: 56, fontSize: 16 }} onClick={openNav} disabled={loading}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden>
             <path d="M12 2 C8 2 5 5 5 9 c0 5 7 13 7 13 s7-8 7-13 c0-4-3-7-7-7 z m0 9.5 a2.5 2.5 0 1 1 0-5 a2.5 2.5 0 0 1 0 5 z" />
           </svg>
@@ -218,6 +254,36 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
               <NavLink href={`https://map.naver.com/p/search/${mapQuery}`} label="네이버지도" color="#2db400" ink="#fff" />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 도장 획득 토스트 */}
+      {stampToast && (
+        <div
+          className="fade-up"
+          role="status"
+          style={{
+            position: 'absolute',
+            left: 20,
+            right: 20,
+            bottom: 'calc(90px + env(safe-area-inset-bottom))',
+            zIndex: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '13px 16px',
+            background: 'var(--l-ink)',
+            borderRadius: 16,
+            color: '#fff',
+            boxShadow: '0 12px 30px -10px rgba(20,40,90,.55)',
+          }}
+        >
+          <span style={{ width: 26, height: 26, borderRadius: '50%', background: 'radial-gradient(circle at 38% 32%,#5b93ff,#1e4fd8)', display: 'grid', placeItems: 'center', flex: 'none' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" aria-hidden>
+              <path d="M12 3 L14.5 9 L21 9.5 L16 13.5 L17.5 20 L12 16.5 L6.5 20 L8 13.5 L3 9.5 L9.5 9 Z" />
+            </svg>
+          </span>
+          <span style={{ fontSize: 13.5, fontWeight: 800 }}>{stampToast}</span>
         </div>
       )}
     </ScreenFrame>
