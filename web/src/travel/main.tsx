@@ -10,7 +10,9 @@ import { createRoot } from "react-dom/client";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import { fetchPoiDetailCached, firstSentence, stripHtml, type PoiDetail } from "../api/details";
 import { fetchAllOldTownPois, toEnginePoi } from "../api/tourapi";
-import { SECTORS, SECTOR_KO, normalizeHeading, type Sector } from "../engine/compass";
+import { SECTORS, SECTOR_KO, normalizeHeading, sectorOf, type Sector } from "../engine/compass";
+import type { GeoPoint } from "../engine/geo";
+import { HeadingSmoother } from "../engine/heading";
 import { parseOperationStatus } from "../engine/operation";
 import { ORIGIN_PRESETS, type OriginPreset } from "../engine/origins";
 import {
@@ -21,6 +23,12 @@ import {
   type RankedCandidate,
   type RecommendResult,
 } from "../engine/recommend";
+import { GeoFixError, getCurrentFix, type GeoErrorKind } from "../sensors/geolocation";
+import {
+  isOrientationSupported,
+  requestOrientationPermission,
+  subscribeHeading,
+} from "../sensors/orientation";
 import { DEMO_POIS } from "./demoPois";
 
 const NAVY = "#0F2540";
@@ -72,6 +80,45 @@ type Screen = "home" | "origin" | "reveal" | "result";
 
 const isDemo = new URLSearchParams(window.location.search).get("demo") === "1";
 
+type Mode = "travel" | "field";
+
+type FieldPhase =
+  | { status: "prompt" } // 권한 요청 전 CTA
+  | { status: "acquiring" } // 권한·GPS 취득 중
+  | { status: "tracking"; origin: GeoPoint } // 라이브 나침반 추종
+  | { status: "error"; message: string; detail: string; retryable: boolean };
+
+/** 현장 모드 가능 환경인가 — DeviceOrientation + Geolocation 둘 다 필요 (데스크톱은 폴백) */
+function isFieldModeAvailable(): boolean {
+  return isOrientationSupported() && typeof navigator !== "undefined" && Boolean(navigator.geolocation);
+}
+
+/** GPS 실패 종류 → 사용자 문구 (좌표·내부 오류 메시지는 노출하지 않음) */
+function geoErrorTitle(kind: GeoErrorKind): string {
+  switch (kind) {
+    case "denied":
+      return "위치 권한이 필요해요";
+    case "timeout":
+      return "위치를 확인하지 못했어요 (시간 초과)";
+    case "unsupported":
+      return "이 기기는 위치를 지원하지 않아요";
+    default:
+      return "위치를 확인하지 못했어요";
+  }
+}
+
+/** 원판 회전을 목표 각도로 최단 경로(±180° 내)로 갱신 — 0/360 wrap 시 역회전 방지 */
+function nextRotation(prev: number, targetDeg: number): number {
+  const cur = ((prev % 360) + 360) % 360;
+  let delta = (targetDeg - cur) % 360;
+  if (delta > 180) delta -= 360;
+  if (delta < -180) delta += 360;
+  return prev + delta;
+}
+
+/** 방위가 이 시간(ms) 이상 안정되면 잠근다 (현장 모드 자동 정지) */
+const FIELD_LOCK_MS = 1100;
+
 function usePois(): [PoisState, () => void] {
   const [state, setState] = useState<PoisState>({ status: "loading" });
   const [retryKey, setRetryKey] = useState(0);
@@ -108,8 +155,20 @@ function usePois(): [PoisState, () => void] {
   return [state, () => setRetryKey((k) => k + 1)];
 }
 
-/** 나침반 로즈 원판 — rotation(도)만큼 원판이 돌고, 상단 고정 마커가 방위를 가리킨다 */
-function CompassRose({ rotation, onSpinEnd }: { rotation: number; onSpinEnd: () => void }) {
+/**
+ * 나침반 로즈 원판 — rotation(도)만큼 원판이 돌고, 상단 고정 마커가 방위를 가리킨다.
+ * 여행 모드는 긴 자동 스핀(기본 2600ms) + onSpinEnd로 정지 방위를 산출하고,
+ * 현장 모드는 짧은 transition으로 기기 방위각을 실시간 추종한다(onSpinEnd 미사용).
+ */
+function CompassRose({
+  rotation,
+  transitionMs = 2600,
+  onSpinEnd,
+}: {
+  rotation: number;
+  transitionMs?: number;
+  onSpinEnd?: () => void;
+}) {
   return (
     <div style={{ position: "relative", width: 280, height: 280, margin: "0 auto" }}>
       <div
@@ -133,7 +192,7 @@ function CompassRose({ rotation, onSpinEnd }: { rotation: number; onSpinEnd: () 
         height={280}
         style={{
           transform: `rotate(${rotation}deg)`,
-          transition: "transform 2.6s cubic-bezier(0.15, 0.85, 0.25, 1)",
+          transition: `transform ${transitionMs}ms cubic-bezier(0.15, 0.85, 0.25, 1)`,
         }}
         onTransitionEnd={onSpinEnd}
         role="img"
@@ -340,11 +399,43 @@ function App() {
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [candIndex, setCandIndex] = useState(0);
   const [navSheet, setNavSheet] = useState(false);
+  const [mode, setMode] = useState<Mode>("travel"); // 기본 여행 모드 (심사 시연 경로)
+  const [fieldPhase, setFieldPhase] = useState<FieldPhase>({ status: "prompt" });
+  const [liveHeading, setLiveHeading] = useState(0); // 현장 모드 스무딩된 방위각
+  const [fieldRotation, setFieldRotation] = useState(0); // 라이브 원판 회전(연속값)
   const prevContentId = useRef<string | undefined>(undefined);
   const pendingHeading = useRef<number | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lockedRef = useRef(false); // 현장 모드 방위 잠금 1회 보장
 
   const poisReady = poisState.status === "ready";
+
+  // 비동기 센서 콜백에서 최신 dial 값을 읽기 위한 ref (스테일 클로저 방지)
+  const dialRef = useRef(dial);
+  dialRef.current = dial;
+
+  /** 스핀/방위 잠금 공통 — 추천 실행 후 연출(S3) → 결과(S4)로 전환 */
+  function runRecommend(originPoint: GeoPoint, heading: number) {
+    if (poisState.status !== "ready") return;
+    const rec = recommend({
+      origin: originPoint,
+      heading,
+      dial: dialRef.current,
+      pois: poisState.pois,
+      rng: Math.random,
+      prevContentId: prevContentId.current,
+    });
+    prevContentId.current = rec.picked?.poi.contentId ?? prevContentId.current;
+    setResult(rec);
+    setCandIndex(0);
+    setScreen("reveal");
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    revealTimer.current = setTimeout(() => setScreen("result"), 2200); // S3: ~2초 후 자동 전환
+  }
+
+  // 센서 tracking effect에서 스테일 없이 최신 runRecommend를 호출하기 위한 ref
+  const runRecommendRef = useRef(runRecommend);
+  runRecommendRef.current = runRecommend;
 
   function spin() {
     if (!poisReady || spinning) return;
@@ -362,26 +453,103 @@ function App() {
     const heading = pendingHeading.current;
     pendingHeading.current = null;
     setSpinning(false);
-    const rec = recommend({
-      origin: origin.point,
-      heading,
-      dial,
-      pois: poisState.pois,
-      rng: Math.random,
-      prevContentId: prevContentId.current,
-    });
-    prevContentId.current = rec.picked?.poi.contentId ?? prevContentId.current;
-    setResult(rec);
-    setCandIndex(0);
-    setScreen("reveal");
-    if (revealTimer.current) clearTimeout(revealTimer.current);
-    revealTimer.current = setTimeout(() => setScreen("result"), 2200); // S3: ~2초 후 자동 전환
+    runRecommend(origin.point, heading); // 여행 모드: 프리셋 출발점 + 자동 스핀 방위
   }
 
   function skipReveal() {
     if (revealTimer.current) clearTimeout(revealTimer.current);
     setScreen("result");
   }
+
+  // ── 현장 모드 (센서) ──────────────────────────────────────────────
+  function selectMode(next: Mode) {
+    setMode(next);
+    if (next !== "field") return;
+    // 데스크톱 등 센서 미지원 → 즉시 폴백 안내 (여행 모드로 유도)
+    if (!isFieldModeAvailable()) {
+      setFieldPhase({
+        status: "error",
+        message: "이 기기는 위치·나침반 센서를 지원하지 않아요",
+        detail: "데스크톱 등 센서가 없는 환경이에요. 여행 모드로 방향을 정할 수 있어요.",
+        retryable: false,
+      });
+    } else {
+      setFieldPhase({ status: "prompt" });
+    }
+  }
+
+  /** 사용자 제스처 안에서 방위 권한 요청 + GPS 1회 취득 → 라이브 추종 시작 */
+  async function startField() {
+    if (!poisReady) return;
+    setFieldPhase({ status: "acquiring" });
+    const perm = await requestOrientationPermission(); // 반드시 제스처 핸들러 내부 (sensors 스킬)
+    if (perm !== "granted") {
+      setFieldPhase({
+        status: "error",
+        message: perm === "unsupported" ? "이 기기는 나침반을 지원하지 않아요" : "나침반 권한이 필요해요",
+        detail: "권한을 허용하거나, 여행 모드로 계속할 수 있어요.",
+        retryable: perm !== "unsupported",
+      });
+      return;
+    }
+    try {
+      const origin = await getCurrentFix(); // 좌표는 단말 내 존 판정에만 사용 (무전송)
+      lockedRef.current = false;
+      setLiveHeading(0);
+      setFieldRotation(0);
+      setFieldPhase({ status: "tracking", origin });
+    } catch (err) {
+      const kind: GeoErrorKind = err instanceof GeoFixError ? err.kind : "unavailable";
+      setFieldPhase({
+        status: "error",
+        message: geoErrorTitle(kind),
+        detail: "여행 모드로 계속할 수 있어요.",
+        retryable: kind !== "unsupported",
+      });
+    }
+  }
+
+  /** "이 방향으로 결정" — 현재 방위각을 즉시 잠근다 (자동 정지 대기 없이) */
+  function manualLock() {
+    if (fieldPhase.status !== "tracking" || lockedRef.current) return;
+    lockedRef.current = true;
+    runRecommend(fieldPhase.origin, liveHeading);
+  }
+
+  /** 결과 → 홈 복귀 (현장 모드면 잠금 해제 후 다시 추종 재개) */
+  function backToSpin() {
+    setNavSheet(false);
+    lockedRef.current = false;
+    setScreen("home");
+  }
+
+  // 라이브 나침반 추종 + 방위 안정 시 자동 잠금 (홈·현장·tracking일 때만 구독)
+  useEffect(() => {
+    if (mode !== "field" || screen !== "home" || fieldPhase.status !== "tracking") return;
+    const origin = fieldPhase.origin;
+    const smoother = new HeadingSmoother(8);
+    let stableSince = 0;
+    const unsubscribe = subscribeHeading((deg) => {
+      smoother.push(deg);
+      const value = smoother.value;
+      if (value === null) return;
+      setLiveHeading(value);
+      setFieldRotation((prev) => nextRotation(prev, normalizeHeading(360 - value)));
+      if (lockedRef.current) return;
+      if (smoother.isStable()) {
+        const now = performance.now();
+        if (stableSince === 0) {
+          stableSince = now;
+        } else if (now - stableSince >= FIELD_LOCK_MS) {
+          lockedRef.current = true;
+          runRecommendRef.current(origin, value);
+        }
+      } else {
+        stableSince = 0; // 다시 흔들리면 안정 타이머 초기화
+      }
+    });
+    return unsubscribe;
+  }, [mode, screen, fieldPhase]);
 
   const candidates: RankedCandidate[] = result?.picked
     ? [result.picked, ...result.alternates]
@@ -396,6 +564,8 @@ function App() {
   const operation = detail ? operationLabel(detail, new Date()) : null;
   const intro = detail?.overview ? firstSentence(detail.overview) : null;
   const imageUrl = detail?.imageUrl;
+  const originLabel = mode === "field" ? "내 위치" : origin.name;
+  const liveSectorKo = SECTOR_KO[sectorOf(liveHeading)];
 
   const frame: CSSProperties = {
     minHeight: "100vh",
@@ -429,6 +599,49 @@ function App() {
     fontWeight: 700,
   };
 
+  // 이동시간 다이얼 — 여행·현장 모드 공용 (ui.md S1: 기본 반나절)
+  const dialRow = (
+    <div role="group" aria-label="이동시간 다이얼" style={{ display: "flex", gap: 8, margin: "24px 0 16px" }}>
+      {(Object.keys(DIAL_LABEL) as Dial[]).map((d) => (
+        <button
+          key={d}
+          onClick={() => setDial(d)}
+          style={{
+            ...button,
+            flex: 1,
+            fontSize: 14,
+            background: d === dial ? ORANGE : button.background,
+            color: d === dial ? "#1A1208" : "inherit",
+            fontWeight: d === dial ? 700 : 400,
+            border: d === dial ? "none" : button.border,
+          }}
+        >
+          {DIAL_LABEL[d]}
+          <span style={{ display: "block", fontSize: 11, opacity: 0.75 }}>
+            {Number.isFinite(DIAL_LIMIT_MIN[d]) ? `~${DIAL_LIMIT_MIN[d]}분` : "제한 없음"}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // 목록 로딩·에러 안내 — 두 모드 공용 (빈 화면 금지)
+  const poisStatusNote = (
+    <>
+      {poisState.status === "loading" && (
+        <p style={{ textAlign: "center", opacity: 0.8 }}>주변 장소를 불러오는 중이에요…</p>
+      )}
+      {poisState.status === "error" && (
+        <p style={{ textAlign: "center" }}>
+          잠시 연결이 어려워요{" "}
+          <button style={{ ...button, minHeight: 44, fontSize: 14 }} onClick={retryPois}>
+            재시도
+          </button>
+        </p>
+      )}
+    </>
+  );
+
   return (
     <div style={frame}>
       <div style={column}>
@@ -449,7 +662,7 @@ function App() {
 
         {screen === "home" && (
           <>
-            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <span
                 style={{
                   fontSize: 13,
@@ -458,60 +671,124 @@ function App() {
                   border: "1px solid rgba(255,255,255,0.3)",
                 }}
               >
-                여행 모드
+                {mode === "field" ? "현장 모드" : "여행 모드"}
               </span>
-              <button
-                style={{ ...button, minHeight: 44, padding: "8px 14px", fontSize: 14 }}
-                onClick={() => setScreen("origin")}
-              >
-                출발점: {origin.name} ▾
-              </button>
+              {mode === "travel" && (
+                <button
+                  style={{ ...button, minHeight: 44, padding: "8px 14px", fontSize: 14 }}
+                  onClick={() => setScreen("origin")}
+                >
+                  출발점: {origin.name} ▾
+                </button>
+              )}
             </header>
 
-            <CompassRose rotation={rotation} onSpinEnd={onSpinEnd} />
-
-            <div role="group" aria-label="이동시간 다이얼" style={{ display: "flex", gap: 8, margin: "24px 0 16px" }}>
-              {(Object.keys(DIAL_LABEL) as Dial[]).map((d) => (
+            {/* 모드 전환 — 여행(센서 불필요, 심사 시연) / 현장(GPS·나침반) */}
+            <div role="group" aria-label="모드 선택" style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+              {([["travel", "여행 모드"], ["field", "현장 모드"]] as const).map(([m, label]) => (
                 <button
-                  key={d}
-                  onClick={() => setDial(d)}
+                  key={m}
+                  onClick={() => selectMode(m)}
                   style={{
                     ...button,
                     flex: 1,
                     fontSize: 14,
-                    background: d === dial ? ORANGE : button.background,
-                    color: d === dial ? "#1A1208" : "inherit",
-                    fontWeight: d === dial ? 700 : 400,
-                    border: d === dial ? "none" : button.border,
+                    background: m === mode ? ORANGE : button.background,
+                    color: m === mode ? "#1A1208" : "inherit",
+                    fontWeight: m === mode ? 700 : 400,
+                    border: m === mode ? "none" : button.border,
                   }}
                 >
-                  {DIAL_LABEL[d]}
-                  <span style={{ display: "block", fontSize: 11, opacity: 0.75 }}>
-                    {Number.isFinite(DIAL_LIMIT_MIN[d]) ? `~${DIAL_LIMIT_MIN[d]}분` : "제한 없음"}
-                  </span>
+                  {label}
                 </button>
               ))}
             </div>
 
-            {poisState.status === "loading" && (
-              <p style={{ textAlign: "center", opacity: 0.8 }}>주변 장소를 불러오는 중이에요…</p>
-            )}
-            {poisState.status === "error" && (
-              <p style={{ textAlign: "center" }}>
-                잠시 연결이 어려워요{" "}
-                <button style={{ ...button, minHeight: 44, fontSize: 14 }} onClick={retryPois}>
-                  재시도
+            {mode === "travel" && (
+              <>
+                <CompassRose rotation={rotation} onSpinEnd={onSpinEnd} />
+                {dialRow}
+                {poisStatusNote}
+                <button
+                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady && !spinning ? 1 : 0.55 }}
+                  disabled={!poisReady || spinning}
+                  onClick={spin}
+                >
+                  {spinning ? "도는 중…" : "돌리기"}
                 </button>
-              </p>
+              </>
             )}
 
-            <button
-              style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady && !spinning ? 1 : 0.55 }}
-              disabled={!poisReady || spinning}
-              onClick={spin}
-            >
-              {spinning ? "도는 중…" : "돌리기"}
-            </button>
+            {mode === "field" && fieldPhase.status === "prompt" && (
+              <>
+                <CompassRose rotation={0} transitionMs={0} />
+                {dialRow}
+                {poisStatusNote}
+                <button
+                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady ? 1 : 0.55 }}
+                  disabled={!poisReady}
+                  onClick={startField}
+                >
+                  내 위치에서 돌리기
+                </button>
+                <p style={{ fontSize: 13, opacity: 0.65, textAlign: "center", marginTop: 12 }}>
+                  현재 위치와 나침반으로 방향을 정해요. 위치·방위는 기기 안에서만 쓰여요.
+                </p>
+              </>
+            )}
+
+            {mode === "field" && fieldPhase.status === "acquiring" && (
+              <div style={{ textAlign: "center", padding: "24px 0" }}>
+                <CompassRose rotation={fieldRotation} transitionMs={0} />
+                <p style={{ marginTop: 24, opacity: 0.85 }}>위치와 나침반을 준비하고 있어요…</p>
+              </div>
+            )}
+
+            {mode === "field" && fieldPhase.status === "tracking" && (
+              <>
+                <CompassRose rotation={fieldRotation} transitionMs={120} />
+                <p style={{ textAlign: "center", fontSize: 16, margin: "20px 0 4px" }}>
+                  지금 향한 곳:{" "}
+                  <b style={{ color: ORANGE, fontSize: 20 }}>{liveSectorKo}쪽</b>
+                </p>
+                <p style={{ fontSize: 13, opacity: 0.65, textAlign: "center", margin: 0 }}>
+                  휴대폰을 돌려 방향을 맞춘 뒤 잠시 멈추면 자동으로 정해져요.
+                </p>
+                {dialRow}
+                {poisStatusNote}
+                <button
+                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady ? 1 : 0.55 }}
+                  disabled={!poisReady}
+                  onClick={manualLock}
+                >
+                  이 방향으로 결정
+                </button>
+              </>
+            )}
+
+            {mode === "field" && fieldPhase.status === "error" && (
+              <div style={{ padding: "40px 0", textAlign: "center" }}>
+                <p style={{ fontSize: 18, fontWeight: 700, margin: "0 0 8px" }}>{fieldPhase.message}</p>
+                <p style={{ fontSize: 14, opacity: 0.8, margin: "0 0 20px" }}>{fieldPhase.detail}</p>
+                <div style={{ display: "grid", gap: 10 }}>
+                  {fieldPhase.retryable && (
+                    <button
+                      style={{ ...button, opacity: poisReady ? 1 : 0.55 }}
+                      disabled={!poisReady}
+                      onClick={startField}
+                    >
+                      다시 시도
+                    </button>
+                  )}
+                  <button
+                    style={fieldPhase.retryable ? button : primaryButton}
+                    onClick={() => selectMode("travel")}
+                  >
+                    여행 모드로 계속
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -563,7 +840,7 @@ function App() {
         {screen === "result" && result && (
           <>
             <p style={{ fontSize: 14, opacity: 0.75 }}>
-              {origin.name} · {DIAL_LABEL[dial]} · {result.sectorKo}쪽
+              {originLabel} · {DIAL_LABEL[dial]} · {result.sectorKo}쪽
             </p>
             {result.expansionReason && (
               <p
@@ -709,13 +986,7 @@ function App() {
                   다른 후보 보기
                 </button>
               )}
-              <button
-                style={current ? button : primaryButton}
-                onClick={() => {
-                  setNavSheet(false);
-                  setScreen("home");
-                }}
-              >
+              <button style={current ? button : primaryButton} onClick={backToSpin}>
                 다시 돌리기
               </button>
               {current && (

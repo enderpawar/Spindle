@@ -103,12 +103,19 @@ Phase N을 실행할 때 순서대로:
 - 권한 거부·미지원·타임아웃 → 여행 모드 폴백 UI
 
 **DoD (자동 검증)**
-- [ ] 센서 미지원 환경(데스크톱)에서 폴백이 자연스럽게 여행 모드로 유도
-- [ ] 네트워크 요청 페이로드에 좌표·방위각 미포함 (테스트로 검증)
+- [x] 센서 미지원 환경(데스크톱)에서 폴백이 자연스럽게 여행 모드로 유도 — `selectMode("field")`가 `isFieldModeAvailable()`(DeviceOrientation+Geolocation) 미충족 시 폴백 카드("여행 모드로 계속" primary)로 유도, 권한/GPS 실패도 동일 폴백. 미지원 신호 프리미티브 `sensors/support.test.ts`(6)로 고정(`getCurrentFix`→unsupported/denied, `requestOrientationPermission`→unsupported/granted/denied). 시각적 "자연스러움"은 사람 체크리스트
+- [x] 네트워크 요청 페이로드에 좌표·방위각 미포함 (테스트로 검증) — 현장 모드 데이터 경로(`areaBasedList2`·`detail*`)의 모든 요청 URL에 좌표·방위각·좌표 파라미터가 없음을 `sensors/netSafety.test.ts`로 고정. 좌표·방위각은 순수 `recommend()`로만 소비(네트워크 미호출). guard가 클라이언트 내 좌표 파라미터도 차단
 
 **DoD (사람 검증 — 완료 보고에 체크리스트로 명시할 것)**
 - [ ] iPhone Safari: 권한 허용/거부 두 경로, 8방위 정확도
 - [ ] Android Chrome: heading 취득, 편차 ±15° 이내
+
+**Phase 4 사람 체크리스트 (실기기 — sensors 스킬 검증 항목)**
+- [ ] iPhone Safari: "내 위치에서 돌리기" → 권한 프롬프트 → 허용 → 원판이 기기 방위 추종 → 멈추면 자동 잠금 → S4 카드
+- [ ] iPhone Safari: 권한 거부 → 폴백 카드 → "여행 모드로 계속" 동작
+- [ ] Android Chrome: `deviceorientationabsolute` heading 취득, 8방위 편차 ±15° 이내
+- [ ] 데스크톱: 현장 모드 선택 시 즉시 폴백 카드 표시(센서 미지원 안내) + 여행 모드 복귀
+- [ ] "이 방향으로 결정"(수동 잠금)과 자동 잠금 모두 같은 방위로 결과 생성
 
 ## Phase 5 — 콘텐츠·공유 카드·폴리시
 
