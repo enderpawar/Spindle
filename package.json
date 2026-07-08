@@ -6,6 +6,7 @@
     "dev": "npm --prefix web run dev",
     "dev:proxy": "npm --prefix proxy run dev",
     "build": "npm --prefix web run build",
+    "pwa:verify": "npm run build && node scripts/verify-pwa.mjs",
     "guard": "node scripts/guard.mjs",
     "check": "node scripts/guard.mjs && npm --prefix web run check && npm --prefix proxy run check"
   }

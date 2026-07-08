@@ -16,6 +16,9 @@ import { HeadingSmoother } from "../engine/heading";
 import { parseOperationStatus } from "../engine/operation";
 import { ORIGIN_PRESETS, type OriginPreset } from "../engine/origins";
 import { buildShareCardBlob } from "../lib/shareCard";
+import { PwaInstallBanner, PwaNoticeToast } from "../pwa/PwaUi";
+import { registerSpindlePwa } from "../pwa/register";
+import { useOnlineStatus } from "../pwa/state";
 import {
   DIAL_LIMIT_MIN,
   recommend,
@@ -31,6 +34,8 @@ import {
   subscribeHeading,
 } from "../sensors/orientation";
 import { DEMO_POIS } from "./demoPois";
+
+registerSpindlePwa();
 
 const NAVY = "#0F2540";
 const ORANGE = "#FF7A45";
@@ -726,8 +731,10 @@ function App() {
   const pendingHeading = useRef<number | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockedRef = useRef(false); // 현장 모드 방위 잠금 1회 보장
+  const isOnline = useOnlineStatus();
 
   const poisReady = poisState.status === "ready";
+  const canRecommendNow = poisReady && isOnline;
 
   // 비동기 센서 콜백에서 최신 dial 값을 읽기 위한 ref (스테일 클로저 방지)
   const dialRef = useRef(dial);
@@ -757,7 +764,7 @@ function App() {
   runRecommendRef.current = runRecommend;
 
   function spin() {
-    if (!poisReady || spinning) return;
+    if (!canRecommendNow || spinning) return;
     // 연출 각도 = 알고리즘 입력 각도 (sensors 스킬): heading을 먼저 확정하고
     // 원판 회전량을 heading에서 역산한다. 상단 마커 기준 heading = (360 - rotation) mod 360.
     const heading = normalizeHeading(Math.random() * 360);
@@ -799,7 +806,7 @@ function App() {
 
   /** 사용자 제스처 안에서 방위 권한 요청 + GPS 1회 취득 → 라이브 추종 시작 */
   async function startField() {
-    if (!poisReady) return;
+    if (!canRecommendNow) return;
     setFieldPhase({ status: "acquiring" });
     const perm = await requestOrientationPermission(); // 반드시 제스처 핸들러 내부 (sensors 스킬)
     if (perm !== "granted") {
@@ -830,7 +837,7 @@ function App() {
 
   /** "이 방향으로 결정" — 현재 방위각을 즉시 잠근다 (자동 정지 대기 없이) */
   function manualLock() {
-    if (fieldPhase.status !== "tracking" || lockedRef.current) return;
+    if (!canRecommendNow || fieldPhase.status !== "tracking" || lockedRef.current) return;
     lockedRef.current = true;
     runRecommend(fieldPhase.origin, liveHeading);
   }
@@ -1042,6 +1049,22 @@ function App() {
       )}
     </>
   );
+  const offlineNote = !isOnline ? (
+    <p
+      style={{
+        textAlign: "center",
+        fontSize: 14,
+        lineHeight: 1.45,
+        color: "#FFD3C2",
+        background: "rgba(255,122,69,0.13)",
+        border: "1px solid rgba(255,122,69,0.34)",
+        borderRadius: 10,
+        padding: "10px 12px",
+      }}
+    >
+      네트워크 연결이 필요해요. 앱 화면은 열 수 있지만 추천은 실시간 호출로만 진행돼요.
+    </p>
+  ) : null;
 
   return (
     <div style={frame}>
@@ -1060,6 +1083,8 @@ function App() {
             데모 데이터 모드 — TourAPI 미연동 검증용 합성 목록입니다
           </p>
         )}
+        <PwaInstallBanner buttonStyle={button} primaryButtonStyle={primaryButton} />
+        <PwaNoticeToast buttonStyle={button} />
 
         {screen === "onboarding" && (
           <div style={{ minHeight: "calc(100vh - 80px)", display: "flex", flexDirection: "column" }}>
@@ -1155,9 +1180,10 @@ function App() {
                 <CompassRose rotation={rotation} onSpinEnd={onSpinEnd} />
                 {dialRow}
                 {poisStatusNote}
+                {offlineNote}
                 <button
-                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady && !spinning ? 1 : 0.55 }}
-                  disabled={!poisReady || spinning}
+                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: canRecommendNow && !spinning ? 1 : 0.55 }}
+                  disabled={!canRecommendNow || spinning}
                   onClick={spin}
                 >
                   {spinning ? "도는 중…" : "돌리기"}
@@ -1170,9 +1196,10 @@ function App() {
                 <CompassRose rotation={0} transitionMs={0} />
                 {dialRow}
                 {poisStatusNote}
+                {offlineNote}
                 <button
-                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady ? 1 : 0.55 }}
-                  disabled={!poisReady}
+                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: canRecommendNow ? 1 : 0.55 }}
+                  disabled={!canRecommendNow}
                   onClick={startField}
                 >
                   내 위치에서 돌리기
@@ -1202,9 +1229,10 @@ function App() {
                 </p>
                 {dialRow}
                 {poisStatusNote}
+                {offlineNote}
                 <button
-                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: poisReady ? 1 : 0.55 }}
-                  disabled={!poisReady}
+                  style={{ ...primaryButton, width: "100%", fontSize: 18, opacity: canRecommendNow ? 1 : 0.55 }}
+                  disabled={!canRecommendNow}
                   onClick={manualLock}
                 >
                   이 방향으로 결정
@@ -1219,8 +1247,8 @@ function App() {
                 <div style={{ display: "grid", gap: 10 }}>
                   {fieldPhase.retryable && (
                     <button
-                      style={{ ...button, opacity: poisReady ? 1 : 0.55 }}
-                      disabled={!poisReady}
+                      style={{ ...button, opacity: canRecommendNow ? 1 : 0.55 }}
+                      disabled={!canRecommendNow}
                       onClick={startField}
                     >
                       다시 시도

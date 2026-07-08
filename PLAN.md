@@ -147,10 +147,18 @@ Phase N을 실행할 때 순서대로:
 - 운영계정 키를 프로덕션 프록시 환경변수에 설정 → **이후 모든 개발·테스트도 프로덕션 프록시 경유** (호출 이력 축적)
 
 **DoD**
-- [ ] Lighthouse PWA installable 통과
+- [ ] Lighthouse PWA installable 통과 — manifest(standalone·portrait·512 maskable PNG) 구현, `npm run pwa:verify` 통과. Lighthouse 실측은 브라우저/배포 URL 필요
+- [ ] 시크릿 창 + 프로덕션 URL에서 여행 모드 완주 — Cloudflare 계정·Pages/Workers 배포·프로덕션 키 설정 필요
+- [x] SW가 API 응답을 Cache Storage에 저장하지 않음 (검증 테스트) — `vite.config.ts` `/api` runtime route를 `NetworkOnly`로 명시, `scripts/verify-pwa.mjs`가 빌드된 `dist/sw.js`에서 `/api` NetworkOnly와 TourAPI 엔드포인트 미포함을 검증. `npm run pwa:verify` 통과(2026-07-08)
+- [x] 오프라인 상태에서 셸 표시 + "네트워크 필요" 안내 (추천 동작하면 규정 위반 신호) — `dist/sw.js`가 `travel.html` 셸을 precache함을 `pwa:verify`로 검증, `cachePolicy.test.ts`가 오프라인 추천 차단을 고정, `travel/main.tsx`가 오프라인 시 스핀/현장 추천 버튼 비활성 + 네트워크 필요 안내 표시
+
+**Phase 6 사람 체크리스트 (브라우저/배포)**
+- [ ] Chrome Lighthouse: PWA installable 통과
+- [ ] Chrome DevTools Offline: 셸 표시 + 추천 버튼 비활성 + 네트워크 필요 안내
+- [ ] Android Chrome: 설치 배너 → 홈 화면 설치
+- [ ] iPhone Safari: 공유 시트 "홈 화면에 추가" 안내 확인
+- [ ] Cloudflare Pages + Workers 프로덕션 배포, 운영계정 키 환경변수 설정
 - [ ] 시크릿 창 + 프로덕션 URL에서 여행 모드 완주
-- [ ] SW가 API 응답을 Cache Storage에 저장하지 않음 (검증 테스트)
-- [ ] 오프라인 상태에서 셸 표시 + "네트워크 필요" 안내 (추천 동작하면 규정 위반 신호)
 
 ## Phase 7 — 방향 기반 여행 코스 + 2순위 기능 (Phase 1–6 DoD 전부 체크 후에만, 시간 부족 시 스킵)
 
