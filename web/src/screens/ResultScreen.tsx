@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchPoiDetailByTitleCached } from '../api/poiLookup'
+import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
+import { pickFestivalForDirection, type Festival } from '../engine/festival'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { markVisited, useVisited } from '../lib/visited'
 import type { Recommendation } from '../mock/pois'
@@ -23,6 +25,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [imageFailed, setImageFailed] = useState(false)
   const [navSheet, setNavSheet] = useState(false)
   const [stampToast, setStampToast] = useState<string | null>(null)
+  const [festival, setFestival] = useState<Festival | null>(null)
   const visited = useVisited()
   const alreadyVisited = visited.has(poi.id)
 
@@ -49,6 +52,23 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       cancelled = true
     }
   }, [poi.name])
+
+  // 방위+기간이 맞는 축제만 특별 카드로 (없거나 실패하면 조용히 미표시)
+  useEffect(() => {
+    let cancelled = false
+    const today = todayYyyymmdd()
+    setFestival(null)
+    fetchOldTownFestivalsCached(today)
+      .then((list) => {
+        if (!cancelled) setFestival(pickFestivalForDirection(list, direction.id, today))
+      })
+      .catch(() => {
+        if (!cancelled) setFestival(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [direction.id])
 
   // 도장 획득 토스트 자동 숨김
   useEffect(() => {
@@ -84,6 +104,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       </header>
 
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px 132px' }}>
+        {festival && <FestivalBanner festival={festival} />}
         {loading ? (
           <ResultSkeleton />
         ) : (
@@ -287,6 +308,45 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
         </div>
       )}
     </ScreenFrame>
+  )
+}
+
+/** YYYYMMDD → "M.D" */
+function shortDate(yyyymmdd: string): string {
+  if (!/^\d{8}$/.test(yyyymmdd)) return yyyymmdd
+  return `${Number(yyyymmdd.slice(4, 6))}.${Number(yyyymmdd.slice(6, 8))}`
+}
+
+/** 축제 특별 카드 — 방위+기간 일치 시 일반 결과 위에 (Phase 7) */
+function FestivalBanner({ festival }: { festival: Festival }) {
+  const mapHref = `https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${festival.title}`)}`
+  return (
+    <a
+      href={mapHref}
+      target="_blank"
+      rel="noreferrer"
+      className="fade-up"
+      style={{
+        display: 'block',
+        marginBottom: 14,
+        padding: '14px 16px',
+        borderRadius: 18,
+        background: 'linear-gradient(135deg,#ff9e7a,#e0603f)',
+        color: '#fff',
+        textDecoration: 'none',
+        boxShadow: '0 12px 26px -14px rgba(224,96,63,.7)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 800, letterSpacing: 0.2 }}>
+        <span aria-hidden>🎉</span>
+        지금 이 방향에서 축제 진행 중
+      </div>
+      <div style={{ marginTop: 6, fontSize: 17, fontWeight: 900, letterSpacing: -0.3 }}>{festival.title}</div>
+      <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, opacity: 0.95 }}>
+        {festival.district ? `${festival.district} · ` : ''}
+        {shortDate(festival.startDate)}–{shortDate(festival.endDate)} · 지도에서 보기 ›
+      </div>
+    </a>
   )
 }
 

@@ -11,6 +11,7 @@ interface Props {
   onOpenDeparture: () => void
   onSelectPoi: (poi: Poi) => void
   onOpenTheme: (themeId: ThemeId) => void
+  onOpenFestival: () => void
   onNavigate: (tab: NavTab) => void
 }
 
@@ -42,7 +43,7 @@ function SketchArt({ variant }: { variant: number }) {
   )
 }
 
-export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenTheme, onNavigate }: Props) {
+export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenTheme, onOpenFestival, onNavigate }: Props) {
   const visited = useVisited()
   const progress = stampProgress(visited)
 
@@ -82,9 +83,9 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
     {
       label: '축제',
       bg: 'var(--l-soft)',
-      soon: true,
+      onClick: onOpenFestival,
       icon: (
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#9db3d8" strokeWidth={2} strokeLinecap="round" aria-hidden>
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2} strokeLinecap="round" aria-hidden>
           <rect x="3" y="5" width="18" height="16" rx="2.5" />
           <path d="M3 9 h18 M8 3 v4 M16 3 v4" />
         </svg>
@@ -149,14 +150,10 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             <button
               key={item.label}
               onClick={item.onClick}
-              disabled={item.soon}
-              style={{ background: 'none', border: 'none', cursor: item.soon ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 0, position: 'relative' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 0, position: 'relative' }}
             >
               <div style={{ width: 50, height: 50, borderRadius: 18, background: item.bg, display: 'grid', placeItems: 'center' }}>{item.icon}</div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: item.soon ? '#9db3d8' : 'var(--l-ink-2)' }}>{item.label}</span>
-              {item.soon && (
-                <span style={{ position: 'absolute', top: -4, right: -8, padding: '2px 6px', borderRadius: 8, background: '#eef2fb', color: '#9db3d8', fontSize: 9, fontWeight: 800 }}>곧</span>
-              )}
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--l-ink-2)' }}>{item.label}</span>
             </button>
           ))}
         </div>

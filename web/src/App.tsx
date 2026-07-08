@@ -11,11 +11,12 @@ import { RevealScreen } from './screens/RevealScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { ShareScreen } from './screens/ShareScreen'
 import { ThemeDeckScreen } from './screens/ThemeDeckScreen'
+import { FestivalScreen } from './screens/FestivalScreen'
 import type { NavTab } from './components/BottomNav'
 import type { ThemeId } from './engine/themes'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
-export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'share' | 'theme'
+export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'share' | 'theme' | 'festival'
 
 const ONBOARD_KEY = 'spindle.onboarded' // 온보딩 노출 여부만 저장 (API 데이터 아님 — 규정 무관)
 
@@ -110,8 +111,10 @@ function App() {
       return rec ? <ShareScreen rec={rec} poi={rec.candidates[candidateIndex]} onBack={() => setScreen('result')} /> : null
     case 'theme':
       return <ThemeDeckScreen initialTheme={themeSeed} onSelect={(poi) => openPoi(poi, 'theme')} onNavigate={navigate} onBack={() => setScreen('home')} />
+    case 'festival':
+      return <FestivalScreen onNavigate={navigate} onBack={() => setScreen('home')} />
     default:
-      return <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onNavigate={navigate} />
+      return <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onOpenFestival={() => setScreen('festival')} onNavigate={navigate} />
   }
 }
 
