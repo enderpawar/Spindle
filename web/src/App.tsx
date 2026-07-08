@@ -10,10 +10,12 @@ import { DepartureScreen } from './screens/DepartureScreen'
 import { RevealScreen } from './screens/RevealScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { ShareScreen } from './screens/ShareScreen'
+import { ThemeDeckScreen } from './screens/ThemeDeckScreen'
 import type { NavTab } from './components/BottomNav'
+import type { ThemeId } from './engine/themes'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
-export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'share'
+export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'share' | 'theme'
 
 const ONBOARD_KEY = 'spindle.onboarded' // 온보딩 노출 여부만 저장 (API 데이터 아님 — 규정 무관)
 
@@ -24,6 +26,8 @@ function App() {
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [candidateIndex, setCandidateIndex] = useState(0)
   const [departureReturn, setDepartureReturn] = useState<Screen>('home')
+  const [themeSeed, setThemeSeed] = useState<ThemeId>('sea')
+  const [poiReturn, setPoiReturn] = useState<Screen>('home')
 
   const finishOnboarding = () => {
     localStorage.setItem(ONBOARD_KEY, '1')
@@ -33,15 +37,22 @@ function App() {
   const handleSpun = (headingDeg: number) => {
     setRec(recommend(headingDeg))
     setCandidateIndex(0)
+    setPoiReturn('home')
     setScreen('reveal')
   }
 
-  /** 명소 탭·홈 추천 카드에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
-  const openPoi = (poi: Poi) => {
+  /** 명소 탭·홈 추천 카드·테마 덱에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
+  const openPoi = (poi: Poi, from: Screen = 'home') => {
     const direction = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
     setRec({ direction, candidates: [poi] })
     setCandidateIndex(0)
+    setPoiReturn(from)
     setScreen('result')
+  }
+
+  const openTheme = (themeId: ThemeId) => {
+    setThemeSeed(themeId)
+    setScreen('theme')
   }
 
   const openDeparture = (from: Screen) => {
@@ -90,15 +101,17 @@ function App() {
           rec={rec}
           candidateIndex={candidateIndex}
           onNextCandidate={() => setCandidateIndex((i) => (i + 1) % rec.candidates.length)}
-          onBack={() => setScreen('home')}
+          onBack={() => setScreen(poiReturn)}
           onRespin={() => setScreen('spin')}
           onShare={() => setScreen('share')}
         />
       ) : null
     case 'share':
       return rec ? <ShareScreen rec={rec} poi={rec.candidates[candidateIndex]} onBack={() => setScreen('result')} /> : null
+    case 'theme':
+      return <ThemeDeckScreen initialTheme={themeSeed} onSelect={(poi) => openPoi(poi, 'theme')} onNavigate={navigate} onBack={() => setScreen('home')} />
     default:
-      return <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onNavigate={navigate} />
+      return <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onNavigate={navigate} />
   }
 }
 

@@ -2,6 +2,7 @@ import pointingImg from '../assets/poses/별이_pointing.png'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { useVisited } from '../lib/visited'
+import { THEMES, type ThemeId } from '../engine/themes'
 import { DIRECTIONS, POI_POOL, type Departure, type Poi } from '../mock/pois'
 import { stampProgress } from '../mock/stamps'
 
@@ -9,6 +10,7 @@ interface Props {
   departure: Departure
   onOpenDeparture: () => void
   onSelectPoi: (poi: Poi) => void
+  onOpenTheme: (themeId: ThemeId) => void
   onNavigate: (tab: NavTab) => void
 }
 
@@ -40,7 +42,7 @@ function SketchArt({ variant }: { variant: number }) {
   )
 }
 
-export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onNavigate }: Props) {
+export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenTheme, onNavigate }: Props) {
   const visited = useVisited()
   const progress = stampProgress(visited)
 
@@ -155,6 +157,24 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onNavigate
               {item.soon && (
                 <span style={{ position: 'absolute', top: -4, right: -8, padding: '2px 6px', borderRadius: 8, background: '#eef2fb', color: '#9db3d8', fontSize: 9, fontWeight: 800 }}>곧</span>
               )}
+            </button>
+          ))}
+        </div>
+
+        {/* 테마로 떠나기 */}
+        <div style={{ padding: '16px 20px 2px', fontSize: 15, fontWeight: 900, color: 'var(--l-ink)' }}>테마로 떠나기</div>
+        <div className="no-scrollbar" style={{ display: 'flex', gap: 10, padding: '0 20px 2px', overflowX: 'auto' }}>
+          {THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => onOpenTheme(theme.id)}
+              style={{ flex: 'none', width: 108, height: 92, borderRadius: 18, border: 'none', cursor: 'pointer', textAlign: 'left', padding: '12px 13px', color: '#fff', background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)`, position: 'relative', overflow: 'hidden' }}
+            >
+              <div aria-hidden style={{ position: 'absolute', right: -6, bottom: -8, fontSize: 46, opacity: 0.34 }}>
+                {theme.emoji}
+              </div>
+              <div style={{ position: 'relative', fontSize: 14, fontWeight: 900 }}>{theme.label}</div>
+              <div style={{ position: 'relative', marginTop: 3, fontSize: 10.5, fontWeight: 600, opacity: 0.92, lineHeight: 1.35 }}>{theme.tagline}</div>
             </button>
           ))}
         </div>
