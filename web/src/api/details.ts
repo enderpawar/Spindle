@@ -66,6 +66,11 @@ export function firstSentence(overview: string, maxLength = 80): string {
   return sentence.length > maxLength ? `${sentence.slice(0, maxLength - 1)}…` : sentence;
 }
 
+function normalizeImageUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  return url.startsWith("http://") ? `https://${url.slice("http://".length)}` : url;
+}
+
 async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<PoiDetail> {
   const commonBody = await callTourApi<ListBody<DetailCommonItem>>(
     "detailCommon2",
@@ -96,10 +101,10 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
     }
   }
 
-  let imageUrl = common.firstimage || undefined;
+  let imageUrl = normalizeImageUrl(common.firstimage);
   if (!imageUrl && imagesResult.status === "fulfilled") {
     const first = extractItems(imagesResult.value)[0];
-    imageUrl = first?.originimgurl || first?.smallimageurl || undefined;
+    imageUrl = normalizeImageUrl(first?.originimgurl || first?.smallimageurl);
   }
 
   return {

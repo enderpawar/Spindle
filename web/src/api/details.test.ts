@@ -106,6 +106,20 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     expect(detail.imageUrl).toBe("https://img/o.jpg");
   });
 
+  it("TourAPI 이미지 URL이 http로 오면 https로 정규화한다", async () => {
+    const common = {
+      contentid: "101-http",
+      contenttypeid: "12",
+      title: "HTTP 이미지",
+      firstimage: "http://tong.visitkorea.or.kr/cms/resource/a.jpg",
+    };
+    const detail = await fetchPoiDetailCached(
+      "101-http",
+      makeFetch({ common }) as typeof fetch,
+    );
+    expect(detail.imageUrl).toBe("https://tong.visitkorea.or.kr/cms/resource/a.jpg");
+  });
+
   it("intro·image가 실패해도 카드는 반환된다 (부분 실패 허용)", async () => {
     const common = {
       contentid: "102",
