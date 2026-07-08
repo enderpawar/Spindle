@@ -8,8 +8,10 @@
 import { StrictMode, useEffect, useRef, useState, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+import { fetchPoiDetailCached, firstSentence, stripHtml, type PoiDetail } from "../api/details";
 import { fetchAllOldTownPois, toEnginePoi } from "../api/tourapi";
-import { SECTORS, SECTOR_KO, normalizeHeading } from "../engine/compass";
+import { SECTORS, SECTOR_KO, normalizeHeading, type Sector } from "../engine/compass";
+import { parseOperationStatus } from "../engine/operation";
 import { ORIGIN_PRESETS, type OriginPreset } from "../engine/origins";
 import {
   DIAL_LIMIT_MIN,
@@ -24,6 +26,42 @@ import { DEMO_POIS } from "./demoPois";
 const NAVY = "#0F2540";
 const ORANGE = "#FF7A45";
 const DIAL_LABEL: Record<Dial, string> = { light: "가볍게", half: "반나절", day: "하루 나들이" };
+
+/**
+ * ⚠ ui.md 미확정 제안값 — 방위별 보조 색상 8종 (밤바다 네이비 위 대비 확보).
+ * S4 카드의 이미지 폴백 배경·연출에 사용. 확정 시 ui.md 디자인 톤 절과 함께 갱신.
+ */
+const SECTOR_COLOR: Record<Sector, string> = {
+  N: "#5C7CFA", // 북 — 심야 블루
+  NE: "#4DABF7", // 북동 — 새벽 하늘
+  E: "#22B8CF", // 동 — 떠오르는 청록
+  SE: "#20C997", // 남동 — 아침 물빛
+  S: "#FFA94D", // 남 — 한낮 볕
+  SW: "#FF7A45", // 남서 — 선셋 오렌지(테마 포인트)
+  W: "#FA5252", // 서 — 노을
+  NW: "#9775FA", // 북서 — 땅거미 보라
+};
+
+/** 길찾기 딥링크 — 좌표 대신 이름 검색으로 카카오맵·네이버지도에 위임 (자체 경로계산 없음) */
+function mapLinks(title: string): { kakao: string; naver: string } {
+  const q = encodeURIComponent(`부산 ${title}`);
+  return {
+    kakao: `https://map.kakao.com/link/search/${q}`,
+    naver: `https://map.naver.com/p/search/${q}`,
+  };
+}
+
+/** 운영상태 표시 — 파싱 성공 시 "오늘 영업/휴무", 실패 시 원문 그대로 (ui.md S4·algorithm 스킬) */
+function operationLabel(
+  detail: PoiDetail,
+  now: Date,
+): { text: string; known: boolean } | null {
+  const status = parseOperationStatus(detail.restdate, now);
+  if (status.kind === "open") return { text: "오늘 영업", known: true };
+  if (status.kind === "closed") return { text: "오늘 휴무", known: true };
+  if (status.raw) return { text: status.raw, known: false }; // 판정 불가 → 원문 노출
+  return null;
+}
 
 type PoisState =
   | { status: "loading" }
@@ -149,6 +187,149 @@ function travelLabel(c: RankedCandidate): string {
   }
 }
 
+type DetailState =
+  | { status: "skip" } // 데모 모드 등 상세 호출을 하지 않는 경우
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; detail: PoiDetail };
+
+/** 결과 시점에 contentId 상세를 조회 (details.ts 세션 캐시 경유). demo 모드면 skip. */
+function useDetail(contentId: string | undefined, enabled: boolean): [DetailState, () => void] {
+  const [state, setState] = useState<DetailState>({ status: "skip" });
+  const [retryKey, setRetryKey] = useState(0);
+  useEffect(() => {
+    if (!enabled || !contentId) {
+      setState({ status: "skip" });
+      return;
+    }
+    let cancelled = false;
+    setState({ status: "loading" });
+    fetchPoiDetailCached(contentId)
+      .then((detail) => {
+        if (!cancelled) setState({ status: "ready", detail });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contentId, enabled, retryKey]);
+  return [state, () => setRetryKey((k) => k + 1)];
+}
+
+/** 대표 이미지 없음/로드 실패 → 방위 색상 배경 + 나침반 아이콘 (ui.md S4 폴백) */
+function FallbackImage({ color }: { color: string }) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        background: `linear-gradient(140deg, ${color}, ${NAVY})`,
+        display: "grid",
+        placeItems: "center",
+      }}
+      aria-hidden
+    >
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={1.4}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 5 L14 12 L12 19 L10 12 Z" fill="rgba(255,255,255,0.85)" stroke="none" />
+        <circle cx="12" cy="12" r="1.3" fill="rgba(255,255,255,0.85)" stroke="none" />
+      </svg>
+    </div>
+  );
+}
+
+/** 대표 이미지 — URL 있으면 표시, 로드 실패 시 폴백으로 대체 (key로 POI별 상태 초기화) */
+function PoiImage({ url, color, title }: { url: string | undefined; color: string; title: string }) {
+  const [errored, setErrored] = useState(false);
+  const showImage = Boolean(url) && !errored;
+  return (
+    <div style={{ position: "relative", height: 200, borderRadius: 16, overflow: "hidden", background: NAVY }}>
+      {showImage ? (
+        <img
+          src={url}
+          alt={title}
+          onError={() => setErrored(true)}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        />
+      ) : (
+        <FallbackImage color={color} />
+      )}
+    </div>
+  );
+}
+
+function SkeletonBar({ width, height = 14 }: { width: string | number; height?: number }) {
+  return (
+    <div
+      style={{ width, height, borderRadius: 6, background: "rgba(255,255,255,0.1)" }}
+      aria-hidden
+    />
+  );
+}
+
+/** 길찾기 앱 선택 시트 (카카오맵·네이버지도 딥링크) */
+function NavSheet({ title, onClose }: { title: string; onClose: () => void }) {
+  const links = mapLinks(title);
+  const link: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 54,
+    padding: "0 18px",
+    borderRadius: 12,
+    border: "1px solid rgba(0,0,0,0.1)",
+    background: "#fff",
+    color: "#1A1208",
+    fontSize: 16,
+    fontWeight: 600,
+    textDecoration: "none",
+  };
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 20 }}>
+      <button
+        aria-label="닫기"
+        onClick={onClose}
+        style={{
+          position: "absolute",
+          inset: 0,
+          border: "none",
+          background: "rgba(6,15,32,0.55)",
+          cursor: "pointer",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          margin: "0 auto",
+          maxWidth: 480,
+          background: "#fff",
+          borderRadius: "20px 20px 0 0",
+          padding: "20px 20px calc(24px + env(safe-area-inset-bottom))",
+        }}
+      >
+        <p style={{ fontSize: 16, fontWeight: 800, color: "#101828", margin: "0 0 14px" }}>
+          어떤 지도로 안내할까요?
+        </p>
+        <div style={{ display: "grid", gap: 10 }}>
+          <a href={links.kakao} target="_blank" rel="noreferrer" style={link}>
+            <span style={{ width: 30, height: 30, borderRadius: 8, background: "#FFE812", color: "#3d2c00", display: "grid", placeItems: "center", fontWeight: 900 }}>K</span>
+            카카오맵으로 길찾기
+          </a>
+          <a href={links.naver} target="_blank" rel="noreferrer" style={link}>
+            <span style={{ width: 30, height: 30, borderRadius: 8, background: "#2DB400", color: "#fff", display: "grid", placeItems: "center", fontWeight: 900 }}>N</span>
+            네이버지도로 길찾기
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [poisState, retryPois] = usePois();
   const [screen, setScreen] = useState<Screen>("home");
@@ -158,6 +339,7 @@ function App() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [candIndex, setCandIndex] = useState(0);
+  const [navSheet, setNavSheet] = useState(false);
   const prevContentId = useRef<string | undefined>(undefined);
   const pendingHeading = useRef<number | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -205,6 +387,15 @@ function App() {
     ? [result.picked, ...result.alternates]
     : [];
   const current = candidates.length > 0 ? candidates[candIndex % candidates.length] : null;
+
+  // 결과 시점 상세 조회 (details.ts). demo 모드는 네트워크 없이 폴백 카드로 동작.
+  const enableDetail = poisState.status === "ready" && !poisState.demo;
+  const [detailState, retryDetail] = useDetail(current?.poi.contentId, enableDetail);
+  const detail = detailState.status === "ready" ? detailState.detail : null;
+  const sectorColor = result ? SECTOR_COLOR[result.sector] : SECTOR_COLOR.N;
+  const operation = detail ? operationLabel(detail, new Date()) : null;
+  const intro = detail?.overview ? firstSentence(detail.overview) : null;
+  const imageUrl = detail?.imageUrl;
 
   const frame: CSSProperties = {
     minHeight: "100vh",
@@ -390,32 +581,108 @@ function App() {
             {current ? (
               <div
                 style={{
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: 16,
-                  padding: 20,
+                  border: "1px solid rgba(255,255,255,0.16)",
+                  borderRadius: 18,
+                  overflow: "hidden",
                   margin: "12px 0 16px",
+                  background: "rgba(255,255,255,0.03)",
                 }}
               >
-                {current.tier === "T3" && (
-                  <span
-                    style={{
-                      fontSize: 12,
-                      background: ORANGE,
-                      color: "#1A1208",
-                      borderRadius: 999,
-                      padding: "3px 10px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    숨은 명소
-                  </span>
-                )}
-                <h1 style={{ fontSize: 24, margin: "8px 0" }}>{current.poi.title}</h1>
-                <p style={{ fontSize: 15, opacity: 0.85, margin: 0 }}>{travelLabel(current)}</p>
-                {candidates.length > 1 && (
-                  <p style={{ fontSize: 12, opacity: 0.55, marginTop: 8 }}>
-                    후보 {(candIndex % candidates.length) + 1} / {candidates.length}
-                  </p>
+                {detailState.status === "loading" ? (
+                  <>
+                    <div
+                      style={{ height: 200, background: "rgba(255,255,255,0.06)" }}
+                      aria-label="상세 정보를 불러오는 중"
+                    />
+                    <div style={{ padding: 18, display: "grid", gap: 12 }}>
+                      <SkeletonBar width="58%" height={26} />
+                      <SkeletonBar width="82%" />
+                      <SkeletonBar width="46%" height={30} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <PoiImage
+                      key={current.poi.contentId}
+                      url={imageUrl}
+                      color={sectorColor}
+                      title={current.poi.title}
+                    />
+                    <div style={{ padding: 18 }}>
+                      {current.tier === "T3" && (
+                        <span
+                          style={{
+                            display: "inline-block",
+                            fontSize: 12,
+                            background: ORANGE,
+                            color: "#1A1208",
+                            borderRadius: 999,
+                            padding: "3px 10px",
+                            fontWeight: 700,
+                            marginBottom: 8,
+                          }}
+                        >
+                          숨은 명소
+                        </span>
+                      )}
+                      <h1 style={{ fontSize: 24, margin: "0 0 4px" }}>{current.poi.title}</h1>
+                      {intro && (
+                        <p style={{ fontSize: 14, opacity: 0.8, margin: "0 0 12px", lineHeight: 1.5 }}>
+                          {intro}
+                        </p>
+                      )}
+
+                      {/* 정보 행: 보정 도보시간 · 운영상태 (ui.md S4) */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                        <span style={{ fontSize: 14, padding: "6px 12px", borderRadius: 10, background: "rgba(255,255,255,0.08)" }}>
+                          {travelLabel(current)}
+                        </span>
+                        {operation && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              fontSize: 13,
+                              padding: "6px 12px",
+                              borderRadius: 10,
+                              background: operation.known ? "rgba(46,204,113,0.16)" : "rgba(255,255,255,0.08)",
+                              color: operation.known ? "#7BE8A8" : "inherit",
+                            }}
+                          >
+                            {operation.known && (
+                              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#2ECC71" }} />
+                            )}
+                            {operation.text}
+                          </span>
+                        )}
+                      </div>
+
+                      {detail?.usetime && (
+                        <p style={{ fontSize: 12, opacity: 0.6, margin: "10px 0 0" }}>
+                          이용시간 {stripHtml(detail.usetime)}
+                        </p>
+                      )}
+
+                      {detailState.status === "error" && (
+                        <p style={{ fontSize: 13, opacity: 0.85, margin: "12px 0 0" }}>
+                          상세 정보를 불러오지 못했어요{" "}
+                          <button
+                            style={{ ...button, minHeight: 36, padding: "6px 12px", fontSize: 13 }}
+                            onClick={retryDetail}
+                          >
+                            재시도
+                          </button>
+                        </p>
+                      )}
+
+                      {candidates.length > 1 && (
+                        <p style={{ fontSize: 12, opacity: 0.55, marginTop: 12 }}>
+                          후보 {(candIndex % candidates.length) + 1} / {candidates.length}
+                        </p>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             ) : (
@@ -426,15 +693,46 @@ function App() {
             )}
 
             <div style={{ display: "grid", gap: 10 }}>
+              {current && (
+                <button style={primaryButton} onClick={() => setNavSheet(true)}>
+                  길찾기
+                </button>
+              )}
               {candidates.length > 1 && (
-                <button style={button} onClick={() => setCandIndex((i) => i + 1)}>
+                <button
+                  style={button}
+                  onClick={() => {
+                    setNavSheet(false);
+                    setCandIndex((i) => i + 1);
+                  }}
+                >
                   다른 후보 보기
                 </button>
               )}
-              <button style={primaryButton} onClick={() => setScreen("home")}>
+              <button
+                style={current ? button : primaryButton}
+                onClick={() => {
+                  setNavSheet(false);
+                  setScreen("home");
+                }}
+              >
                 다시 돌리기
               </button>
+              {current && (
+                <button
+                  style={{ ...button, opacity: 0.5, cursor: "not-allowed" }}
+                  disabled
+                  aria-disabled
+                >
+                  공유 카드 만들기{" "}
+                  <span style={{ fontSize: 12, opacity: 0.8 }}>(준비 중 · Phase 5)</span>
+                </button>
+              )}
             </div>
+
+            {navSheet && current && (
+              <NavSheet title={current.poi.title} onClose={() => setNavSheet(false)} />
+            )}
           </>
         )}
       </div>

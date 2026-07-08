@@ -1,9 +1,8 @@
 /**
  * TourAPI 지역코드 상수 — 부산 원도심·영도 4개 구.
  *
- * TODO(areaCode2): 아래 시군구코드는 TourAPI 문서 기반 임시값이다.
- * 운영계정 키 발급 후 `/api/areaCode2?areaCode=6`을 실제 호출해 값을 재확인하고,
- * 이 주석을 "확인 날짜: YYYY-MM-DD (areaCode2 실호출)"로 교체할 것. (PLAN.md Phase 1)
+ * 확인 날짜: 2026-07-08 (areaCode2 실호출) — `/api/areaCode2?areaCode=6` 응답과 대조 완료.
+ * 중구=15·동구=5·서구=11·영도구=14 모두 일치. (PLAN.md Phase 1)
  */
 
 export const BUSAN_AREA_CODE = "6";

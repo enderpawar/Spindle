@@ -40,11 +40,11 @@ export interface AreaPoi {
   mapy: string; // guard-allow: TourAPI 응답의 POI 위도 읽기 — 단말 내 방향·거리 계산 전용
 }
 
-interface ListBody<T> {
+export interface ListBody<T> {
   items: { item: T | T[] } | "";
-  numOfRows: number | string;
-  pageNo: number | string;
-  totalCount: number | string;
+  numOfRows?: number | string;
+  pageNo?: number | string;
+  totalCount?: number | string;
 }
 
 interface TourApiEnvelope<B> {
@@ -54,7 +54,9 @@ interface TourApiEnvelope<B> {
   };
 }
 
-async function callTourApi<B>(
+const REQUEST_TIMEOUT_MS = 10_000;
+
+export async function callTourApi<B>(
   endpoint: string,
   params: Record<string, string>,
   fetchImpl: FetchLike,
@@ -62,9 +64,11 @@ async function callTourApi<B>(
   const qs = new URLSearchParams(params);
   let res: Response;
   try {
-    res = await fetchImpl(`${API_BASE}/${endpoint}?${qs.toString()}`);
+    res = await fetchImpl(`${API_BASE}/${endpoint}?${qs.toString()}`, {
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
   } catch {
-    throw new TourApiError("네트워크 요청 실패");
+    throw new TourApiError("네트워크 요청 실패"); // 타임아웃 포함 — 에러 UI에서 재시도 (빈 화면 금지)
   }
   if (!res.ok) throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`);
 
@@ -79,7 +83,7 @@ async function callTourApi<B>(
   return body;
 }
 
-function extractItems<T>(body: ListBody<T>): T[] {
+export function extractItems<T>(body: ListBody<T>): T[] {
   if (body.items === "" || body.items == null) return []; // 빈 결과는 items가 "" 로 온다
   const item = body.items.item;
   return Array.isArray(item) ? item : [item];
