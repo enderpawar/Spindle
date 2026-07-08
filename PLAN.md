@@ -163,10 +163,10 @@ Phase N을 실행할 때 순서대로:
 ## Phase 7 — 방향 기반 여행 코스 + 2순위 기능 (Phase 1–6 DoD 전부 체크 후에만, 시간 부족 시 스킵)
 
 - [x] **방향 기반 여행 코스 (최우선)**: 단일 추천 결과의 `[이 방향으로 코스 짜기]`에서 `docs/course.md` 규칙에 따라 2~4개 POI 코스 구성. 후보 선정·이동비용·순서 계산은 전부 단말 내 수행하고, 외부 경로 API는 사용하지 않음 — `engine/course.ts` 순수 엔진 + S4→S6 UI 연결(`travel/main.tsx`), 장소별 길찾기 딥링크만 제공. `npm --prefix web run test`·typecheck·guard 통과(2026-07-08)
-- [ ] 테마 덱: 바다/골목·시장/근현대·역사/야간/먹거리 — cat 코드 + 큐레이션 태그 필터
-- [ ] 축제 특별 카드: `searchFestival2`, 방위+기간 일치 시에만 일반 결과 위에 표시
-- [ ] 부산 동네 도장깨기: 방문 contentId 단말 저장, 존별 수집 현황 UI (좌표·개인정보 서버 전송 없음)
-- [ ] 익명 지표 카운터: Workers KV에 방위·티어별 추천/선택 카운트만 (좌표·식별자·API 응답 저장 금지) → 기능설명서 발전성 수치용
+- [x] 테마 덱: 바다/골목·시장/근현대·역사/야간/먹거리 — `engine/themes.ts`(category→테마 매핑 + POI별 큐레이션 태그), `ThemeDeckScreen` + 홈 "테마로 떠나기" 진입. **정본=screens 앱**(index.html)에 구현. `themes.test.ts` 5개, typecheck·guard 통과(2026-07-08). 브라우저 육안 확인은 사람 체크리스트
+- [x] 축제 특별 카드: `searchFestival2`, 방위+기간 일치 시에만 일반 결과 위에 표시 — `engine/festival.ts`(방위→구 매핑·기간 판정·매칭) + `api/festivals.ts`(프록시 경유·세션 캐시·좌표 무전송) → `ResultScreen` 결과 위 특별 배너 + `FestivalScreen`(홈 축제 메뉴, 로딩/에러/빈 상태). `festival.test.ts` 7 + `festivals.test.ts` 3(요청에 좌표·방위각 없음 고정), typecheck·guard 통과(2026-07-08). **실데이터 표시는 진행 중 축제 + 프록시 필요**(사람 체크리스트)
+- [x] 부산 동네 도장깨기: 방문 contentId 단말 저장, 존별 수집 현황 UI (좌표·개인정보 서버 전송 없음) — `lib/visited.ts`(localStorage·무전송, useSyncExternalStore) → StampScreen/HomeScreen 실시간 반영, ResultScreen 길찾기 시 도장 획득 + 토스트. `visited.test.ts` 5개, guard 통과(2026-07-08)
+- [ ] 익명 지표 카운터: Workers KV에 방위·티어별 추천/선택 카운트만 → 기능설명서 발전성 수치용 — **보류(사람 판단 필요)**: 방위 버킷을 서버로 전송하는 것이 AGENTS.md 절대 원칙 1(방위각 무전송)의 취지와 충돌 소지 + Phase 0 Cloudflare 계정 미준비로 배포·검증 불가. 규정 판단(competition.md/사무국) 확정 후 구현할 것
 
 **방향 기반 여행 코스 DoD**
 
