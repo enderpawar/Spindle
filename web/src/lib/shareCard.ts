@@ -11,6 +11,7 @@ interface ShareCardInput {
   message: string
   directionLabel: string
   color: string
+  imageUrl?: string
 }
 
 /** 한글은 어절 단위 줄바꿈이 자주 실패하므로 글자 단위로 감싼다 */
@@ -47,8 +48,67 @@ function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: n
   ctx.restore()
 }
 
+function loadCardImage(url: string | undefined): Promise<HTMLImageElement | null> {
+  if (!url) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
+function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.roundRect(x, y, w, h, r)
+}
+
+function drawCoverImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
+  const sw = w / scale
+  const sh = h / scale
+  const sx = (img.naturalWidth - sw) / 2
+  const sy = (img.naturalHeight - sh) / 2
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
+}
+
+function drawImagePanel(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null) {
+  const x = 120
+  const y = 850
+  const w = 840
+  const h = 520
+  ctx.save()
+  drawRoundedRect(ctx, x, y, w, h, 48)
+  ctx.clip()
+  if (img) {
+    try {
+      drawCoverImage(ctx, img, x, y, w, h)
+      ctx.fillStyle = 'rgba(0,0,0,.18)'
+      ctx.fillRect(x, y, w, h)
+    } catch {
+      img = null
+    }
+  }
+  if (!img) {
+    const panel = ctx.createLinearGradient(x, y, x + w, y + h)
+    panel.addColorStop(0, 'rgba(255,255,255,.18)')
+    panel.addColorStop(1, 'rgba(8,20,38,.35)')
+    ctx.fillStyle = panel
+    ctx.fillRect(x, y, w, h)
+    drawStar(ctx, x + w / 2, y + h / 2, 78, 'rgba(255,255,255,.72)')
+  }
+  ctx.restore()
+
+  ctx.strokeStyle = 'rgba(255,255,255,.32)'
+  ctx.lineWidth = 2
+  drawRoundedRect(ctx, x, y, w, h, 48)
+  ctx.stroke()
+}
+
 export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
   await document.fonts.ready
+  const cardImage = await loadCardImage(input.imageUrl)
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -98,16 +158,18 @@ export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
   const messageLines = wrapText(ctx, input.message, 860)
   messageLines.forEach((line, i) => ctx.fillText(line, W / 2, 700 + i * 68))
 
+  drawImagePanel(ctx, cardImage)
+
   // 관광지명
-  ctx.font = `900 96px ${FONT}`
+  ctx.font = `900 86px ${FONT}`
   ctx.fillStyle = '#ffffff'
-  const nameLines = wrapText(ctx, input.poiName, 920)
-  const nameTop = 960
-  nameLines.forEach((line, i) => ctx.fillText(line, W / 2, nameTop + i * 122))
+  const nameLines = wrapText(ctx, input.poiName, 920).slice(0, 3)
+  const nameTop = 1510
+  nameLines.forEach((line, i) => ctx.fillText(line, W / 2, nameTop + i * 104))
 
   ctx.font = `600 40px ${FONT}`
   ctx.fillStyle = 'rgba(255,255,255,.6)'
-  ctx.fillText(input.districtLine, W / 2, nameTop + nameLines.length * 122 + 24)
+  ctx.fillText(input.districtLine, W / 2, nameTop + nameLines.length * 104 + 28)
 
   // 푸터
   ctx.font = `700 36px ${FONT}`

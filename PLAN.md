@@ -127,9 +127,14 @@ Phase N을 실행할 때 순서대로:
 - 출발점 지도 픽 (Phase 2에서 이연했다면)
 
 **DoD**
-- [ ] 8방위 메시지가 스핀 정지 연출에 표시
-- [ ] 공유 카드 PNG가 모바일에서 저장/공유 가능
-- [ ] 모든 API 호출 지점에 로딩 상태, 모든 실패 경로에 에러 UI 존재 (전수 점검 목록 첨부)
+- [x] 8방위 메시지가 스핀 정지 연출에 표시 — `travel/main.tsx` S3 reveal에 8종 메시지(`SECTOR_MESSAGE`)와 방위 부채꼴 하이라이트 연결. `npm run check`·`npm run build`·guard 통과(2026-07-08)
+- [ ] 공유 카드 PNG가 모바일에서 저장/공유 가능 — Canvas PNG(1080×1920) 생성, S5 미리보기, Web Share API + 저장 폴백 구현 완료(`travel/main.tsx`, `lib/shareCard.ts`). **모바일 실기기 저장/공유 확인 필요**
+- [x] 모든 API 호출 지점에 로딩 상태, 모든 실패 경로에 에러 UI 존재 — 전수 점검(2026-07-08): POI 목록 `usePois` 로딩/에러+재시도, 상세 `useDetail` 스켈레톤/부분 실패+재시도, 공유 카드 생성 실패 notice, 후보 0개 빈 상태 안내, 현장 센서 권한/GPS 실패 폴백. `npm run check` 통과
+
+**Phase 5 사람 체크리스트 (모바일/브라우저)**
+- [ ] iPhone/Android: S5 공유하기(Web Share API)로 PNG 공유
+- [ ] iPhone/Android: S5 저장 버튼으로 PNG 다운로드/갤러리 저장 확인
+- [ ] `travel.html?demo=1`: 온보딩 → 출발점 지도 선택 → 스핀 → S3 메시지 → S4 → S5 저장까지 육안 확인
 
 ## Phase 6 — PWA 완성 + 프로덕션 배포
 

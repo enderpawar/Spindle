@@ -15,6 +15,7 @@ import type { GeoPoint } from "../engine/geo";
 import { HeadingSmoother } from "../engine/heading";
 import { parseOperationStatus } from "../engine/operation";
 import { ORIGIN_PRESETS, type OriginPreset } from "../engine/origins";
+import { buildShareCardBlob } from "../lib/shareCard";
 import {
   DIAL_LIMIT_MIN,
   recommend,
@@ -50,6 +51,41 @@ const SECTOR_COLOR: Record<Sector, string> = {
   NW: "#9775FA", // 북서 — 땅거미 보라
 };
 
+const SECTOR_MESSAGE: Record<Sector, string> = {
+  N: "오래된 골목을 따라 천천히 걸어요",
+  NE: "언덕 위 이야기를 만나러 가요",
+  E: "시작과 새벽의 방향. 해를 만나러 가요",
+  SE: "섬 안쪽 바람을 따라가요",
+  S: "바다 냄새 나는 쪽으로 가요",
+  SW: "골목 끝 바다를 보러 가요",
+  W: "노을이 먼저 닿는 곳으로 가요",
+  NW: "시장 소리 따라 한 걸음 가요",
+};
+
+const ONBOARDING_KEY = "spindle.travel.onboarding.v1";
+const OLD_TOWN_BOUNDS = {
+  minLat: 35.038,
+  maxLat: 35.135,
+  minLng: 128.998,
+  maxLng: 129.108,
+} as const;
+
+function hasSeenOnboarding(): boolean {
+  try {
+    return window.localStorage.getItem(ONBOARDING_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberOnboarding(): void {
+  try {
+    window.localStorage.setItem(ONBOARDING_KEY, "1");
+  } catch {
+    // 저장이 막혀도 앱 사용은 계속 가능하다.
+  }
+}
+
 /** 길찾기 딥링크 — 좌표 대신 이름 검색으로 카카오맵·네이버지도에 위임 (자체 경로계산 없음) */
 function mapLinks(title: string): { kakao: string; naver: string } {
   const q = encodeURIComponent(`부산 ${title}`);
@@ -76,7 +112,7 @@ type PoisState =
   | { status: "error"; message: string }
   | { status: "ready"; pois: readonly EnginePoi[]; demo: boolean };
 
-type Screen = "home" | "origin" | "reveal" | "result";
+type Screen = "onboarding" | "home" | "origin" | "originMap" | "reveal" | "result" | "share";
 
 const isDemo = new URLSearchParams(window.location.search).get("demo") === "1";
 
@@ -328,6 +364,285 @@ function SkeletonBar({ width, height = 14 }: { width: string | number; height?: 
   );
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function clampToOldTown(point: GeoPoint): GeoPoint {
+  return {
+    lat: clamp(point.lat, OLD_TOWN_BOUNDS.minLat, OLD_TOWN_BOUNDS.maxLat),
+    lng: clamp(point.lng, OLD_TOWN_BOUNDS.minLng, OLD_TOWN_BOUNDS.maxLng),
+  };
+}
+
+function mapPosition(point: GeoPoint): { left: string; top: string } {
+  const p = clampToOldTown(point);
+  return {
+    left: `${((p.lng - OLD_TOWN_BOUNDS.minLng) / (OLD_TOWN_BOUNDS.maxLng - OLD_TOWN_BOUNDS.minLng)) * 100}%`,
+    top: `${((OLD_TOWN_BOUNDS.maxLat - p.lat) / (OLD_TOWN_BOUNDS.maxLat - OLD_TOWN_BOUNDS.minLat)) * 100}%`,
+  };
+}
+
+function pointFromMap(clientX: number, clientY: number, rect: DOMRect): GeoPoint {
+  const x = clamp((clientX - rect.left) / rect.width, 0, 1);
+  const y = clamp((clientY - rect.top) / rect.height, 0, 1);
+  return {
+    lat: OLD_TOWN_BOUNDS.maxLat - y * (OLD_TOWN_BOUNDS.maxLat - OLD_TOWN_BOUNDS.minLat),
+    lng: OLD_TOWN_BOUNDS.minLng + x * (OLD_TOWN_BOUNDS.maxLng - OLD_TOWN_BOUNDS.minLng),
+  };
+}
+
+function RevealSectorMark({ sector, color }: { sector: Sector; color: string }) {
+  const index = SECTORS.indexOf(sector);
+  const start = index * 45 - 22.5;
+  return (
+    <div
+      aria-hidden
+      style={{
+        width: 178,
+        height: 178,
+        margin: "0 auto 28px",
+        borderRadius: "50%",
+        display: "grid",
+        placeItems: "center",
+        background: `conic-gradient(from ${start}deg, ${color} 0deg 45deg, rgba(255,255,255,0.08) 45deg 360deg)`,
+        boxShadow: `0 0 44px ${color}55`,
+        border: "1px solid rgba(255,255,255,0.22)",
+      }}
+    >
+      <div
+        style={{
+          width: 112,
+          height: 112,
+          borderRadius: "50%",
+          background: NAVY,
+          border: "1px solid rgba(255,255,255,0.18)",
+          display: "grid",
+          placeItems: "center",
+          color: "#fff",
+          fontSize: 13,
+          fontWeight: 800,
+        }}
+      >
+        {SECTOR_KO[sector]}
+      </div>
+    </div>
+  );
+}
+
+function OriginMapPicker({
+  selected,
+  onChange,
+}: {
+  selected: GeoPoint;
+  onChange: (point: GeoPoint) => void;
+}) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const selectedPos = mapPosition(selected);
+  return (
+    <div
+      ref={mapRef}
+      role="application"
+      aria-label="부산 원도심 출발점 지도"
+      onPointerDown={(event) => {
+        const rect = mapRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        onChange(pointFromMap(event.clientX, event.clientY, rect));
+      }}
+      style={{
+        position: "relative",
+        height: 380,
+        borderRadius: 18,
+        overflow: "hidden",
+        background: "linear-gradient(180deg, #1B4E75, #0A2136)",
+        border: "1px solid rgba(255,255,255,0.18)",
+        touchAction: "none",
+        cursor: "crosshair",
+      }}
+    >
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: "5% 40% 22% 0",
+          background: "rgba(244,246,251,0.82)",
+          clipPath: "polygon(0 0, 92% 8%, 78% 46%, 100% 70%, 54% 100%, 0 84%)",
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "36%",
+          top: "44%",
+          width: "44%",
+          height: "42%",
+          background: "rgba(244,246,251,0.78)",
+          borderRadius: "52% 45% 48% 55%",
+          transform: "rotate(-12deg)",
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: "28%",
+          top: "46%",
+          width: "18%",
+          height: 4,
+          background: ORANGE,
+          transform: "rotate(35deg)",
+          transformOrigin: "left center",
+          opacity: 0.9,
+        }}
+      />
+      {ORIGIN_PRESETS.map((preset) => {
+        const pos = mapPosition(preset.point);
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={() => onChange(preset.point)}
+            style={{
+              position: "absolute",
+              left: pos.left,
+              top: pos.top,
+              transform: "translate(-50%, -50%)",
+              minWidth: 34,
+              minHeight: 34,
+              borderRadius: 999,
+              border: "2px solid #fff",
+              background: ORANGE,
+              color: "#1A1208",
+              fontSize: 11,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 10px 24px rgba(0,0,0,0.28)",
+            }}
+            aria-label={`${preset.name} 선택`}
+            title={preset.name}
+          >
+            {preset.name.slice(0, 1)}
+          </button>
+        );
+      })}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: selectedPos.left,
+          top: selectedPos.top,
+          transform: "translate(-50%, -100%)",
+          width: 26,
+          height: 34,
+          display: "grid",
+          placeItems: "center",
+          filter: "drop-shadow(0 10px 18px rgba(0,0,0,0.35))",
+        }}
+      >
+        <svg viewBox="0 0 24 32" width="26" height="34">
+          <path d="M12 31s9-10.5 9-19A9 9 0 1 0 3 12c0 8.5 9 19 9 19Z" fill="#fff" />
+          <circle cx="12" cy="12" r="4" fill={ORANGE} />
+        </svg>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 14,
+          right: 14,
+          bottom: 14,
+          padding: "10px 12px",
+          borderRadius: 12,
+          background: "rgba(8,20,38,0.62)",
+          color: "rgba(255,255,255,0.88)",
+          fontSize: 12,
+          lineHeight: 1.5,
+        }}
+      >
+        원도심·영도 권역 안에서 출발점을 정해요. 권역 밖 터치는 가장 가까운 경계로 맞춰요.
+      </div>
+    </div>
+  );
+}
+
+function SharePreview({
+  title,
+  detailLine,
+  message,
+  directionLabel,
+  color,
+  imageUrl,
+}: {
+  title: string;
+  detailLine: string;
+  message: string;
+  directionLabel: string;
+  color: string;
+  imageUrl: string | undefined;
+}) {
+  return (
+    <div
+      style={{
+        width: "min(62vw, 260px)",
+        aspectRatio: "9 / 16",
+        borderRadius: 20,
+        overflow: "hidden",
+        margin: "0 auto",
+        background: `linear-gradient(180deg, ${color}, #16304f 42%, #081426)`,
+        boxShadow: "0 30px 70px rgba(0,0,0,0.34)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        textAlign: "center",
+        padding: "18px 16px",
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ fontSize: 15, fontWeight: 900, color: "rgba(255,255,255,0.92)" }}>Spindle</div>
+      <div
+        style={{
+          marginTop: 18,
+          padding: "5px 13px",
+          borderRadius: 999,
+          background: "rgba(8,20,38,0.55)",
+          fontSize: 12,
+          fontWeight: 900,
+        }}
+      >
+        {directionLabel}쪽
+      </div>
+      <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.55, fontWeight: 700, opacity: 0.86 }}>
+        {message}
+      </div>
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "1.62 / 1",
+          marginTop: 18,
+          borderRadius: 14,
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.12)",
+        }}
+      >
+        {imageUrl ? (
+          <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <FallbackImage color={color} />
+        )}
+      </div>
+      <div style={{ marginTop: "auto" }}>
+        <div style={{ fontSize: 18, lineHeight: 1.2, fontWeight: 900 }}>{title}</div>
+        <div style={{ marginTop: 6, fontSize: 10, fontWeight: 700, opacity: 0.64 }}>{detailLine}</div>
+      </div>
+      <div style={{ marginTop: 18, fontSize: 9, fontWeight: 800, opacity: 0.55 }}>
+        Spindle이 정해준 오늘의 방향
+      </div>
+    </div>
+  );
+}
+
 /** 길찾기 앱 선택 시트 (카카오맵·네이버지도 딥링크) */
 function NavSheet({ title, onClose }: { title: string; onClose: () => void }) {
   const links = mapLinks(title);
@@ -391,14 +706,18 @@ function NavSheet({ title, onClose }: { title: string; onClose: () => void }) {
 
 function App() {
   const [poisState, retryPois] = usePois();
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(() => (hasSeenOnboarding() ? "home" : "onboarding"));
   const [origin, setOrigin] = useState<OriginPreset>(ORIGIN_PRESETS[0]);
+  const [mapPick, setMapPick] = useState<GeoPoint>(ORIGIN_PRESETS[0].point);
+  const [mapSnapNotice, setMapSnapNotice] = useState<string | null>(null);
   const [dial, setDial] = useState<Dial>("half"); // ui.md: 기본 반나절
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<RecommendResult | null>(null);
   const [candIndex, setCandIndex] = useState(0);
   const [navSheet, setNavSheet] = useState(false);
+  const [shareBusy, setShareBusy] = useState<"idle" | "saving" | "sharing">("idle");
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("travel"); // 기본 여행 모드 (심사 시연 경로)
   const [fieldPhase, setFieldPhase] = useState<FieldPhase>({ status: "prompt" });
   const [liveHeading, setLiveHeading] = useState(0); // 현장 모드 스무딩된 방위각
@@ -519,7 +838,34 @@ function App() {
   /** 결과 → 홈 복귀 (현장 모드면 잠금 해제 후 다시 추종 재개) */
   function backToSpin() {
     setNavSheet(false);
+    setShareNotice(null);
     lockedRef.current = false;
+    setScreen("home");
+  }
+
+  function finishOnboarding() {
+    rememberOnboarding();
+    setScreen("home");
+  }
+
+  function openMapPicker() {
+    setMapPick(origin.point);
+    setMapSnapNotice(null);
+    setScreen("originMap");
+  }
+
+  function updateMapPick(point: GeoPoint) {
+    const clamped = clampToOldTown(point);
+    const snapped =
+      Math.abs(clamped.lat - point.lat) > 0.000001 || Math.abs(clamped.lng - point.lng) > 0.000001;
+    setMapPick(clamped);
+    setMapSnapNotice(snapped ? "권역 경계에 맞췄어요" : null);
+  }
+
+  function useMapPick() {
+    const point = clampToOldTown(mapPick);
+    setOrigin({ id: "map-pick", name: "지도 선택 지점", point });
+    setMapSnapNotice(null);
     setScreen("home");
   }
 
@@ -566,6 +912,61 @@ function App() {
   const imageUrl = detail?.imageUrl;
   const originLabel = mode === "field" ? "내 위치" : origin.name;
   const liveSectorKo = SECTOR_KO[sectorOf(liveHeading)];
+  const sectorMessage = result ? SECTOR_MESSAGE[result.sector] : "";
+  const shareDetailLine = current ? `${originLabel} · ${travelLabel(current)}` : "";
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  async function makeShareBlob(): Promise<Blob> {
+    if (!result || !current) throw new Error("공유할 결과가 없어요");
+    return buildShareCardBlob({
+      poiName: current.poi.title,
+      districtLine: shareDetailLine,
+      message: SECTOR_MESSAGE[result.sector],
+      directionLabel: result.sectorKo,
+      color: sectorColor,
+      imageUrl,
+    });
+  }
+
+  async function saveShareCard() {
+    if (!current || !result) return;
+    setShareBusy("saving");
+    setShareNotice(null);
+    try {
+      const blob = await makeShareBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `spindle-${result.sector.toLowerCase()}-${current.poi.contentId}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setShareNotice("이미지로 저장했어요");
+    } catch {
+      setShareNotice("저장에 실패했어요. 다시 시도해 주세요");
+    } finally {
+      setShareBusy("idle");
+    }
+  }
+
+  async function shareCard() {
+    if (!current || !result) return;
+    setShareBusy("sharing");
+    setShareNotice(null);
+    try {
+      const blob = await makeShareBlob();
+      const file = new File([blob], "spindle.png", { type: "image/png" });
+      const text = `오늘의 방향은 ${result.sectorKo}쪽 — ${current.poi.title}`;
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Spindle", text });
+      } else {
+        await navigator.share({ title: "Spindle", text });
+      }
+    } catch {
+      setShareNotice("공유를 완료하지 못했어요. 저장으로 다시 시도할 수 있어요");
+    } finally {
+      setShareBusy("idle");
+    }
+  }
 
   const frame: CSSProperties = {
     minHeight: "100vh",
@@ -658,6 +1059,51 @@ function App() {
           >
             데모 데이터 모드 — TourAPI 미연동 검증용 합성 목록입니다
           </p>
+        )}
+
+        {screen === "onboarding" && (
+          <div style={{ minHeight: "calc(100vh - 80px)", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "grid", alignContent: "center", gap: 18 }}>
+              <div
+                style={{
+                  height: 300,
+                  borderRadius: 20,
+                  background: "radial-gradient(circle at 50% 50%, rgba(255,122,69,0.35), rgba(255,255,255,0.05) 46%, transparent 47%)",
+                  display: "grid",
+                  placeItems: "center",
+                  border: "1px solid rgba(255,255,255,0.16)",
+                }}
+                aria-hidden
+              >
+                <CompassRose rotation={315} transitionMs={0} />
+              </div>
+              <section style={{ display: "grid", gap: 18 }}>
+                <div>
+                  <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 6px" }}>1 / 2</p>
+                  <h1 style={{ fontSize: 28, lineHeight: 1.18, margin: 0 }}>
+                    휴대폰을 돌리면, 방향이 정해져요
+                  </h1>
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 6px" }}>2 / 2</p>
+                  <h2 style={{ fontSize: 22, lineHeight: 1.25, margin: 0 }}>
+                    덜 알려진 부산을 만나요
+                  </h2>
+                  <p style={{ fontSize: 15, lineHeight: 1.55, opacity: 0.78, margin: "8px 0 0" }}>
+                    부산 현지라면 현장 모드로, 멀리 있다면 여행 모드로 바로 돌릴 수 있어요.
+                  </p>
+                </div>
+              </section>
+            </div>
+            <div style={{ display: "grid", gap: 10, paddingBottom: "env(safe-area-inset-bottom)" }}>
+              <button style={primaryButton} onClick={finishOnboarding}>
+                시작하기
+              </button>
+              <button style={button} onClick={finishOnboarding}>
+                건너뛰기
+              </button>
+            </div>
+          </div>
         )}
 
         {screen === "home" && (
@@ -816,20 +1262,58 @@ function App() {
                 </button>
               ))}
             </div>
-            <p style={{ fontSize: 13, opacity: 0.6, marginTop: 16 }}>지도에서 고르기는 준비 중이에요 (Phase 5)</p>
+            <button
+              style={{ ...primaryButton, width: "100%", marginTop: 14 }}
+              onClick={openMapPicker}
+            >
+              지도에서 고르기
+            </button>
+            <button style={{ ...button, width: "100%", marginTop: 10 }} onClick={() => setScreen("home")}>
+              돌아가기
+            </button>
+          </>
+        )}
+
+        {screen === "originMap" && (
+          <>
+            <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <button
+                style={{ ...button, width: 46, minHeight: 46, padding: 0 }}
+                aria-label="뒤로"
+                onClick={() => setScreen("origin")}
+              >
+                ‹
+              </button>
+              <h1 style={{ fontSize: 20, margin: 0 }}>지도에서 출발점 고르기</h1>
+            </header>
+            <OriginMapPicker selected={mapPick} onChange={updateMapPick} />
+            {mapSnapNotice && (
+              <p style={{ fontSize: 13, opacity: 0.75, margin: "10px 0 0" }}>{mapSnapNotice}</p>
+            )}
+            <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+              <button style={primaryButton} onClick={useMapPick}>
+                이 지점에서 출발
+              </button>
+              <button style={button} onClick={() => setScreen("origin")}>
+                프리셋으로 돌아가기
+              </button>
+            </div>
           </>
         )}
 
         {screen === "reveal" && result && (
           <div
             onClick={skipReveal}
-            style={{ textAlign: "center", paddingTop: 120, cursor: "pointer", minHeight: "60vh" }}
+            style={{ textAlign: "center", paddingTop: 72, cursor: "pointer", minHeight: "60vh" }}
           >
+            <RevealSectorMark sector={result.sector} color={sectorColor} />
             <p style={{ fontSize: 15, opacity: 0.75, marginBottom: 8 }}>오늘의 방향은</p>
             <p style={{ fontSize: 48, fontWeight: 800, color: ORANGE, margin: 0 }}>
               {result.sectorKo}쪽
             </p>
-            {/* 8방위 큐레이션 메시지는 Phase 5에서 작성 — 자리만 유지 */}
+            <p style={{ fontSize: 17, lineHeight: 1.45, margin: "14px auto 0", maxWidth: 320 }}>
+              {SECTOR_MESSAGE[result.sector]}
+            </p>
             {result.expansionReason && (
               <p style={{ fontSize: 15, marginTop: 20, opacity: 0.9 }}>{result.expansionReason}</p>
             )}
@@ -991,18 +1475,77 @@ function App() {
               </button>
               {current && (
                 <button
-                  style={{ ...button, opacity: 0.5, cursor: "not-allowed" }}
-                  disabled
-                  aria-disabled
+                  style={button}
+                  onClick={() => {
+                    setShareNotice(null);
+                    setScreen("share");
+                  }}
                 >
-                  공유 카드 만들기{" "}
-                  <span style={{ fontSize: 12, opacity: 0.8 }}>(준비 중 · Phase 5)</span>
+                  공유 카드 만들기
                 </button>
               )}
             </div>
 
             {navSheet && current && (
               <NavSheet title={current.poi.title} onClose={() => setNavSheet(false)} />
+            )}
+          </>
+        )}
+
+        {screen === "share" && result && (
+          <>
+            <header style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+              <button
+                style={{ ...button, width: 46, minHeight: 46, padding: 0 }}
+                aria-label="뒤로"
+                onClick={() => setScreen("result")}
+              >
+                ‹
+              </button>
+              <h1 style={{ fontSize: 20, margin: 0 }}>오늘의 방향, 공유하기</h1>
+            </header>
+
+            {current ? (
+              <>
+                <SharePreview
+                  title={current.poi.title}
+                  detailLine={shareDetailLine}
+                  message={sectorMessage}
+                  directionLabel={result.sectorKo}
+                  color={sectorColor}
+                  imageUrl={imageUrl}
+                />
+                {shareNotice && (
+                  <p style={{ textAlign: "center", fontSize: 13, opacity: 0.82, margin: "18px 0 0" }}>
+                    {shareNotice}
+                  </p>
+                )}
+                <div style={{ display: "grid", gap: 10, marginTop: 18 }}>
+                  {canShare && (
+                    <button
+                      style={primaryButton}
+                      disabled={shareBusy !== "idle"}
+                      onClick={shareCard}
+                    >
+                      {shareBusy === "sharing" ? "카드 만드는 중…" : "공유하기"}
+                    </button>
+                  )}
+                  <button
+                    style={canShare ? button : primaryButton}
+                    disabled={shareBusy !== "idle"}
+                    onClick={saveShareCard}
+                  >
+                    {shareBusy === "saving" ? "카드 만드는 중…" : "저장"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: "42px 0", textAlign: "center" }}>
+                <p style={{ fontSize: 17, margin: "0 0 8px" }}>공유할 결과가 없어요</p>
+                <button style={primaryButton} onClick={backToSpin}>
+                  다시 돌리기
+                </button>
+              </div>
             )}
           </>
         )}
