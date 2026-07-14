@@ -61,6 +61,11 @@ export interface BuildCourseInput {
   expansionReason?: string;
   /** 운영 상태가 확실히 휴무면 0. 파싱 실패/미조회는 1로 보수 통과. */
   operationScoreOf?: (contentId: string) => number;
+  /**
+   * 분산 가중치 주입 — 기본은 curation.ts의 contentId 표(dispersionWeight).
+   * 정적 큐레이션 풀처럼 티어를 다른 곳에서 관리하면 단일 추천과 동일하게 이 훅으로 주입한다.
+   */
+  dispersionWeightOf?: (contentId: string) => number;
   /** 테스트 주입용. 앱에서는 zones.ts의 travelMinutes를 사용한다. */
   travelEstimateOf?: TravelEstimator;
 }
@@ -91,7 +96,8 @@ function courseCandidate(
   const direction = directionScore(bearing, sectorCenter, halfWidth);
   if (direction === 0) return null;
 
-  const score = direction * operationScore * dispersionWeight(poi.contentId);
+  const dispersion = input.dispersionWeightOf?.(poi.contentId) ?? dispersionWeight(poi.contentId);
+  const score = direction * operationScore * dispersion;
   if (score <= 0) return null;
 
   return {

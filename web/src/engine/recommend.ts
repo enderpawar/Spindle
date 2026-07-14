@@ -69,6 +69,11 @@ export interface RecommendInput {
   prevContentId?: string;
   /** 운영 상태 점수 (Phase 3에서 detailIntro2 연동) — 기본 1.0 보수 통과 */
   operationScoreOf?: (contentId: string) => number;
+  /**
+   * 분산 가중치 주입 — 기본은 curation.ts의 contentId 표(dispersionWeight).
+   * 정적 큐레이션 풀처럼 티어를 다른 곳에서 관리하면 이 훅으로 주입한다.
+   */
+  dispersionWeightOf?: (contentId: string) => number;
 }
 
 export interface RecommendResult {
@@ -96,6 +101,7 @@ function rankCandidates(
   halfWidth: number,
 ): RankedCandidate[] {
   const operationScoreOf = input.operationScoreOf ?? (() => 1);
+  const dispersionWeightOf = input.dispersionWeightOf ?? dispersionWeight;
   const ranked: RankedCandidate[] = [];
   for (const poi of input.pois) {
     if (poi.contentId === input.prevContentId) continue;
@@ -104,7 +110,7 @@ function rankCandidates(
     if (direction === 0) continue;
     const travel = travelMinutes(input.origin, poi.point);
     if (!withinDial(travel, input.dial)) continue; // 접근 가능성 0 → 제외
-    const score = direction * 1 * operationScoreOf(poi.contentId) * dispersionWeight(poi.contentId);
+    const score = direction * 1 * operationScoreOf(poi.contentId) * dispersionWeightOf(poi.contentId);
     if (score <= 0) continue;
     ranked.push({ poi, score, bearing, travel, tier: tierOf(poi.contentId) });
   }

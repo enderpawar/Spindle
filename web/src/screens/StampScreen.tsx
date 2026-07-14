@@ -44,17 +44,18 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
 
       {/* 도장 그리드 */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '18px 20px calc(110px + env(safe-area-inset-bottom))' }}>
+        {collected === 0 && (
+          <div style={{ marginBottom: 16, padding: '13px 15px', background: 'var(--l-soft)', borderRadius: 14, fontSize: 12.5, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-2)', textAlign: 'center' }}>
+            아직 도장이 없어요. 스핀을 돌려 이 동네를 방문하면 도장이 하나씩 채워져요.
+          </div>
+        )}
         <div key={zone.id} className="fade-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
           {zone.slots.map((slot) => {
             const isCollected = visited.has(slot.poi.id)
             return (
             <div key={slot.poi.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               {isCollected ? (
-                <div style={{ width: 82, height: 82, borderRadius: '50%', background: 'radial-gradient(circle at 38% 32%,#5b93ff,#1e4fd8)', display: 'grid', placeItems: 'center', boxShadow: '0 10px 20px -10px rgba(30,79,216,.6)' }}>
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff" aria-hidden>
-                    <path d="M12 3 L14.5 9 L21 9.5 L16 13.5 L17.5 20 L12 16.5 L6.5 20 L8 13.5 L3 9.5 L9.5 9 Z" />
-                  </svg>
-                </div>
+                <img src="/stamp-mark-512.png" alt="획득한 참 잘했어요 도장" style={{ width: 82, height: 82, objectFit: 'contain' }} />
               ) : (
                 <div style={{ width: 82, height: 82, borderRadius: '50%', border: '2.5px dashed #c3d3ee', display: 'grid', placeItems: 'center' }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2} aria-hidden>

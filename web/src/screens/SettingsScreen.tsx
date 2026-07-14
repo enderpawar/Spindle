@@ -90,6 +90,10 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
           </div>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>계정과 개인정보 수집 없이 쓰는 서비스예요 · 관광지 정보 출처: TourAPI 실시간 조회</div>
         </div>
+
+        <div style={{ textAlign: 'center', padding: '12px 0 0', fontSize: 11, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+          Spindle · 부산 원도심·영도를 돌려 발견하는 탐색
+        </div>
       </div>
 
       <BottomNav active="settings" onNavigate={onNavigate} />

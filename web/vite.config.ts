@@ -11,14 +11,14 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate', // 심사 기간 중 구버전 방지 (pwa 스킬)
       injectRegister: false,
-      includeAssets: ['favicon.svg', 'pwa-icon.svg', 'pwa-icon-192.png', 'pwa-icon-512.png'],
+      includeAssets: ['favicon-32.png', 'apple-touch-icon-180.png', 'brand-mark-192.png', 'stamp-mark-512.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
       workbox: {
         // pwa 스킬 규약: precache는 정적 자산만. API 응답은 NetworkOnly로만
         // 통과시키고 Cache Storage에 넣지 않는다.
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true,
-        navigateFallback: '/travel.html',
+        navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
@@ -36,7 +36,7 @@ export default defineConfig({
         short_name: 'Spindle',
         description: '휴대폰을 돌려 가리키는 방향의 숨은 부산을 발견하는 스핀 탐색 서비스',
         lang: 'ko',
-        start_url: '/travel.html',
+        start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
@@ -56,12 +56,6 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'any maskable',
           },
-          {
-            src: '/pwa-icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
         ],
       },
     }),
@@ -77,7 +71,6 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         poiCheck: fileURLToPath(new URL('./poi-check.html', import.meta.url)), // Phase 1 검증 페이지
-        travel: fileURLToPath(new URL('./travel.html', import.meta.url)), // Phase 2 여행 모드
       },
     },
   },

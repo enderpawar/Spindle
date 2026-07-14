@@ -191,16 +191,16 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
           <defs>
             <radialGradient id="discFace" cx="50%" cy="38%" r="75%">
-              <stop offset="0" stopColor="rgba(163,196,255,.14)" />
-              <stop offset="0.55" stopColor="rgba(163,196,255,.05)" />
-              <stop offset="1" stopColor="rgba(8,20,38,.0)" />
+              <stop offset="0" stopColor="rgba(47,92,255,.08)" />
+              <stop offset="0.55" stopColor="rgba(47,92,255,.03)" />
+              <stop offset="1" stopColor="rgba(47,92,255,0)" />
             </radialGradient>
           </defs>
 
-          <circle cx="160" cy="160" r="154" fill="#0b1c34" stroke="rgba(163,196,255,.28)" strokeWidth="1.5" />
+          <circle cx="160" cy="160" r="154" fill="#ffffff" stroke="var(--l-line)" strokeWidth="1.5" />
           <circle cx="160" cy="160" r="154" fill="url(#discFace)" />
-          <circle cx="160" cy="160" r="120" fill="none" stroke="var(--line)" strokeWidth="1" />
-          <circle cx="160" cy="160" r="62" fill="rgba(255,255,255,.035)" stroke="var(--line)" strokeWidth="1" />
+          <circle cx="160" cy="160" r="120" fill="none" stroke="var(--l-line)" strokeWidth="1" />
+          <circle cx="160" cy="160" r="62" fill="rgba(47,92,255,.03)" stroke="var(--l-line)" strokeWidth="1" />
 
           {DIRECTIONS.map((dir, i) => {
             const angle = i * 45
@@ -215,15 +215,15 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
                 {/* 림 방위 색 아크 */}
                 <path d={arcPath(150, angle - 16, angle + 16)} stroke={dir.color} strokeWidth="7" fill="none" opacity="0.5" strokeLinecap="round" />
                 {/* 눈금 — 방위선(굵게) + 경계선(얇게) */}
-                <line x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="rgba(220,232,255,.7)" strokeWidth={cardinal ? 2.5 : 1.5} strokeLinecap="round" />
-                <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="rgba(125,149,196,.4)" strokeWidth="1" />
+                <line x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="rgba(90,118,168,.5)" strokeWidth={cardinal ? 2.5 : 1.5} strokeLinecap="round" />
+                <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="rgba(139,163,207,.45)" strokeWidth="1" />
                 <text
                   x={tx}
                   y={ty}
                   textAnchor="middle"
                   dominantBaseline="central"
                   transform={`rotate(${angle} ${tx} ${ty})`}
-                  style={{ fill: cardinal ? '#e8f0ff' : '#8ba3cf', fontSize: cardinal ? 19 : 12, fontWeight: 800, fontFamily: 'inherit' }}
+                  style={{ fill: cardinal ? '#17347f' : '#8ba3cf', fontSize: cardinal ? 19 : 12, fontWeight: 800, fontFamily: 'inherit' }}
                 >
                   {dir.label}
                 </text>

@@ -34,19 +34,20 @@ const CATEGORY_THEMES: Record<string, ThemeId[]> = {
   '산업·예술': ['history'],
   자연: ['sea'],
   전시: ['history'],
+  전망: ['night'],
   마을: ['sea', 'alley'],
   해안: ['sea'],
   해변: ['sea'],
   공원: ['history'],
 }
 
-// category만으로 담기 어려운 큐레이션 태그 (야시장·먹자골목·노을·카페 등)
+// category만으로 담기 어려운 큐레이션 태그 (야시장·먹자골목·노을·체험 등)
 const POI_EXTRA_THEMES: Record<string, ThemeId[]> = {
-  'gukje-market': ['food', 'night'],
   'bupyeong-market': ['food', 'night'],
-  chinatown: ['food', 'night'],
+  'jagalchi-market': ['food'],
+  'choryang-market': ['food'],
+  'samjin-eomuk': ['food'],
   'huinnyeoul-tunnel': ['night'],
-  'baekje-hospital': ['food'],
 }
 
 export function themesOf(poi: Poi): ThemeId[] {

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { fetchPoiCardDetailCached, poiImageProxyUrl } from '../api/details'
 import { ScreenFrame, Stars } from '../components/ScreenFrame'
 import { buildShareCardBlob } from '../lib/shareCard'
 import type { Poi, Recommendation } from '../mock/pois'
@@ -16,7 +17,29 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
   const { direction } = rec
   const [busy, setBusy] = useState<BusyState>('idle')
   const [notice, setNotice] = useState<string | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [previewFailed, setPreviewFailed] = useState(false)
   const canShare = typeof navigator.share === 'function'
+
+  // 결과 카드에서 이미 조회한 상세(세션 캐시 히트)로 대표 이미지 유무를 확인한다.
+  // 미리보기 <img>는 직접 URL로 표시하고, 내려받는 PNG(canvas)는 CORS 회피용 프록시 URL을 쓴다.
+  useEffect(() => {
+    let cancelled = false
+    setImageUrl(null)
+    setPreviewFailed(false)
+    fetchPoiCardDetailCached(poi.contentId)
+      .then((d) => {
+        if (!cancelled) setImageUrl(d.imageUrl ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setImageUrl(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [poi.contentId])
+
+  const showImage = Boolean(imageUrl) && !previewFailed
 
   const makeBlob = () =>
     buildShareCardBlob({
@@ -25,6 +48,8 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       message: direction.message,
       directionLabel: direction.label,
       color: direction.color,
+      // 대표 이미지가 있을 때만 프록시 경유 same-origin URL을 넘긴다 (없으면 별 폴백)
+      imageUrl: showImage ? poiImageProxyUrl(poi.contentId) : undefined,
     })
 
   const handleSave = async () => {
@@ -97,17 +122,44 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
             <path d="M20 4 L24 16 L36 20 L24 24 L20 36 L16 24 L4 20 L16 16 Z" fill="rgba(255,255,255,.92)" />
           </svg>
           <div style={{ marginTop: 6, fontSize: 13, fontWeight: 900, color: 'rgba(255,255,255,.92)' }}>Spindle</div>
-          <div style={{ marginTop: '16%', padding: '5px 13px', borderRadius: 999, background: 'rgba(8,20,38,.55)', fontSize: 11, fontWeight: 900, color: '#fff' }}>
+          <div style={{ marginTop: '9%', padding: '5px 13px', borderRadius: 999, background: 'rgba(8,20,38,.55)', fontSize: 11, fontWeight: 900, color: '#fff' }}>
             {direction.label}쪽
           </div>
           <div style={{ marginTop: 12, fontSize: 10.5, lineHeight: 1.6, fontWeight: 700, color: 'rgba(255,255,255,.85)' }}>{direction.message}</div>
+          {/* 대표 이미지 패널 — 실제 PNG(shareCard.ts drawImagePanel)와 같은 구성 */}
+          <div
+            style={{
+              marginTop: '7%',
+              width: '82%',
+              aspectRatio: '840 / 520',
+              borderRadius: 11,
+              overflow: 'hidden',
+              display: 'grid',
+              placeItems: 'center',
+              background: 'linear-gradient(135deg, rgba(255,255,255,.18), rgba(8,20,38,.35))',
+              border: '1px solid rgba(255,255,255,.32)',
+            }}
+          >
+            {showImage ? (
+              <img
+                src={imageUrl ?? undefined}
+                alt=""
+                onError={() => setPreviewFailed(true)}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <svg width="26" height="26" viewBox="0 0 40 40" aria-hidden>
+                <path d="M20 4 L24 16 L36 20 L24 24 L20 36 L16 24 L4 20 L16 16 Z" fill="rgba(255,255,255,.72)" />
+              </svg>
+            )}
+          </div>
           <div style={{ marginTop: 'auto' }}>
             <div style={{ fontSize: 17, fontWeight: 900, color: '#fff', letterSpacing: -0.3 }}>{poi.name}</div>
             <div style={{ marginTop: 5, fontSize: 9.5, fontWeight: 600, color: 'rgba(255,255,255,.6)' }}>
               부산 {poi.district} · 걸어서 약 {poi.walkMinutes}분
             </div>
           </div>
-          <div style={{ marginTop: '14%', fontSize: 8.5, fontWeight: 700, color: 'rgba(255,255,255,.55)' }}>Spindle이 정해준 오늘의 방향</div>
+          <div style={{ marginTop: '9%', fontSize: 8.5, fontWeight: 700, color: 'rgba(255,255,255,.55)' }}>Spindle이 정해준 오늘의 방향</div>
         </div>
       </div>
 

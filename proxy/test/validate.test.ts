@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { validateRequest } from "../src/validate";
+import {
+  isAllowedImageHost,
+  isValidContentId,
+  normalizeImageUrl,
+  validateRequest,
+} from "../src/validate";
 
 function run(path: string, query: string) {
   return validateRequest(path, new URLSearchParams(query));
@@ -57,5 +62,32 @@ describe("validateRequest", () => {
   it("detailIntro2 등 상세 계열도 화이트리스트로 통과한다", () => {
     const r = run("/api/detailIntro2", "contentId=126508&contentTypeId=12");
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("이미지 릴레이(/api/img) 검증 헬퍼", () => {
+  it("contentId는 짧은 영숫자만 허용한다", () => {
+    expect(isValidContentId("126122")).toBe(true);
+    expect(isValidContentId("3083767")).toBe(true);
+    expect(isValidContentId("")).toBe(false);
+    expect(isValidContentId("1".repeat(33))).toBe(false);
+    expect(isValidContentId("../etc")).toBe(false);
+    expect(isValidContentId("12 34")).toBe(false);
+  });
+
+  it("이미지 URL의 http는 https로 정규화한다", () => {
+    expect(normalizeImageUrl("http://tong.visitkorea.or.kr/a.jpg")).toBe(
+      "https://tong.visitkorea.or.kr/a.jpg",
+    );
+    expect(normalizeImageUrl("https://tong.visitkorea.or.kr/a.jpg")).toBe(
+      "https://tong.visitkorea.or.kr/a.jpg",
+    );
+  });
+
+  it("허용 호스트(TourAPI 이미지 CDN)만 통과시킨다 — SSRF 방지", () => {
+    expect(isAllowedImageHost("https://tong.visitkorea.or.kr/cms/resource/a.jpg")).toBe(true);
+    expect(isAllowedImageHost("https://evil.example.com/a.jpg")).toBe(false);
+    expect(isAllowedImageHost("http://169.254.169.254/latest/meta-data")).toBe(false);
+    expect(isAllowedImageHost("not a url")).toBe(false);
   });
 });

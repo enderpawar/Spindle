@@ -11,7 +11,10 @@ function Item({ label, active, icon, onClick }: { label: string; active: boolean
       onClick={onClick}
       style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '2px 8px', minWidth: 44 }}
     >
-      {icon}
+      {/* 활성화되는 순간 아이콘이 살짝 팝 — key로 리마운트해 매번 재생 */}
+      <span className={`nav-icon${active ? ' nav-icon--active' : ''}`} key={active ? 'on' : 'off'}>
+        {icon}
+      </span>
       <span style={{ fontSize: 11, fontWeight: active ? 800 : 700, color: active ? ACTIVE : INACTIVE }}>{label}</span>
     </button>
   )
@@ -60,17 +63,16 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         <button
           onClick={() => onNavigate('spin')}
           aria-label="스핀"
+          className="nav-fab"
           style={{
             width: 58,
             height: 58,
             borderRadius: '50%',
             border: 'none',
             cursor: 'pointer',
-            background: 'radial-gradient(circle at 38% 32%, #5b93ff, #1e4fd8 70%)',
+            background: 'var(--l-primary)',
             display: 'grid',
             placeItems: 'center',
-            animation: active === 'spin' ? 'none' : 'pulseL 2.8s ease-in-out infinite',
-            boxShadow: '0 10px 22px -6px rgba(30,79,216,.6)',
           }}
         >
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} aria-hidden>

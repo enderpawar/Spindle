@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
-import spinningImg from '../assets/poses/별이_spin.png'
 import { CompassRose, type CompassRoseHandle } from '../components/CompassRose'
-import { ScreenFrame, Stars } from '../components/ScreenFrame'
+import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DIALS, DIRECTIONS, directionFromHeading, type Departure, type DialId } from '../mock/pois'
 
@@ -45,14 +44,15 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
   const busy = spinning || settled
 
   return (
-    <ScreenFrame>
-      <Stars />
-
+    <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', zIndex: 2 }}>
-        <span style={{ fontSize: 19, fontWeight: 900, letterSpacing: -0.4 }}>스핀</span>
-        <button onClick={onOpenDeparture} className="chip" style={{ cursor: 'pointer', minHeight: 44 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)' }} />
-          여행 모드 · {departure.name}
+        <span style={{ fontSize: 19, fontWeight: 900, letterSpacing: -0.4, color: 'var(--l-ink)' }}>스핀</span>
+        <button
+          onClick={onOpenDeparture}
+          style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}
+        >
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', flex: 'none' }} />
+          {departure.name} 기준
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
             <path d="M7 10 l5 5 5-5" />
           </svg>
@@ -62,15 +62,15 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
       <div style={{ textAlign: 'center', padding: '18px 24px 0', zIndex: 2, minHeight: 84 }}>
         {busy ? (
           <>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-3)' }}>{settled ? '오늘의 방향은' : '방향을 찾는 중…'}</div>
-            <div style={{ marginTop: 4, fontSize: 34, fontWeight: 900, letterSpacing: -0.5, color: settled ? liveDir.color : 'var(--ink)', transition: 'color .3s ease' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>{settled ? '오늘의 방향은' : '방향을 찾는 중…'}</div>
+            <div style={{ marginTop: 4, fontSize: 34, fontWeight: 900, letterSpacing: -0.5, color: settled ? liveDir.color : 'var(--l-ink)', transition: 'color .3s ease' }}>
               {liveDir.label}
             </div>
           </>
         ) : (
           <>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5 }}>오늘, 어느 쪽으로 갈까요?</h1>
-            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--ink-3)' }}>원판을 휙 돌리고, 방향에 맡겨보세요</p>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>오늘, 어느 쪽으로 갈까요?</h1>
+            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>원판을 휙 돌리고, 방향에 맡겨보세요</p>
           </>
         )}
       </div>
@@ -90,20 +90,24 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             }}
           />
           <CompassRose ref={rose} disabled={settled} onSpinningChange={setSpinning} onHeading={handleHeading} onSettle={handleSettle} />
-          <img
-            src={spinningImg}
-            alt=""
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              width: '31%',
-              transform: 'translate(-50%, -54%)',
-              pointerEvents: 'none',
-              filter: 'drop-shadow(0 10px 16px rgba(0,10,40,.5))',
-              animation: spinning ? 'wobble 0.5s ease-in-out infinite' : 'bobsm 3.4s ease-in-out infinite',
-            }}
-          />
+          <div className={`spin-compass-hub${spinning ? ' is-spinning' : ''}`} aria-hidden>
+            <svg viewBox="0 0 100 100">
+              <defs>
+                <linearGradient id="hubNeedleNorth" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#49b8ff" />
+                  <stop offset="1" stopColor="#1e4fd8" />
+                </linearGradient>
+                <linearGradient id="hubNeedleSouth" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stopColor="#dbe8ff" />
+                  <stop offset="1" stopColor="#9eb8eb" />
+                </linearGradient>
+              </defs>
+              <path d="M50 13 L64 52 L50 47 L36 52 Z" fill="url(#hubNeedleNorth)" />
+              <path d="M50 87 L36 48 L50 53 L64 48 Z" fill="url(#hubNeedleSouth)" />
+              <circle cx="50" cy="50" r="13" fill="#fff" stroke="#2f5cff" strokeWidth="3" />
+              <path d="M50 41 L52.6 47.4 L59.5 48 L54.2 52.4 L55.8 59 L50 55.4 L44.2 59 L45.8 52.4 L40.5 48 L47.4 47.4 Z" fill="#2f5cff" />
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -118,7 +122,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
               </button>
             ))}
           </div>
-          <button className="btn btn-primary" onClick={() => rose.current?.spin()}>
+          <button className="btn btn-blue" style={{ height: 58, fontSize: 17 }} onClick={() => rose.current?.spin()}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
               <path d="M4 12 a8 8 0 1 1 2.6 5.9" />
               <path d="M4 19 v-4 h4" />
@@ -136,12 +140,12 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
                   style={{
                     flex: 'none',
                     padding: '14px 24px',
-                    background: settled && label === liveDir.label ? liveDir.color : 'var(--glass-2)',
-                    border: '1px solid var(--line)',
+                    background: settled && label === liveDir.label ? liveDir.color : '#fff',
+                    border: '1px solid var(--l-line)',
                     borderRadius: 16,
                     fontSize: 17,
                     fontWeight: 800,
-                    color: settled && label === liveDir.label ? '#0f2540' : 'var(--ink-3)',
+                    color: settled && label === liveDir.label ? '#0f2540' : 'var(--l-ink-3)',
                   }}
                 >
                   {label}

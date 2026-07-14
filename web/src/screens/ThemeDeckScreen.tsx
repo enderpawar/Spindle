@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { BottomNav, type NavTab } from '../components/BottomNav'
+import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { THEMES, poisByTheme, themeInfo, type ThemeId } from '../engine/themes'
 import { DIRECTIONS, type Poi } from '../mock/pois'
@@ -84,11 +85,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
                   <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -10, fontSize: 58, opacity: 0.28 }}>
                     {theme.emoji}
                   </div>
-                  {poi.tier === 3 && (
-                    <div style={{ position: 'absolute', top: 9, left: 9, padding: '4px 9px', background: 'rgba(255,255,255,.94)', borderRadius: 11, fontSize: 10, fontWeight: 800, color: 'var(--l-orange)' }}>
-                      ✦ 숨은 명소
-                    </div>
-                  )}
+                  <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
                   {done && (
                     <div style={{ position: 'absolute', top: 9, right: 9, width: 22, height: 22, borderRadius: '50%', background: 'rgba(15,37,64,.72)', display: 'grid', placeItems: 'center' }} aria-label="방문함">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" aria-hidden>
@@ -96,9 +93,6 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
                       </svg>
                     </div>
                   )}
-                  <div style={{ position: 'absolute', bottom: 8, left: 10, padding: '4px 9px', background: 'rgba(15,37,64,.72)', borderRadius: 10, fontSize: 10, fontWeight: 800, color: '#fff' }}>
-                    {dir.label} · 도보 {poi.walkMinutes}분
-                  </div>
                 </div>
                 <div style={{ padding: '9px 2px 0' }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--l-ink)' }}>{poi.name}</div>

@@ -39,6 +39,12 @@ body {
   margin: 0;
   min-height: 100%;
   background: var(--bg-0);
+  /* 앱은 세로 스크롤만 — 어떤 폭에서도 가로 스크롤·잘림이 생기지 않게 막는다 */
+  overflow-x: hidden;
+  /* 탭 시 브라우저가 칠하는 반투명 하이라이트 박스 제거 (눌림 피드백은 :active 축소로 대체) */
+  -webkit-tap-highlight-color: transparent;
+  /* 더블 탭 확대(및 비표준 제스처) 비활성화 — 스크롤·핀치 줌은 유지 (접근성) */
+  touch-action: manipulation;
 }
 
 body {
@@ -50,6 +56,7 @@ body {
 }
 
 #root {
+  width: 100%;
   min-height: 100svh;
   display: flex;
   justify-content: center;
@@ -58,6 +65,8 @@ body {
 
 button {
   font-family: inherit;
+  min-width: 0;
+  touch-action: manipulation;
 }
 
 /* ─── 화면 프레임 ─── */
@@ -65,11 +74,673 @@ button {
   position: relative;
   width: 100%;
   max-width: 480px;
+  /* flex 자식의 기본 min-width:auto 로 인해 좁은 창에서 콘텐츠 최소폭 아래로 못 줄어드는 것을 방지 */
+  min-width: 0;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.screen > * {
+  min-width: 0;
+}
+
+/* ─── 홈: 좁은 기기에서도 카드가 잘리지 않는 반응형 레이아웃 ─── */
+.home-header {
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 10px;
+}
+
+.home-brand {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-brand-icon {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+
+.home-origin {
+  max-width: 58%;
+  overflow: hidden;
+}
+
+.home-origin-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-scroll {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.home-hero {
+  position: relative;
+  height: 178px;
+  margin: 8px 16px 0;
+  padding: 20px 22px;
+  overflow: hidden;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #4f8bff, #1e4fd8);
+}
+
+.home-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: min(214px, 62%);
+}
+
+.home-hero-title {
+  margin-top: 2px;
+  color: #fff;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.32;
+  letter-spacing: -0.5px;
+}
+
+.home-hero-mascot {
+  position: absolute;
+  right: -6px;
+  bottom: -4px;
+  z-index: 1;
+  width: min(146px, 42%);
+  max-width: none;
+  animation: bobsm 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 10px 14px rgba(0, 10, 40, 0.35));
+  transform: scaleX(-1);
+}
+
+.home-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 18px 12px 4px;
+}
+
+.home-quick-button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.home-quick-icon {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  border-radius: 18px;
+}
+
+.home-quick-label {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--l-ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 20px 2px;
+}
+
+.home-theme-card {
+  position: relative;
+  width: 100%;
+  min-height: 92px;
+  padding: 12px 13px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 18px;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-stamp-card {
+  display: flex;
+  align-items: center;
+  width: calc(100% - 32px);
+  margin: 14px 16px 0;
+  padding: 14px 16px;
+  gap: 12px;
+  border: 0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 24px -14px rgba(20, 40, 90, 0.3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-stamp-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-stamp-dots {
+  display: flex;
+  gap: clamp(4px, 1.4vw, 6px);
+  margin-top: 9px;
+}
+
+.home-stamp-dot {
+  display: grid;
+  flex: none;
+  width: clamp(20px, 7vw, 26px);
+  height: clamp(20px, 7vw, 26px);
+  place-items: center;
+  border-radius: 50%;
+}
+
+.home-stamp-dot--filled {
+  background: transparent;
+}
+
+.home-stamp-dot--filled img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.home-stamp-dot--empty {
+  border: 2px dashed #c3d3ee;
+}
+
+.home-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 14px;
+  padding: 0 20px 8px;
+}
+
+.home-pick-card {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-pick-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 14 / 9;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.home-pick-title {
+  display: -webkit-box;
+  min-height: 2.7em;
+  overflow: hidden;
+  color: var(--l-ink);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-pick-meta {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--l-ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .home-header {
+    gap: 6px;
+    padding-inline: 14px;
+  }
+
+  .home-brand {
+    gap: 5px;
+  }
+
+  .home-brand-icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .home-brand span {
+    font-size: 18px !important;
+  }
+
+  .home-origin {
+    max-width: 54%;
+    padding-left: 6px !important;
+    font-size: 12px !important;
+  }
+
+  .home-hero {
+    height: 168px;
+    margin-inline: 12px;
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .home-hero-title {
+    font-size: 20px;
+  }
+
+  .home-hero-mascot {
+    right: -10px;
+    width: min(128px, 43%);
+  }
+
+  .home-quick-grid {
+    padding-inline: 8px;
+    gap: 2px;
+  }
+
+  .home-quick-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+  }
+
+  .home-quick-label {
+    font-size: 11px;
+  }
+
+  .home-theme-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-inline: 16px;
+  }
+
+  .home-stamp-card {
+    width: calc(100% - 24px);
+    margin-inline: 12px;
+    padding-inline: 12px;
+    gap: 8px;
+  }
+
+  .home-pick-grid {
+    padding-inline: 16px;
+    gap: 16px 10px;
+  }
+
+  .home-pick-title {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 299px) {
+  .home-pick-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── 스핀 원판 중앙: 캐릭터 대신 기능이 명확한 나침반 허브 ─── */
+.spin-compass-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  width: 30%;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(181, 203, 241, 0.82);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 12px 26px -16px rgba(25, 53, 118, 0.48), inset 0 0 0 5px rgba(232, 240, 255, 0.72);
+  backdrop-filter: blur(8px);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.spin-compass-hub::before {
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(47, 92, 255, 0.1);
+  border-radius: 50%;
+  content: '';
+}
+
+.spin-compass-hub svg {
+  position: relative;
+  z-index: 1;
+  width: 78%;
+  height: 78%;
+  filter: drop-shadow(0 4px 6px rgba(30, 79, 216, 0.16));
+}
+
+.spin-compass-hub.is-spinning svg {
+  animation: hubBreathe 0.72s ease-in-out infinite alternate;
+}
+
+/* ─── 스핀 리빌: 관광 패스처럼 보이는 목적지 공개 카드 ─── */
+.reveal-layout {
+  z-index: 2;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: clamp(20px, 4vh, 40px) 16px;
+  gap: clamp(16px, 2.8vh, 24px);
+  text-align: center;
+  pointer-events: none;
+}
+
+.reveal-copy {
+  width: min(100%, 416px);
+}
+
+.reveal-copy h1 {
+  margin: 0;
+  color: var(--l-ink);
+  font-size: clamp(18px, 5vw, 21px);
+  font-weight: 900;
+  line-height: 1.42;
+  letter-spacing: -0.5px;
+  word-break: keep-all;
+}
+
+.reveal-expand-reason {
+  margin: 8px 0 0;
+  color: var(--l-ink-3);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.reveal-card-shell {
+  position: relative;
+  display: grid;
+  width: min(416px, calc(100vw - 32px));
+  place-items: center;
+}
+
+.reveal-card-glow {
+  position: absolute;
+  width: 118%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  animation: glow 2.8s ease-in-out infinite;
+}
+
+.reveal-card {
+  position: relative;
+  width: 100%;
+  min-height: 426px;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 30px;
+  box-shadow: 0 24px 54px -28px rgba(25, 53, 118, 0.42), 0 8px 22px -16px rgba(25, 53, 118, 0.22);
+}
+
+.reveal-card-orbit {
+  position: absolute;
+  top: -94px;
+  right: -82px;
+  width: 220px;
+  height: 220px;
+  border: 30px solid;
+  border-radius: 50%;
+}
+
+.reveal-card-head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--l-ink-3);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+}
+
+.reveal-card-visual {
+  position: relative;
+  z-index: 1;
+  height: 240px;
+  margin-top: 12px;
+}
+
+.reveal-photo-frame {
+  position: relative;
+  width: 100%;
+  height: 226px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px rgba(30, 79, 216, 0.08);
+}
+
+.reveal-photo-fallback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 82px;
+  height: 82px;
+  opacity: 0.2;
+  transform: translate(-50%, -50%);
+}
+
+.reveal-card-mascot {
+  position: absolute;
+  right: -10px;
+  bottom: -4px;
+  z-index: 4;
+  width: 98px;
+  animation: bob 3s ease-in-out infinite;
+  filter: drop-shadow(0 8px 12px rgba(20, 40, 90, 0.28));
+}
+
+.reveal-mascot-bubble {
+  position: absolute;
+  right: 66px;
+  bottom: 84px;
+  z-index: 5;
+  padding: 8px 11px;
+  border: 1px solid var(--l-line);
+  border-radius: 12px 12px 3px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 18px -12px rgba(20, 40, 90, 0.42);
+  color: var(--l-ink);
+  font-size: 11.5px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.reveal-mascot-bubble::after {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid var(--l-line);
+  border-bottom: 1px solid var(--l-line);
+  background: #fff;
+  content: '';
+  transform: rotate(35deg);
+}
+
+.reveal-card-copy {
+  position: relative;
+  z-index: 2;
+  padding: 3px 4px 0;
+  text-align: left;
+}
+
+.reveal-card-kicker {
+  color: var(--l-primary);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.reveal-card-title {
+  margin-top: 4px;
+  color: var(--l-ink);
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.35px;
+}
+
+.reveal-card-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  margin-top: 16px;
+  padding: 0 17px;
+  border: 1px solid var(--l-line);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--l-ink-2);
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.reveal-card-cta span:last-child {
+  color: var(--l-primary);
+  font-size: 18px;
+}
+
+.reveal-progress {
+  position: absolute;
+  right: 22px;
+  bottom: 12px;
+  left: 22px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--l-line);
+}
+
+.reveal-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  animation: revealProgress 3s linear both;
+  transform-origin: left;
+}
+
+.reveal-auto-hint {
+  color: var(--l-ink-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-height: 700px) {
+  .reveal-layout {
+    padding-block: 18px;
+    gap: 13px;
+  }
+
+  .reveal-card {
+    min-height: 350px;
+  }
+
+  .reveal-card-visual {
+    height: 174px;
+  }
+
+  .reveal-photo-frame {
+    height: 160px;
+  }
+
+  .reveal-card-mascot {
+    width: 76px;
+  }
+
+  .reveal-mascot-bubble {
+    right: 50px;
+    bottom: 65px;
+  }
+}
+
+@media (max-width: 359px) {
+  .reveal-layout {
+    padding-inline: 12px;
+  }
+
+  .reveal-card-shell {
+    width: calc(100vw - 24px);
+  }
+}
+
+/* ─── 결과 상세 시트: 핵심 정보 표를 설명보다 먼저 노출 ─── */
+.result-info-facts {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid var(--l-line);
+  border-radius: 18px;
+  background: #f8fbff;
+}
+
+.result-info-facts--preview {
+  margin-top: 0;
+}
+
+.result-info-row {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--l-line);
+}
+
+.result-info-row:last-child {
+  border-bottom: 0;
+}
+
+.result-info-label {
+  color: var(--l-primary);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.result-info-value {
+  color: var(--l-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.result-info-story {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  margin-top: 22px;
 }
 
 /* ─── 공용 컴포넌트 ─── */
@@ -86,7 +757,12 @@ button {
   transition: transform 0.15s ease, opacity 0.2s ease;
 }
 .btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
+}
+/* 주요 CTA(파란·오렌지)는 눌림을 조금 더 또렷하게 */
+.btn-blue:active,
+.btn-primary:active {
+  transform: scale(0.945);
 }
 
 .btn-primary {
@@ -125,14 +801,14 @@ button {
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* 세그먼트 컨트롤 (이동시간 다이얼) */
+/* 세그먼트 컨트롤 (이동시간 다이얼) — 스핀 전용, 라이트 테마 */
 .seg {
   display: flex;
   padding: 5px;
   gap: 4px;
   border-radius: 18px;
-  background: var(--glass);
-  border: 1px solid var(--line);
+  background: #fff;
+  border: 1px solid var(--l-line);
 }
 .seg button {
   flex: 1;
@@ -141,7 +817,7 @@ button {
   border-radius: 14px;
   background: none;
   cursor: pointer;
-  color: var(--ink-3);
+  color: var(--l-ink-3);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -150,9 +826,9 @@ button {
   transition: background 0.2s ease, color 0.2s ease;
 }
 .seg button.on {
-  background: var(--ink);
-  color: var(--bg-1);
-  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.6);
+  background: var(--l-primary);
+  color: #fff;
+  box-shadow: 0 6px 16px -10px rgba(30, 79, 216, 0.6);
 }
 .seg .seg-label {
   font-size: 14px;
@@ -192,9 +868,9 @@ button {
 
 /* ─── 라이트 테마 공용 ─── */
 .btn-blue {
-  background: linear-gradient(145deg, #3b7bf5, var(--l-primary-deep));
+  background: var(--l-primary);
   color: #fff;
-  box-shadow: 0 12px 26px -10px rgba(30, 79, 216, 0.55);
+  box-shadow: 0 8px 18px -12px rgba(30, 79, 216, 0.5);
 }
 
 .l-icon-btn {
@@ -245,6 +921,14 @@ button {
   }
   to {
     transform: translateX(100%);
+  }
+}
+@keyframes revealProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
   }
 }
 @keyframes bob {
@@ -304,6 +988,26 @@ button {
       0 0 0 18px rgba(59, 123, 245, 0);
   }
 }
+/* 지도 — 출발점 물결·연결 점선 흐름 */
+@keyframes maprip {
+  from {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+@keyframes mapdash {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes sparkle {
   0%,
   100% {
@@ -313,6 +1017,218 @@ button {
   50% {
     transform: scale(1.35);
     opacity: 0.4;
+  }
+}
+
+/* ─── 화면 전환 (라우터 레벨 진입 연출) ─── */
+/* ui.md §91 "애니메이션은 스핀 원판과 화면 전환에만" — App.tsx가 key={screen} 래퍼로 감싸
+   매 내비게이션마다 재생. 탭 전환은 fade, 드릴다운·스핀 의식은 오른쪽에서 slide-in.
+   래퍼가 #root(flex,center)의 자식이 되므로 .screen 중앙정렬을 여기서 재현한다. */
+.screen-anim {
+  width: 100%;
+  /* #root의 뷰포트-높이 컨텍스트를 대신 재현 — .screen(overflow:hidden, 내부 flex 스크롤)을
+     정확히 뷰포트 높이로 가둬 BottomNav(absolute bottom)가 하단에 앵커되도록 한다. */
+  height: 100svh;
+  display: flex;
+  justify-content: center;
+}
+.screen-anim[data-transition='fade'] {
+  animation: screenFade 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.screen-anim[data-transition='push'] {
+  animation: screenPush 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes screenFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.994);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes screenPush {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ─── 인트로 스플래시 (앱 콜드 스타트 로딩 연출) ─── */
+/* 라이트 배경에서 PWA 앱 아이콘이 중앙에 페이드인되며 떠오르고, "Spindle" 워드마크가 뒤이어 상승.
+   앱 홈(라이트 테마)과 같은 팔레트라 스플래시가 화면으로 자연스럽게 녹아든다. */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background: radial-gradient(125% 85% at 50% 8%, #ffffff 0%, #f4f8ff 46%, #e8f0ff 100%);
+  animation: introIn 0.45s ease both;
+  cursor: pointer;
+}
+.intro--exit {
+  animation: introOut 0.52s cubic-bezier(0.4, 0, 0.9, 0.35) both;
+  pointer-events: none;
+}
+@keyframes introIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes introOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+/* 히어로 — 앱 아이콘 + 워드마크 (세로 정렬) */
+.intro-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+/* 앱 아이콘 — 중앙에서 페이드인 + 위로 떠오름 */
+.intro-appicon {
+  width: 122px;
+  height: 122px;
+  border-radius: 27px;
+  filter: drop-shadow(0 16px 34px rgba(30, 70, 165, 0.22));
+  animation: introAppIn 0.9s cubic-bezier(0.2, 0.75, 0.25, 1) 0.1s both;
+}
+@keyframes introAppIn {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 워드마크 — 아이콘에 이어 아래에서 부드럽게 상승 */
+.intro-logo {
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--l-ink);
+  animation: introRise 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s both;
+}
+@keyframes introRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 하단 로딩 인디케이터 — 은은히 명멸 (미니멀) */
+.intro-dots {
+  position: absolute;
+  bottom: calc(46px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 8px;
+  animation: introRise 0.6s ease 0.9s both;
+}
+.intro-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a6bce4;
+  animation: introDot 1.5s ease-in-out infinite;
+}
+@keyframes introDot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* 모션 최소화 선호 시 — 등장/퇴장만 짧은 페이드로 */
+@media (prefers-reduced-motion: reduce) {
+  .intro *,
+  .intro--exit {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  .intro {
+    animation: introIn 0.3s ease both;
+  }
+}
+
+/* ─── 접근성 · 상호작용 (상용 품질 플로어) ─── */
+/* 키보드 포커스만 링을 그리고(마우스 클릭엔 안 그림), 링은 브랜드 블루로 통일 */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--l-primary);
+  outline-offset: 2px;
+}
+/* 카드·아이콘 버튼에도 눌림 반응을 줘 네이티브 같은 촉각 피드백 (.btn은 자체 :active 유지) */
+/* 릴리즈 시 살짝 탄성(overshoot) — 절제된 스프링 */
+button {
+  transition: transform 0.14s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+button:active {
+  transform: scale(0.96);
+}
+
+/* 하단 스핀 FAB — 눌림 강조 */
+.nav-fab {
+  transition: transform 0.14s cubic-bezier(0.34, 1.5, 0.64, 1);
+}
+.nav-fab:active {
+  transform: scale(0.92);
+}
+/* 하단 탭 아이콘 — 활성화되는 순간 팝 */
+.nav-icon {
+  display: grid;
+  place-items: center;
+}
+.nav-icon--active {
+  animation: navPop 0.34s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+@keyframes navPop {
+  0% {
+    transform: scale(0.82);
+  }
+  55% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 

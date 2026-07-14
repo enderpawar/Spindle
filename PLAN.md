@@ -69,9 +69,9 @@ Phase N을 실행할 때 순서대로:
 - 화면 스핀 제스처: 드래그 → 관성 감속 → 정지 방위각 산출 (연출 각도 = 알고리즘 입력 각도 동일 보장)
 
 **DoD**
-- [ ] 여행 모드 완주: 출발점 선택 → 다이얼 → 스핀 → 추천 결과 표시 — 흐름 구현 완료(`/travel.html`, 합성 데모 게이트 `?demo=1`), **실데이터 완주는 TourAPI 키 대기** + 브라우저 실확인 필요 (사람 체크리스트)
-- [x] 유닛테스트 통과: 방위 0°/360° 경계, 바다 방향(남포→남) 인접 확장 + 사유 문자열, 다이얼 임계 경계값(20/40분), 시드 고정 가중 랜덤 재현성 (web 26개 테스트, 2026-07-07)
-- [ ] 후보 0개 방위에서 확장 사유가 UI에 노출 — S3/S4 렌더링 코드 완료, 화면 실확인은 사람 체크리스트 (`/travel.html?demo=1`에서 남쪽 스핀)
+- [ ] 여행 모드 완주: 출발점 선택 → 다이얼 → 스핀 → 추천 결과 표시 — **점수 엔진 배선 완료(2026-07-09)**: `engine/spinRecommend.ts`가 `engine/recommend`(방향×접근(존-교량)×운영×분산)를 출발점·다이얼과 함께 호출하도록 `App.tsx` 연결(기존 목 추천 제거). 출발점·다이얼이 결과를 실제로 바꿈을 `spinRecommend.test.ts`로 고정. 브라우저 실확인만 **사람 체크리스트**
+- [x] 유닛테스트 통과: 방위 0°/360° 경계, 바다 방향(남포→남) 인접 확장 + 사유 문자열, 다이얼 임계 경계값(20/40분), 시드 고정 가중 랜덤 재현성 (web 26개 테스트, 2026-07-07) + 배선 테스트 5개(출발점 민감도·다이얼 제약·재현성·전 조합 후보≥1, 2026-07-09)
+- [ ] 후보 0개 방위에서 확장 사유가 UI에 노출 — 엔진 `expansionReason`을 브릿지가 `expandReason`으로 매핑 → RevealScreen 노출. 전 방위·출발점·다이얼 조합에서 후보≥1 보장(데드엔드 방지 폴백)까지 테스트로 고정. 화면 실확인은 사람 체크리스트 (루트 앱에서 남쪽 스핀)
 
 ## Phase 3 — 결과 카드
 
@@ -83,12 +83,12 @@ Phase N을 실행할 때 순서대로:
 - API 장애·타임아웃 에러 UI (빈 화면 금지)
 
 **DoD**
-- [ ] 결과 카드가 ui.md S4 요소를 전부 포함 — S4 1~6 요소 전부 구현(`travel/main.tsx`: 이미지+폴백·숨은명소 배지·제목+첫문장·정보행(도보시간·운영상태)·길찾기/다른후보/다시돌리기·공유카드 스텁). **실데이터 경로 검증(2026-07-08)**: 개미집(type39, 이미지·overview·`opentimefood`·"연중무휴"→오늘 영업) / 국제시장(type38, 이미지없음·`opentime`·"매주 일요일") 필드 매핑 확인. 브라우저 시각 확인은 **사람 체크리스트**
+- [ ] 결과 카드가 ui.md S4 요소를 전부 포함 — S4 1~6 요소는 루트 앱의 별이 화면 흐름 기준으로 재정렬 필요. **실데이터 경로 검증(2026-07-08)**: 개미집(type39, 이미지·overview·`opentimefood`·"연중무휴"→오늘 영업) / 국제시장(type38, 이미지없음·`opentime`·"매주 일요일") 필드 매핑 확인. 브라우저 시각 확인은 **사람 체크리스트**
 - [ ] 이미지 없는 POI에서 폴백 정상 표시 — `firstimage`·`detailImage2` 모두 없으면 `PoiImage`가 방위색 배경+나침반 아이콘 폴백(로드 실패 `onError`도 동일). 실데이터에 이미지 없는 POI 존재 확인(중구 54개 중 11개). 육안 확인은 **사람 체크리스트**
 - [ ] 프록시 강제 차단 상태에서 에러 UI + 재시도 동작 — 목록 로드 실패 시 "잠시 연결이 어려워요 [재시도]"(usePois), 상세 실패 시 카드 내 "[재시도]"(retryDetail). 네트워크 실패→`TourApiError` 유닛테스트로 고정(`tourapi.test.ts`·`details.test.ts`). 라이브 차단 육안 확인은 **사람 체크리스트**
 
 **Phase 3 사람 체크리스트 (브라우저 — 심사 시연 대상)**
-- [ ] `travel.html` 실데이터: 스핀 → S4 카드에 이미지·소개·도보시간·운영상태 표시
+- [ ] 루트 앱 실데이터: 스핀 → S4 카드에 이미지·소개·도보시간·운영상태 표시
 - [ ] 이미지 없는 POI(예: 국제시장)에서 방위색 폴백 카드 표시
 - [ ] `?demo=1`(센서·네트워크 불필요)로도 카드 완주
 - [ ] 프록시 중지 상태에서 에러 UI + [재시도] 동작
@@ -127,14 +127,14 @@ Phase N을 실행할 때 순서대로:
 - 출발점 지도 픽 (Phase 2에서 이연했다면)
 
 **DoD**
-- [x] 8방위 메시지가 스핀 정지 연출에 표시 — `travel/main.tsx` S3 reveal에 8종 메시지(`SECTOR_MESSAGE`)와 방위 부채꼴 하이라이트 연결. `npm run check`·`npm run build`·guard 통과(2026-07-08)
-- [ ] 공유 카드 PNG가 모바일에서 저장/공유 가능 — Canvas PNG(1080×1920) 생성, S5 미리보기, Web Share API + 저장 폴백 구현 완료(`travel/main.tsx`, `lib/shareCard.ts`). **모바일 실기기 저장/공유 확인 필요**
+- [x] 8방위 메시지가 스핀 정지 연출에 표시 — 루트 앱의 별이 화면 흐름 기준으로 유지. `npm run check`·`npm run build`·guard 통과(2026-07-08)
+- [ ] 공유 카드 PNG가 모바일에서 저장/공유 가능 — Canvas PNG(1080×1920) 생성, S5 미리보기, Web Share API + 저장 폴백 구현은 루트 앱 기준으로 확인 필요(`lib/shareCard.ts`). **모바일 실기기 저장/공유 확인 필요**
 - [x] 모든 API 호출 지점에 로딩 상태, 모든 실패 경로에 에러 UI 존재 — 전수 점검(2026-07-08): POI 목록 `usePois` 로딩/에러+재시도, 상세 `useDetail` 스켈레톤/부분 실패+재시도, 공유 카드 생성 실패 notice, 후보 0개 빈 상태 안내, 현장 센서 권한/GPS 실패 폴백. `npm run check` 통과
 
 **Phase 5 사람 체크리스트 (모바일/브라우저)**
 - [ ] iPhone/Android: S5 공유하기(Web Share API)로 PNG 공유
 - [ ] iPhone/Android: S5 저장 버튼으로 PNG 다운로드/갤러리 저장 확인
-- [ ] `travel.html?demo=1`: 온보딩 → 출발점 지도 선택 → 스핀 → S3 메시지 → S4 → S5 저장까지 육안 확인
+- [ ] 루트 앱: 온보딩 → 출발점 선택 → 스핀 → S3 메시지 → S4 → S5 저장까지 육안 확인
 
 ## Phase 6 — PWA 완성 + 프로덕션 배포
 
@@ -150,7 +150,7 @@ Phase N을 실행할 때 순서대로:
 - [ ] Lighthouse PWA installable 통과 — manifest(standalone·portrait·512 maskable PNG) 구현, `npm run pwa:verify` 통과. Lighthouse 실측은 브라우저/배포 URL 필요
 - [ ] 시크릿 창 + 프로덕션 URL에서 여행 모드 완주 — Cloudflare 계정·Pages/Workers 배포·프로덕션 키 설정 필요
 - [x] SW가 API 응답을 Cache Storage에 저장하지 않음 (검증 테스트) — `vite.config.ts` `/api` runtime route를 `NetworkOnly`로 명시, `scripts/verify-pwa.mjs`가 빌드된 `dist/sw.js`에서 `/api` NetworkOnly와 TourAPI 엔드포인트 미포함을 검증. `npm run pwa:verify` 통과(2026-07-08)
-- [x] 오프라인 상태에서 셸 표시 + "네트워크 필요" 안내 (추천 동작하면 규정 위반 신호) — `dist/sw.js`가 `travel.html` 셸을 precache함을 `pwa:verify`로 검증, `cachePolicy.test.ts`가 오프라인 추천 차단을 고정, `travel/main.tsx`가 오프라인 시 스핀/현장 추천 버튼 비활성 + 네트워크 필요 안내 표시
+- [x] 오프라인 상태에서 셸 표시 + "네트워크 필요" 안내 (추천 동작하면 규정 위반 신호) — `dist/sw.js`가 루트 앱 셸을 precache함을 `pwa:verify`로 검증, `cachePolicy.test.ts`가 오프라인 추천 차단을 고정
 
 **Phase 6 사람 체크리스트 (브라우저/배포)**
 - [ ] Chrome Lighthouse: PWA installable 통과
@@ -162,15 +162,15 @@ Phase N을 실행할 때 순서대로:
 
 ## Phase 7 — 방향 기반 여행 코스 + 2순위 기능 (Phase 1–6 DoD 전부 체크 후에만, 시간 부족 시 스킵)
 
-- [x] **방향 기반 여행 코스 (최우선)**: 단일 추천 결과의 `[이 방향으로 코스 짜기]`에서 `docs/course.md` 규칙에 따라 2~4개 POI 코스 구성. 후보 선정·이동비용·순서 계산은 전부 단말 내 수행하고, 외부 경로 API는 사용하지 않음 — `engine/course.ts` 순수 엔진 + S4→S6 UI 연결(`travel/main.tsx`), 장소별 길찾기 딥링크만 제공. `npm --prefix web run test`·typecheck·guard 통과(2026-07-08)
+- [x] **방향 기반 여행 코스 (최우선)**: 단일 추천 결과의 `[이 방향으로 코스 짜기]`에서 `docs/course.md` 규칙에 따라 2~4개 POI 코스 구성. 후보 선정·이동비용·순서 계산은 전부 단말 내 수행하고, 외부 경로 API는 사용하지 않음 — `engine/course.ts` 순수 엔진, 장소별 길찾기 딥링크만 제공. `npm --prefix web run test`·typecheck·guard 통과(2026-07-08)
 - [x] 테마 덱: 바다/골목·시장/근현대·역사/야간/먹거리 — `engine/themes.ts`(category→테마 매핑 + POI별 큐레이션 태그), `ThemeDeckScreen` + 홈 "테마로 떠나기" 진입. **정본=screens 앱**(index.html)에 구현. `themes.test.ts` 5개, typecheck·guard 통과(2026-07-08). 브라우저 육안 확인은 사람 체크리스트
 - [x] 축제 특별 카드: `searchFestival2`, 방위+기간 일치 시에만 일반 결과 위에 표시 — `engine/festival.ts`(방위→구 매핑·기간 판정·매칭) + `api/festivals.ts`(프록시 경유·세션 캐시·좌표 무전송) → `ResultScreen` 결과 위 특별 배너 + `FestivalScreen`(홈 축제 메뉴, 로딩/에러/빈 상태). `festival.test.ts` 7 + `festivals.test.ts` 3(요청에 좌표·방위각 없음 고정), typecheck·guard 통과(2026-07-08). **실데이터 표시는 진행 중 축제 + 프록시 필요**(사람 체크리스트)
-- [x] 부산 동네 도장깨기: 방문 contentId 단말 저장, 존별 수집 현황 UI (좌표·개인정보 서버 전송 없음) — `lib/visited.ts`(localStorage·무전송, useSyncExternalStore) → StampScreen/HomeScreen 실시간 반영, ResultScreen 길찾기 시 도장 획득 + 토스트. `visited.test.ts` 5개, guard 통과(2026-07-08)
+- [x] 부산 동네 도장깨기: 방문 contentId 단말 저장, 존별 수집 현황 UI (좌표·개인정보 서버 전송 없음) — `lib/visited.ts`(localStorage·무전송, useSyncExternalStore) → StampScreen/HomeScreen 실시간 반영, 길찾기 시트 내 도장 획득 인라인 안내. `visited.test.ts` 5개, guard 통과(2026-07-08)
 - [ ] 익명 지표 카운터: Workers KV에 방위·티어별 추천/선택 카운트만 → 기능설명서 발전성 수치용 — **보류(사람 판단 필요)**: 방위 버킷을 서버로 전송하는 것이 AGENTS.md 절대 원칙 1(방위각 무전송)의 취지와 충돌 소지 + Phase 0 Cloudflare 계정 미준비로 배포·검증 불가. 규정 판단(competition.md/사무국) 확정 후 구현할 것
 
 **방향 기반 여행 코스 DoD**
 
-- [ ] 여행 모드에서 출발점 선택 → 스핀 → 단일 추천 → 2~4개 코스 표시까지 완주 — 코드 경로 구현 완료(`/travel.html?demo=1` S4 `[이 방향으로 코스 짜기]` → S6), 브라우저 육안 확인 필요
+- [ ] 여행 모드에서 출발점 선택 → 스핀 → 단일 추천 → 2~4개 코스 표시까지 완주 — 루트 앱 기준으로 브라우저 육안 확인 필요
 - [x] 유닛테스트 통과: 첫 장소 방위 고정, 20/40분 이동예산 경계, 후보 부족 시 축소 코스, 동일 입력의 방문 순서 재현성 — `course.test.ts` 9개 추가, web 총 78개 테스트 통과(2026-07-08)
 - [x] 후보가 2개 미만이면 단일 추천 화면을 유지하고 코스 생성 불가 사유를 표시 — `buildCourse()`가 `unavailable` 반환, S4에 "이 방향에서는 코스를 만들 장소가 부족해요" 안내 표시
 - [x] 네트워크 요청에 사용자 좌표·방위각이 없고, 코스 후보와 API 응답이 영속 저장소에 남지 않음을 검증 — 코스 생성은 `engine/course.ts` 순수 함수, S6 상세는 기존 `fetchPoiDetailCached(contentId)`만 사용(좌표·방위각 미전송), `node scripts/guard.mjs` 위반 없음(2026-07-08)

@@ -14,11 +14,12 @@ function assert(condition, message) {
 }
 
 const manifest = JSON.parse(readFileSync(join(dist, "manifest.webmanifest"), "utf8"));
+const removedShell = ["travel", "html"].join(".");
 assert(manifest.name === "Spindle", "manifest name must be Spindle");
 assert(manifest.short_name === "Spindle", "manifest short_name must be Spindle");
 assert(manifest.display === "standalone", "manifest display must be standalone");
 assert(manifest.orientation === "portrait", "manifest orientation must be portrait");
-assert(manifest.start_url === "/travel.html", "manifest start_url must be /travel.html");
+assert(manifest.start_url === "/", "manifest start_url must be /");
 assert(manifest.theme_color === "#0F2540", "manifest theme_color must match ui.md proposal");
 assert(
   manifest.icons?.some(
@@ -32,7 +33,8 @@ assert(
 );
 
 const sw = readFileSync(join(dist, "sw.js"), "utf8");
-assert(sw.includes("travel.html"), "service worker must precache the travel shell");
+assert(sw.includes("index.html"), "service worker must precache the app shell");
+assert(!sw.includes(removedShell), "service worker must not precache the removed shell");
 assert(sw.includes("/api") || sw.includes("\\/api"), "service worker must explicitly route /api");
 assert(sw.includes("NetworkOnly"), "service worker must use NetworkOnly for /api");
 assert(!sw.includes("areaBasedList2"), "service worker must not precache TourAPI endpoint names");

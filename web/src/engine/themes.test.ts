@@ -17,17 +17,17 @@ describe('themes', () => {
 
   it('큐레이션 태그가 category 밖 테마를 보강한다 (야시장→먹거리·야간)', () => {
     const foodIds = poisByTheme('food').map((p) => p.id)
-    expect(foodIds).toContain('gukje-market')
+    expect(foodIds).toContain('jagalchi-market')
     expect(foodIds).toContain('bupyeong-market')
     const nightIds = poisByTheme('night').map((p) => p.id)
     expect(nightIds).toContain('bupyeong-market')
   })
 
-  it('바다 테마는 해안·해변·자연 POI를 포함한다', () => {
+  it('바다 테마는 해안·해변·마을 POI를 포함한다', () => {
     const seaIds = poisByTheme('sea').map((p) => p.id)
-    expect(seaIds).toContain('huinnyeoul')
-    expect(seaIds).toContain('taejongdae')
+    expect(seaIds).toContain('huinnyeoul-tunnel')
     expect(seaIds).toContain('songdo-beach')
+    expect(seaIds).toContain('busan-bridge')
   })
 
   it('themesOf는 중복 없는 테마 목록을 반환한다', () => {

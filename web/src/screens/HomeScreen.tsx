@@ -1,5 +1,6 @@
 import pointingImg from '../assets/poses/별이_pointing.png'
 import { BottomNav, type NavTab } from '../components/BottomNav'
+import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { useVisited } from '../lib/visited'
 import { THEMES, type ThemeId } from '../engine/themes'
@@ -16,7 +17,7 @@ interface Props {
 }
 
 // 오늘의 스핀 추천 — 숨은 명소(T3) 위주 픽 (목 단계 고정, Phase 2에서 추천 엔진 연동)
-const todayPicks = ['huinnyeoul', 'kangkangee', 'ibagu-road', 'ami-village']
+const todayPicks = ['kangkangee', 'ibagu-skyway', 'color-village', 'dongsam-shell']
   .map((id) => POI_POOL.find((p) => p.id === id))
   .filter((p): p is Poi => Boolean(p))
 
@@ -96,31 +97,32 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       {/* 앱 바 */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 10px', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="26" height="26" viewBox="0 0 40 40" aria-hidden>
-            <path d="M20 4 L24 16 L36 20 L24 24 L20 36 L16 24 L4 20 L16 16 Z" fill="var(--l-primary-deep)" />
-          </svg>
+      <header className="home-header">
+        <div className="home-brand">
+          <img src="/brand-mark-192.png" alt="" className="home-brand-icon" />
           <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>Spindle</span>
         </div>
         <button
           onClick={onOpenDeparture}
-          className="chip"
-          style={{ cursor: 'pointer', minHeight: 40, background: '#fff', border: '1.5px solid var(--l-line)', color: 'var(--l-ink-2)' }}
+          className="home-origin"
+          style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}
         >
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1fa971' }} />
-          여행 모드 · {departure.name}
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1fa971', flex: 'none' }} />
+          <span className="home-origin-label">{departure.name} 기준</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
+            <path d="M7 10 l5 5 5-5" />
+          </svg>
         </button>
       </header>
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
+      <div className="home-scroll no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         {/* 히어로 배너 */}
-        <div style={{ margin: '8px 16px 0', height: 178, borderRadius: 26, background: 'linear-gradient(135deg,#4f8bff,#1e4fd8)', position: 'relative', overflow: 'hidden', padding: '20px 22px' }}>
+        <div className="home-hero">
           <div aria-hidden style={{ position: 'absolute', top: -30, right: -30, width: 150, height: 150, borderRadius: '50%', background: 'rgba(255,255,255,.1)' }} />
           <div aria-hidden style={{ position: 'absolute', bottom: -40, right: 60, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,.08)' }} />
-          <div style={{ position: 'relative', zIndex: 2, maxWidth: 214 }}>
+          <div className="home-hero-copy">
             <div style={{ fontSize: 13, fontWeight: 700, color: '#cfe0ff' }}>붐비는 해변 말고,</div>
-            <div style={{ marginTop: 2, fontSize: 21, lineHeight: 1.32, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>
+            <div className="home-hero-title">
               숨은 부산을
               <br />
               발견하세요
@@ -140,32 +142,33 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           <img
             src={pointingImg}
             alt=""
-            style={{ position: 'absolute', right: -6, bottom: -4, width: 146, zIndex: 1, filter: 'drop-shadow(0 10px 14px rgba(0,10,40,.35))', transform: 'scaleX(-1)', animation: 'bobsm 3.4s ease-in-out infinite' }}
+            className="home-hero-mascot"
           />
         </div>
 
         {/* 퀵 메뉴 */}
-        <div style={{ display: 'flex', justifyContent: 'space-around', padding: '18px 12px 4px' }}>
+        <div className="home-quick-grid">
           {quickMenu.map((item) => (
             <button
               key={item.label}
               onClick={item.onClick}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 0, position: 'relative' }}
+              className="home-quick-button"
             >
-              <div style={{ width: 50, height: 50, borderRadius: 18, background: item.bg, display: 'grid', placeItems: 'center' }}>{item.icon}</div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--l-ink-2)' }}>{item.label}</span>
+              <div className="home-quick-icon" style={{ background: item.bg }}>{item.icon}</div>
+              <span className="home-quick-label">{item.label}</span>
             </button>
           ))}
         </div>
 
         {/* 테마로 떠나기 */}
         <div style={{ padding: '16px 20px 2px', fontSize: 15, fontWeight: 900, color: 'var(--l-ink)' }}>테마로 떠나기</div>
-        <div className="no-scrollbar" style={{ display: 'flex', gap: 10, padding: '0 20px 2px', overflowX: 'auto' }}>
+        <div className="home-theme-grid">
           {THEMES.map((theme) => (
             <button
               key={theme.id}
               onClick={() => onOpenTheme(theme.id)}
-              style={{ flex: 'none', width: 108, height: 92, borderRadius: 18, border: 'none', cursor: 'pointer', textAlign: 'left', padding: '12px 13px', color: '#fff', background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)`, position: 'relative', overflow: 'hidden' }}
+              className="home-theme-card"
+              style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
             >
               <div aria-hidden style={{ position: 'absolute', right: -6, bottom: -8, fontSize: 46, opacity: 0.34 }}>
                 {theme.emoji}
@@ -179,9 +182,9 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         {/* 도장깨기 진행 카드 */}
         <button
           onClick={() => onNavigate('stamp')}
-          style={{ margin: '14px 16px 0', padding: '14px 16px', background: '#fff', border: 'none', borderRadius: 20, boxShadow: '0 10px 24px -14px rgba(20,40,90,.3)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', width: 'calc(100% - 32px)', textAlign: 'left' }}
+          className="home-stamp-card"
         >
-          <div style={{ flex: 1 }}>
+          <div className="home-stamp-body">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--l-ink)' }}>원도심 도장깨기</div>
               <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--l-primary)' }}>
@@ -189,16 +192,14 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
                 <span style={{ color: '#c3d3ee' }}>/{progress.total}</span>
               </span>
             </div>
-            <div style={{ marginTop: 9, display: 'flex', gap: 6 }}>
+            <div className="home-stamp-dots">
               {Array.from({ length: Math.min(progress.collected, 5) }, (_, i) => (
-                <div key={i} style={{ width: 26, height: 26, borderRadius: '50%', background: 'radial-gradient(circle at 38% 32%,#5b93ff,#1e4fd8)', display: 'grid', placeItems: 'center' }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff" aria-hidden>
-                    <path d="M12 3 L14.5 9 L21 9.5 L16 13.5 L17.5 20 L12 16.5 L6.5 20 L8 13.5 L3 9.5 L9.5 9 Z" />
-                  </svg>
+                <div key={i} className="home-stamp-dot home-stamp-dot--filled">
+                  <img src="/stamp-mark-512.png" alt="" aria-hidden />
                 </div>
               ))}
               {Array.from({ length: Math.max(0, Math.min(5 - progress.collected, 2)) + 2 }, (_, i) => (
-                <div key={`empty-${i}`} style={{ width: 26, height: 26, borderRadius: '50%', border: '2px dashed #c3d3ee' }} />
+                <div key={`empty-${i}`} className="home-stamp-dot home-stamp-dot--empty" />
               ))}
             </div>
           </div>
@@ -214,25 +215,18 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             더보기 ›
           </button>
         </div>
-        <div className="no-scrollbar" style={{ display: 'flex', gap: 14, padding: '0 20px 8px', overflowX: 'auto' }}>
+        <div className="home-pick-grid">
           {todayPicks.map((poi, i) => {
             const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
             return (
-              <button key={poi.id} onClick={() => onSelectPoi(poi)} style={{ flex: 'none', width: 196, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}>
-                <div style={{ height: 126, borderRadius: 20, background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)`, position: 'relative', overflow: 'hidden' }}>
+              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card">
+                <div className="home-pick-image" style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>
                   <SketchArt variant={i} />
-                  {poi.tier === 3 && (
-                    <div style={{ position: 'absolute', top: 10, left: 10, padding: '5px 10px', background: 'rgba(255,255,255,.94)', borderRadius: 12, fontSize: 10.5, fontWeight: 800, color: 'var(--l-orange)' }}>
-                      ✦ 숨은 명소
-                    </div>
-                  )}
-                  <div style={{ position: 'absolute', top: 10, right: 10, padding: '5px 10px', background: 'rgba(15,37,64,.72)', borderRadius: 12, fontSize: 10.5, fontWeight: 800, color: '#fff' }}>
-                    {dir.label} · 도보 {poi.walkMinutes}분
-                  </div>
+                  <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
                 </div>
                 <div style={{ padding: '10px 2px 0' }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>{poi.name}</div>
-                  <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                  <div className="home-pick-title">{poi.name}</div>
+                  <div className="home-pick-meta">
                     {poi.category} · {poi.district}
                   </div>
                 </div>

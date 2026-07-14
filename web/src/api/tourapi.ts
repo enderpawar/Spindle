@@ -5,7 +5,7 @@
  */
 import { BUSAN_AREA_CODE, OLD_TOWN_REGIONS } from "./regionCodes";
 
-const API_BASE: string = import.meta.env.VITE_API_BASE ?? "/api";
+export const API_BASE: string = import.meta.env.VITE_API_BASE ?? "/api";
 
 /** tourapi 스킬 기본값 — 구별 POI 수를 감안해 충분히 크게 */
 const NUM_OF_ROWS = 100;

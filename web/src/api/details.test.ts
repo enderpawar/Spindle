@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clearDetailCache, fetchPoiDetailCached, firstSentence, stripHtml } from "./details";
+import {
+  clearDetailCache,
+  clearImageCache,
+  fetchPoiCardDetailCached,
+  fetchPoiDetailCached,
+  fetchPoiGalleryImagesCached,
+  fetchPoiImageCached,
+  firstSentence,
+  poiImageProxyUrl,
+  stripHtml,
+} from "./details";
 import { TourApiError } from "./tourapi";
 
 /** TourAPI 목록 응답 봉투 — item이 null이면 빈 결과("") */
@@ -53,7 +63,10 @@ function makeFetch(routes: Routes) {
   });
 }
 
-beforeEach(() => clearDetailCache());
+beforeEach(() => {
+  clearDetailCache();
+  clearImageCache();
+});
 
 describe("stripHtml", () => {
   it("태그·br·엔티티를 제거하고 공백을 정리한다", () => {
@@ -89,7 +102,8 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
       addr1: "부산 사하구",
     };
     const intro = { usetime: "09:00~18:00", restdate: "매주 월요일" };
-    const detail = await fetchPoiDetailCached("100", makeFetch({ common, intro }) as typeof fetch);
+    const fetchMock = makeFetch({ common, intro });
+    const detail = await fetchPoiDetailCached("100", fetchMock as typeof fetch);
 
     expect(detail.title).toBe("감천문화마을");
     expect(detail.imageUrl).toBe("https://img/1.jpg");
@@ -97,6 +111,7 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     expect(detail.restdate).toBe("매주 월요일");
     expect(detail.overview).toContain("산비탈 마을이에요.");
     expect(detail.overview).not.toContain("<p>"); // HTML 제거 확인
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
   });
 
   it("firstimage가 없으면 detailImage2에서 이미지를 보충한다", async () => {
@@ -153,5 +168,130 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
       String(c[0]).includes("detailCommon2"),
     );
     expect(commonCalls).toHaveLength(1);
+  });
+
+  it("썸네일 조회 뒤 상세 조회를 해도 detailCommon2를 재호출하지 않는다", async () => {
+    const common = { contentid: "105", contenttypeid: "12", title: "P", firstimage: "https://i.jpg" };
+    const fetchMock = makeFetch({ common });
+    await fetchPoiImageCached("105", fetchMock as typeof fetch);
+    await fetchPoiDetailCached("105", fetchMock as typeof fetch);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+  });
+});
+
+describe("fetchPoiCardDetailCached — 결과 카드용 빠른 상세", () => {
+  it("카드 표시에는 detailIntro2를 기다리지 않는다", async () => {
+    const common = {
+      contentid: "300",
+      contenttypeid: "12",
+      title: "빠른 카드",
+      overview: "<p>바로 보여줄 소개.</p>",
+      firstimage: "https://img/card.jpg",
+    };
+    const fetchMock = makeFetch({ common, introReject: true });
+    const detail = await fetchPoiCardDetailCached("300", fetchMock as typeof fetch);
+    expect(detail.title).toBe("빠른 카드");
+    expect(detail.overview).toBe("바로 보여줄 소개.");
+    expect(detail.imageUrl).toBe("https://img/card.jpg");
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailIntro2"))).toHaveLength(0);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+  });
+
+  it("편의시설 사진뿐인 POI는 대표 이미지를 쓰지 않는다", async () => {
+    const common = {
+      contentid: "3083767",
+      contenttypeid: "14",
+      title: "부산근현대역사관 본관",
+      firstimage: "http://tong.visitkorea.or.kr/cms/resource/38/3428638_image2_1.jpg",
+    };
+    const fetchMock = makeFetch({ common });
+    const detail = await fetchPoiCardDetailCached("3083767", fetchMock as typeof fetch);
+    expect(detail.imageUrl).toBeUndefined();
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+  });
+
+  it("detailImage2 후보의 이미지명이 편의시설이면 건너뛴다", async () => {
+    const common = { contentid: "301", contenttypeid: "12", title: "이미지 보충", firstimage: "" };
+    const image = [
+      { imgname: "가족화장실", originimgurl: "https://img/restroom.jpg" },
+      { imgname: "외관", originimgurl: "https://img/front.jpg" },
+    ];
+    const detail = await fetchPoiCardDetailCached("301", makeFetch({ common, image }) as typeof fetch);
+    expect(detail.imageUrl).toBe("https://img/front.jpg");
+  });
+});
+
+describe("fetchPoiGalleryImagesCached — 관광지 이미지 슬라이드", () => {
+  it("firstimage와 detailImage2 이미지를 중복 없이 모은다", async () => {
+    const common = { contentid: "400", contenttypeid: "12", title: "갤러리", firstimage: "http://img/cover.jpg" };
+    const image = [
+      { imgname: "외관", originimgurl: "http://img/cover.jpg", smallimageurl: "http://img/cover-small.jpg" },
+      { imgname: "전시실", originimgurl: "http://img/inside.jpg" },
+    ];
+    const images = await fetchPoiGalleryImagesCached("400", makeFetch({ common, image }) as typeof fetch);
+    expect(images).toEqual(["https://img/cover.jpg", "https://img/inside.jpg"]);
+  });
+
+  it("이미지명이 편의시설이면 슬라이드 후보에서 제외한다", async () => {
+    const common = { contentid: "401", contenttypeid: "12", title: "필터", firstimage: "" };
+    const image = [
+      { imgname: "가족화장실", originimgurl: "https://img/restroom.jpg" },
+      { imgname: "외관", originimgurl: "https://img/front.jpg" },
+    ];
+    const images = await fetchPoiGalleryImagesCached("401", makeFetch({ common, image }) as typeof fetch);
+    expect(images).toEqual(["https://img/front.jpg"]);
+  });
+
+  it("편의시설 사진뿐인 POI는 빈 갤러리를 반환한다", async () => {
+    const common = {
+      contentid: "3083767",
+      contenttypeid: "14",
+      title: "부산근현대역사관 본관",
+      firstimage: "http://tong.visitkorea.or.kr/cms/resource/38/3428638_image2_1.jpg",
+    };
+    const fetchMock = makeFetch({ common });
+    const images = await fetchPoiGalleryImagesCached("3083767", fetchMock as typeof fetch);
+    expect(images).toEqual([]);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+  });
+});
+
+describe("fetchPoiImageCached — 썸네일 경량 이미지", () => {
+  it("detailCommon2 firstimage를 https로 정규화해 반환한다", async () => {
+    const common = {
+      contentid: "200",
+      contenttypeid: "12",
+      title: "T",
+      firstimage: "http://tong.visitkorea.or.kr/cms/a.jpg",
+    };
+    const url = await fetchPoiImageCached("200", makeFetch({ common }) as typeof fetch);
+    expect(url).toBe("https://tong.visitkorea.or.kr/cms/a.jpg");
+  });
+
+  it("firstimage가 비면 detailImage2 첫 장으로 보충한다", async () => {
+    const common = { contentid: "201", contenttypeid: "12", title: "U", firstimage: "" };
+    const image = [{ originimgurl: "https://img/o.jpg", smallimageurl: "https://img/s.jpg" }];
+    const url = await fetchPoiImageCached("201", makeFetch({ common, image }) as typeof fetch);
+    expect(url).toBe("https://img/o.jpg");
+  });
+
+  it("이미지가 전혀 없으면 null을 반환한다 (폴백은 호출부에서)", async () => {
+    const common = { contentid: "202", contenttypeid: "12", title: "V", firstimage: "" };
+    const url = await fetchPoiImageCached("202", makeFetch({ common, image: null }) as typeof fetch);
+    expect(url).toBeNull();
+  });
+
+  it("firstimage가 있으면 detailImage2는 호출하지 않는다 (호출 1회)", async () => {
+    const common = { contentid: "203", contenttypeid: "12", title: "W", firstimage: "https://i.jpg" };
+    const fetchMock = makeFetch({ common });
+    await fetchPoiImageCached("203", fetchMock as typeof fetch);
+    await fetchPoiImageCached("203", fetchMock as typeof fetch); // 캐시 히트
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+  });
+
+  it("poiImageProxyUrl은 contentId로 프록시 이미지 경로를 만든다", () => {
+    expect(poiImageProxyUrl("126122")).toBe("/api/img?contentId=126122");
   });
 });

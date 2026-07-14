@@ -31,6 +31,32 @@ export const ALLOWED_PARAMS = new Set([
 // 파라미터 값은 짧은 영숫자만 (TourAPI 코드·ID·날짜 형태)
 const VALUE_RE = /^[A-Za-z0-9]{1,32}$/;
 
+// ── 공유 카드용 이미지 릴레이 (/api/img) ──
+// TourAPI 이미지 CDN에는 CORS 헤더가 없어 브라우저 canvas.toBlob이 오염(taint)으로 실패한다.
+// 그래서 이미지를 이 프록시로 same-origin 중계한다. 클라이언트는 contentId만 보내고
+// (좌표·임의 URL 아님), 워커가 detailCommon2로 대표 이미지를 해석해 스트리밍한다.
+// 응답은 no-store로만 흘려보내고 저장하지 않는다 (절대 원칙 3).
+export const IMAGE_HOST_ALLOWLIST = new Set(["tong.visitkorea.or.kr"]);
+
+/** 이미지 릴레이가 받는 contentId 검증 — 다른 파라미터 값과 동일 형식 */
+export function isValidContentId(value: string): boolean {
+  return VALUE_RE.test(value);
+}
+
+/** TourAPI 대표 이미지 URL이 http로 오면 https로 (혼합 콘텐츠 차단 회피) */
+export function normalizeImageUrl(url: string): string {
+  return url.startsWith("http://") ? `https://${url.slice("http://".length)}` : url;
+}
+
+/** SSRF 방지 — TourAPI 응답에서 온 URL이라도 호스트를 화이트리스트로 재확인 */
+export function isAllowedImageHost(url: string): boolean {
+  try {
+    return IMAGE_HOST_ALLOWLIST.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
 export type ValidationResult =
   | { ok: true; endpoint: string; params: Array<[string, string]> }
   | { ok: false; status: number; message: string };
