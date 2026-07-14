@@ -49,11 +49,11 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
             아직 도장이 없어요. 스핀을 돌려 이 동네를 방문하면 도장이 하나씩 채워져요.
           </div>
         )}
-        <div key={zone.id} className="fade-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+        <div key={zone.id} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
           {zone.slots.map((slot) => {
             const isCollected = visited.has(slot.poi.id)
             return (
-            <div key={slot.poi.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div key={slot.poi.id} className="motion-card-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               {isCollected ? (
                 <img src="/stamp-mark-512.png" alt="획득한 참 잘했어요 도장" style={{ width: 82, height: 82, objectFit: 'contain' }} />
               ) : (

@@ -30,13 +30,14 @@ export function DepartureScreen({ selected, onSelect, onBack }: Props) {
           <img src={locateImg} alt="" style={{ position: 'absolute', right: -6, top: -18, width: 86, filter: 'drop-shadow(0 10px 18px rgba(20,40,90,.22))', animation: 'bobsm 3.2s ease-in-out infinite' }} />
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="motion-card-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {DEPARTURES.map((d) => {
             const on = d.id === selected.id
             return (
               <button
                 key={d.id}
                 onClick={() => onSelect(d)}
+                className="motion-card motion-card-enter"
                 style={{
                   display: 'flex',
                   alignItems: 'center',

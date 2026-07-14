@@ -80,6 +80,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             <button
               key={m}
               onClick={() => setMode(m)}
+              className="motion-card"
               style={{
                 border: 'none',
                 cursor: 'pointer',
@@ -113,7 +114,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
           <div
             ref={stripRef}
             onScroll={onStripScroll}
-            className="no-scrollbar"
+            className="no-scrollbar motion-card-list"
             style={{
               position: 'absolute',
               left: 0,
@@ -124,6 +125,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               overflowX: 'auto',
               scrollSnapType: 'x mandatory',
               padding: '8px 40px 14px',
+              zIndex: 10,
             }}
           >
             {list.map((poi) => {
@@ -132,6 +134,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               return (
                 <div
                   key={poi.id}
+                  className="motion-card-enter"
                   ref={(el) => {
                     if (el) cardRefs.current.set(poi.id, el)
                     else cardRefs.current.delete(poi.id)
@@ -170,13 +173,14 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
           </div>
         </div>
       ) : (
-        <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '6px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {list.map((poi) => {
             const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
             return (
               <button
                 key={poi.id}
                 onClick={() => onSelect(poi)}
+                className="motion-card motion-card-enter"
                 style={{ display: 'flex', gap: 14, alignItems: 'center', padding: 12, background: '#fff', border: 'none', borderRadius: 20, boxShadow: '0 8px 20px -14px rgba(20,40,90,.25)', cursor: 'pointer', textAlign: 'left' }}
               >
                 <div style={{ width: 76, height: 76, borderRadius: 16, flex: 'none', position: 'relative', overflow: 'hidden', background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 140%)`, display: 'grid', placeItems: 'center' }}>

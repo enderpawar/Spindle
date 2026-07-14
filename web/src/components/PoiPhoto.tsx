@@ -19,9 +19,11 @@ export function PoiPhoto({ contentId, alt, scrim = false, style }: Props) {
   const [active, setActive] = useState(false)
   const url = usePoiImage(contentId, active)
   const [failed, setFailed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     setFailed(false)
+    setLoaded(false)
     if (active) return
     const marker = markerRef.current
     if (!marker) return
@@ -50,11 +52,14 @@ export function PoiPhoto({ contentId, alt, scrim = false, style }: Props) {
           alt={alt}
           loading="lazy"
           onError={() => setFailed(true)}
+          onLoad={() => setLoaded(true)}
+          className={`poi-photo${loaded ? ' is-loaded' : ''}`}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', ...style }}
         />
       )}
       {url && !failed && scrim && (
         <div
+          className={`poi-photo-scrim${loaded ? ' is-loaded' : ''}`}
           aria-hidden
           style={{
             position: 'absolute',

@@ -7,21 +7,22 @@ interface Props {
   dial: DialId
   onDialChange: (dial: DialId) => void
   onOpenDeparture: () => void
-  onReplayOnboarding: () => void
+  onReplayGuide: () => void
   onNavigate: (tab: NavTab) => void
 }
 
-export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture, onReplayOnboarding, onNavigate }: Props) {
+export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture, onReplayGuide, onNavigate }: Props) {
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header style={{ padding: '18px 20px 0' }}>
         <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--l-ink)' }}>설정</div>
       </header>
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '16px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* 출발점 */}
         <button
           onClick={onOpenDeparture}
+          className="motion-card motion-card-enter"
           style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px', background: '#fff', border: 'none', borderRadius: 18, boxShadow: '0 8px 20px -14px rgba(20,40,90,.25)', cursor: 'pointer', textAlign: 'left' }}
         >
           <div style={{ flex: 1 }}>
@@ -43,6 +44,7 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
                 <button
                   key={d.id}
                   onClick={() => onDialChange(d.id)}
+                  className="motion-card"
                   role="radio"
                   aria-checked={on}
                   style={{
@@ -68,12 +70,16 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
           </div>
         </div>
 
-        {/* 온보딩 다시 보기 */}
+        {/* 실제 홈 화면 위 코치마크 다시 보기 */}
         <button
-          onClick={onReplayOnboarding}
+          onClick={onReplayGuide}
+          className="motion-card motion-card-enter"
           style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px', background: '#fff', border: 'none', borderRadius: 18, boxShadow: '0 8px 20px -14px rgba(20,40,90,.25)', cursor: 'pointer', textAlign: 'left' }}
         >
-          <div style={{ flex: 1, fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>사용법 다시 보기</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>사용법 다시 보기</div>
+            <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>실제 화면에서 기능 위치를 안내해요</div>
+          </div>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
             <path d="M9 6 l6 6 l-6 6" />
           </svg>

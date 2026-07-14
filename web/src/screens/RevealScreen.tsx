@@ -28,7 +28,7 @@ export function RevealScreen({ rec, onOpen }: { rec: Recommendation; onOpen: () 
 
         <div className="reveal-card-shell">
           <div className="reveal-card-glow" aria-hidden style={{ background: `radial-gradient(circle, ${direction.color}55, transparent 68%)` }} />
-          <article className="reveal-card" style={{ background: `linear-gradient(155deg, #ffffff 0%, #f8fbff 58%, ${direction.color}2e 100%)`, borderColor: `${direction.color}66` }}>
+          <article className="reveal-card motion-reveal-card" style={{ background: `linear-gradient(155deg, #ffffff 0%, #f8fbff 58%, ${direction.color}2e 100%)`, borderColor: `${direction.color}66` }}>
             <div className="reveal-card-orbit" aria-hidden style={{ borderColor: `${direction.color}38` }} />
             <div className="reveal-card-head">
               <span>SPINDLE PICK</span>

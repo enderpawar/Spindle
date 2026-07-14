@@ -20,16 +20,18 @@ import { ThemeDeckScreen } from './screens/ThemeDeckScreen'
 import { FestivalScreen } from './screens/FestivalScreen'
 import type { NavTab } from './components/BottomNav'
 import type { ThemeId } from './engine/themes'
+import { HomeGuide } from './components/HomeGuide'
+import { transitionFor, type Screen, type TransitionIntent } from './navigationMotion'
+import { runViewTransition } from './viewTransition'
+import { usePressFeedback } from './usePressFeedback'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
-export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'course' | 'share' | 'theme' | 'festival'
 
 const ONBOARD_KEY = 'spindle.onboarded' // 온보딩 노출 여부만 저장 (API 데이터 아님 — 규정 무관)
 
-// 화면 전환 연출 구분: 탭·첫 진입은 부드러운 페이드, 그 외(드릴다운·스핀 의식)는 오른쪽 슬라이드-인.
-const FADE_SCREENS = new Set<Screen>(['onboarding', 'home', 'spots', 'spin', 'stamp', 'settings'])
-
 function App() {
+  usePressFeedback()
+
   // 콜드 스타트 인트로 스플래시 — 앱 부팅마다 한 번 노출(세션 시작 POI 프리페치를 자연스럽게 가린다)
   const [booting, setBooting] = useState(true)
   const [screen, setScreen] = useState<Screen>(() => (localStorage.getItem(ONBOARD_KEY) ? 'home' : 'onboarding'))
@@ -41,6 +43,17 @@ function App() {
   const [themeSeed, setThemeSeed] = useState<ThemeId>('sea')
   const [poiReturn, setPoiReturn] = useState<Screen>('home')
   const [course, setCourse] = useState<ReadyCourse | null>(null)
+  const [homeGuideOpen, setHomeGuideOpen] = useState(false)
+  const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
+
+  const goTo = (next: Screen) => {
+    if (next === screen) return
+    const intent = transitionFor(screen, next)
+    runViewTransition(intent, () => {
+      setTransitionIntent(intent)
+      setScreen(next)
+    })
+  }
 
   // SPEC 6: 세션 시작 시 4개 구 areaBasedList2를 실시간 호출(메모리/세션 캐시만, 영속 저장 없음)
   // — 운영계정 호출 이력을 자연스럽게 축적한다. 실패해도 앱 동작에는 영향 없음(추천은 큐레이션 풀 기반).
@@ -60,7 +73,7 @@ function App() {
 
   const finishOnboarding = () => {
     localStorage.setItem(ONBOARD_KEY, '1')
-    setScreen('home')
+    goTo('home')
   }
 
   const handleSpun = (headingDeg: number) => {
@@ -85,7 +98,7 @@ function App() {
           }, 500)
         })
     }
-    setScreen('reveal')
+    goTo('reveal')
   }
 
   /** 명소 탭·홈 추천 카드·테마 덱에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
@@ -95,12 +108,12 @@ function App() {
     setCandidateIndex(0)
     setPoiReturn(from)
     void fetchPoiCardDetailCached(poi.contentId).catch(() => {})
-    setScreen('result')
+    goTo('result')
   }
 
   const openTheme = (themeId: ThemeId) => {
     setThemeSeed(themeId)
-    setScreen('theme')
+    goTo('theme')
   }
 
   /**
@@ -112,7 +125,7 @@ function App() {
     const result = buildCourseFromAnchor({ departure, dial, anchor, noteReason: rec?.expandReason })
     if (result.status === 'ready') {
       setCourse(result)
-      setScreen('course')
+      goTo('course')
       return null
     }
     return result.reason
@@ -120,16 +133,15 @@ function App() {
 
   const openDeparture = (from: Screen) => {
     setDepartureReturn(from)
-    setScreen('departure')
+    goTo('departure')
   }
 
-  const navigate = (tab: NavTab) => setScreen(tab)
+  const navigate = (tab: NavTab) => goTo(tab)
 
   if (booting) {
     return <IntroScreen onDone={() => setBooting(false)} />
   }
 
-  // 화면별 렌더 요소를 뽑아, key가 있는 전환 래퍼로 감싼다 (내비게이션마다 진입 애니메이션 재생).
   const view = (() => {
     switch (screen) {
       case 'onboarding':
@@ -147,7 +159,10 @@ function App() {
           dial={dial}
           onDialChange={setDial}
           onOpenDeparture={() => openDeparture('settings')}
-          onReplayOnboarding={() => setScreen('onboarding')}
+          onReplayGuide={() => {
+            setHomeGuideOpen(true)
+            goTo('home')
+          }}
           onNavigate={navigate}
         />
       )
@@ -157,22 +172,22 @@ function App() {
           selected={departure}
           onSelect={(d) => {
             setDeparture(d)
-            setScreen(departureReturn)
+            goTo(departureReturn)
           }}
-          onBack={() => setScreen(departureReturn)}
+          onBack={() => goTo(departureReturn)}
         />
       )
     case 'reveal':
-      return rec ? <RevealScreen rec={rec} onOpen={() => setScreen('result')} /> : null
+      return rec ? <RevealScreen rec={rec} onOpen={() => goTo('result')} /> : null
     case 'result':
       return rec ? (
         <ResultScreen
           rec={rec}
           candidateIndex={candidateIndex}
           onNextCandidate={() => setCandidateIndex((i) => (i + 1) % rec.candidates.length)}
-          onBack={() => setScreen(poiReturn)}
-          onRespin={() => setScreen('spin')}
-          onShare={() => setScreen('share')}
+          onBack={() => goTo(poiReturn)}
+          onRespin={() => goTo('spin')}
+          onShare={() => goTo('share')}
           onBuildCourse={openCourse}
         />
       ) : null
@@ -181,23 +196,28 @@ function App() {
         <CourseScreen
           course={course}
           departure={departure}
-          onBack={() => setScreen('result')}
-          onRespin={() => setScreen('spin')}
+          onBack={() => goTo('result')}
+          onRespin={() => goTo('spin')}
         />
       ) : null
     case 'share':
-      return rec ? <ShareScreen rec={rec} poi={rec.candidates[candidateIndex]} onBack={() => setScreen('result')} /> : null
+      return rec ? <ShareScreen rec={rec} poi={rec.candidates[candidateIndex]} onBack={() => goTo('result')} /> : null
     case 'theme':
-      return <ThemeDeckScreen initialTheme={themeSeed} onSelect={(poi) => openPoi(poi, 'theme')} onNavigate={navigate} onBack={() => setScreen('home')} />
+      return <ThemeDeckScreen initialTheme={themeSeed} onSelect={(poi) => openPoi(poi, 'theme')} onNavigate={navigate} onBack={() => goTo('home')} />
     case 'festival':
-      return <FestivalScreen onNavigate={navigate} onBack={() => setScreen('home')} />
+      return <FestivalScreen onNavigate={navigate} onBack={() => goTo('home')} />
     default:
-      return <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onOpenFestival={() => setScreen('festival')} onNavigate={navigate} />
+      return (
+        <>
+          <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onOpenFestival={() => goTo('festival')} onNavigate={navigate} />
+          {homeGuideOpen && <HomeGuide onClose={() => setHomeGuideOpen(false)} />}
+        </>
+      )
     }
   })()
 
   return (
-    <div className="screen-anim" data-transition={FADE_SCREENS.has(screen) ? 'fade' : 'push'} key={screen}>
+    <div className="screen-transition" data-transition={transitionIntent} key={screen}>
       {view}
     </div>
   )

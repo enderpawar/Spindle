@@ -98,14 +98,14 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
         )}
 
         {state.kind === 'ready' && state.festivals.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="motion-card-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {state.festivals.map((f) => (
               <a
                 key={f.contentId}
                 href={`https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${f.title}`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="btn"
+                className="btn motion-card motion-card-enter"
                 style={{ padding: 0, height: 'auto', display: 'flex', alignItems: 'stretch', gap: 0, background: '#fff', border: '1px solid var(--l-line)', borderRadius: 18, overflow: 'hidden', textDecoration: 'none' }}
               >
                 <div style={{ width: 92, flex: 'none', background: f.imageUrl ? `center/cover no-repeat url(${f.imageUrl})` : 'linear-gradient(145deg,#ff9e7a,#e0603f)', display: 'grid', placeItems: 'center' }}>

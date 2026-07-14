@@ -105,6 +105,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         <button
           onClick={onOpenDeparture}
           className="home-origin"
+          data-guide="departure"
           style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}
         >
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1fa971', flex: 'none' }} />
@@ -117,7 +118,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
 
       <div className="home-scroll no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         {/* 히어로 배너 */}
-        <div className="home-hero">
+        <div className="home-hero" data-guide="spin">
           <div aria-hidden style={{ position: 'absolute', top: -30, right: -30, width: 150, height: 150, borderRadius: '50%', background: 'rgba(255,255,255,.1)' }} />
           <div aria-hidden style={{ position: 'absolute', bottom: -40, right: 60, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,.08)' }} />
           <div className="home-hero-copy">
@@ -147,12 +148,12 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         </div>
 
         {/* 퀵 메뉴 */}
-        <div className="home-quick-grid">
+        <div className="home-quick-grid motion-card-list">
           {quickMenu.map((item) => (
             <button
               key={item.label}
               onClick={item.onClick}
-              className="home-quick-button"
+              className="home-quick-button motion-card motion-card-enter"
             >
               <div className="home-quick-icon" style={{ background: item.bg }}>{item.icon}</div>
               <span className="home-quick-label">{item.label}</span>
@@ -162,12 +163,12 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
 
         {/* 테마로 떠나기 */}
         <div style={{ padding: '16px 20px 2px', fontSize: 15, fontWeight: 900, color: 'var(--l-ink)' }}>테마로 떠나기</div>
-        <div className="home-theme-grid">
+        <div className="home-theme-grid motion-card-list" data-guide="themes">
           {THEMES.map((theme) => (
             <button
               key={theme.id}
               onClick={() => onOpenTheme(theme.id)}
-              className="home-theme-card"
+              className="home-theme-card motion-card motion-card-enter"
               style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
             >
               <div aria-hidden style={{ position: 'absolute', right: -6, bottom: -8, fontSize: 46, opacity: 0.34 }}>
@@ -182,7 +183,8 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         {/* 도장깨기 진행 카드 */}
         <button
           onClick={() => onNavigate('stamp')}
-          className="home-stamp-card"
+          className="home-stamp-card motion-card motion-card-enter"
+          data-guide="stamps"
         >
           <div className="home-stamp-body">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -215,11 +217,11 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             더보기 ›
           </button>
         </div>
-        <div className="home-pick-grid">
+        <div className="home-pick-grid motion-card-list">
           {todayPicks.map((poi, i) => {
             const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
             return (
-              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card">
+              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card motion-card motion-card-enter">
                 <div className="home-pick-image" style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>
                   <SketchArt variant={i} />
                   <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />

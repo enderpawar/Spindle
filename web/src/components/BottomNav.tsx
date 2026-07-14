@@ -8,13 +8,12 @@ const INACTIVE = '#9db3d8'
 function Item({ label, active, icon, onClick }: { label: string; active: boolean; icon: ReactNode; onClick: () => void }) {
   return (
     <button
+      className={`nav-item${active ? ' is-active' : ''}`}
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '2px 8px', minWidth: 44 }}
     >
-      {/* 활성화되는 순간 아이콘이 살짝 팝 — key로 리마운트해 매번 재생 */}
-      <span className={`nav-icon${active ? ' nav-icon--active' : ''}`} key={active ? 'on' : 'off'}>
-        {icon}
-      </span>
+      <span className="nav-icon" key={active ? 'active' : 'idle'}>{icon}</span>
       <span style={{ fontSize: 11, fontWeight: active ? 800 : 700, color: active ? ACTIVE : INACTIVE }}>{label}</span>
     </button>
   )
@@ -24,6 +23,8 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
   const c = (tab: NavTab) => (active === tab ? ACTIVE : INACTIVE)
   return (
     <nav
+      className="bottom-nav"
+      aria-label="주요 메뉴"
       style={{
         position: 'absolute',
         bottom: 0,
@@ -63,7 +64,8 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         <button
           onClick={() => onNavigate('spin')}
           aria-label="스핀"
-          className="nav-fab"
+          aria-current={active === 'spin' ? 'page' : undefined}
+          className={`nav-fab${active === 'spin' ? ' is-active' : ''}`}
           style={{
             width: 58,
             height: 58,

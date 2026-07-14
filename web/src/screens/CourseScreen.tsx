@@ -107,7 +107,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
       {/* 코스 카드 스트립 — 지도 핀과 선택을 동기화. 스와이프해 순서대로 훑어본다 */}
       <div
         ref={stripRef}
-        className="no-scrollbar"
+        className="no-scrollbar motion-card-list"
         style={{ flex: 'none', display: 'flex', gap: 12, overflowX: 'auto', scrollSnapType: 'x mandatory', padding: '12px 20px 12px' }}
       >
         {stops.map((stop) => {
@@ -116,6 +116,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
           return (
             <div
               key={stop.poi.id}
+              className="motion-card motion-card-enter"
               ref={(el) => {
                 if (el) cardRefs.current.set(stop.poi.id, el)
                 else cardRefs.current.delete(stop.poi.id)
@@ -187,9 +188,9 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
 
       {/* 길찾기 앱 선택 시트 */}
       {navStop && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
           <button aria-label="닫기" onClick={() => { setNavStop(null); setStampToast(null) }} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(12,26,54,.45)', cursor: 'pointer' }} />
-          <div className="fade-up" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(26px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.2)' }}>
+          <div className="motion-sheet" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(26px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.2)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>{navStop.order}번째 · {navStop.poi.district}</div>
             <div style={{ marginTop: 2, marginBottom: stampToast ? 10 : 14, fontSize: 17, fontWeight: 900, color: 'var(--l-ink)' }}>{navStop.poi.name}</div>
             {stampToast && <StampNotice district={stampToast} />}

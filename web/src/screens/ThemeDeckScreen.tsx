@@ -39,6 +39,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
             <button
               key={t.id}
               onClick={() => setThemeId(t.id)}
+              className="motion-card"
               style={{
                 flex: 'none',
                 display: 'flex',
@@ -71,7 +72,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
 
       {/* POI 덱 그리드 */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px calc(110px + env(safe-area-inset-bottom))' }}>
-        <div key={themeId} className="fade-up" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
+        <div key={themeId} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
           {pois.map((poi) => {
             const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
             const done = visited.has(poi.id)
@@ -79,6 +80,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
               <button
                 key={poi.id}
                 onClick={() => onSelect(poi)}
+                className="motion-card motion-card-enter"
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
               >
                 <div style={{ height: 112, borderRadius: 18, background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 135%)`, position: 'relative', overflow: 'hidden' }}>

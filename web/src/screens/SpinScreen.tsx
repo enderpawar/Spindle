@@ -13,8 +13,6 @@ interface Props {
   onNavigate: (tab: NavTab) => void
 }
 
-const reelItems = [...DIRECTIONS, ...DIRECTIONS, ...DIRECTIONS].map((d) => d.label)
-
 /** 스핀 탭 — 밤바다 몰입 화면. 원판 드래그 또는 돌리기 버튼으로 방위를 정한다 */
 export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate }: Props) {
   const rose = useRef<CompassRoseHandle>(null)
@@ -111,7 +109,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
         </div>
       </div>
 
-      {/* 하단 컨트롤 ↔ 스핀 릴 (크로스페이드) — 내브 높이만큼 여백 */}
+      {/* 하단 컨트롤 — 내브 높이만큼 여백 (스핀 중에는 페이드아웃) */}
       <div style={{ position: 'relative', minHeight: 150, padding: '0 24px calc(104px + env(safe-area-inset-bottom))', zIndex: 2 }}>
         <div style={{ opacity: busy ? 0 : 1, pointerEvents: busy ? 'none' : 'auto', transition: 'opacity .25s ease', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div className="seg" role="radiogroup" aria-label="이동시간">
@@ -129,30 +127,6 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             </svg>
             돌리기
           </button>
-        </div>
-
-        <div aria-hidden style={{ position: 'absolute', inset: '0 0 auto', top: 30, opacity: busy ? 1 : 0, transition: 'opacity .25s ease', pointerEvents: 'none' }}>
-          <div style={{ overflow: 'hidden', height: 56, WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent)' }}>
-            <div style={{ display: 'flex', gap: 12, width: 'max-content', animation: 'reelL 1.1s linear infinite' }}>
-              {reelItems.map((label, i) => (
-                <span
-                  key={i}
-                  style={{
-                    flex: 'none',
-                    padding: '14px 24px',
-                    background: settled && label === liveDir.label ? liveDir.color : '#fff',
-                    border: '1px solid var(--l-line)',
-                    borderRadius: 16,
-                    fontSize: 17,
-                    fontWeight: 800,
-                    color: settled && label === liveDir.label ? '#0f2540' : 'var(--l-ink-3)',
-                  }}
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 

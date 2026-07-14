@@ -6,7 +6,7 @@ interface Props {
 export function StampNotice({ district }: Props) {
   return (
     <div
-      className="fade-up"
+      className="motion-status motion-stamp-pop"
       role="status"
       style={{
         display: 'flex',

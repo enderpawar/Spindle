@@ -204,7 +204,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
         {loading ? (
           <ResultSkeleton />
         ) : (
-          <div key={poi.id} className="fade-up">
+          <div key={poi.id} className="motion-card-enter">
             {/* 대표 이미지 — TourAPI 상세 이미지가 있으면 표시, 없으면 방위색 폴백 */}
             <div style={{ height: 196, borderRadius: 24, position: 'relative', background: `linear-gradient(135deg, ${direction.color}, #1e4fd8 130%)`, overflow: 'hidden' }}>
               {detailImageUrl && !imageFailed ? (
@@ -318,7 +318,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 이 방향으로 코스 짜기
               </button>
               {courseNotice && (
-                <div role="status" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '11px 13px', background: '#eef2fb', borderRadius: 13, fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>
+                <div className="motion-status" role="status" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '11px 13px', background: '#eef2fb', borderRadius: 13, fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.2} aria-hidden>
                     <circle cx="12" cy="12" r="9" />
                     <path d="M12 8 v5" strokeLinecap="round" />
@@ -368,9 +368,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
       {/* 길찾기 앱 선택 시트 */}
       {navSheet && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
           <button aria-label="닫기" onClick={() => { setNavSheet(false); setStampToast(null) }} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(12,26,54,.45)', cursor: 'pointer' }} />
-          <div className="fade-up" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(26px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.2)' }}>
+          <div className="motion-sheet" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(26px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.2)' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--l-ink)', marginBottom: stampToast ? 10 : 14 }}>어떤 지도로 안내할까요?</div>
             {stampToast && <StampNotice district={stampToast} />}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -383,9 +383,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
       {/* 도장 획득 토스트 */}
       {galleryOpen && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 14, background: 'rgba(8,20,38,.72)' }}>
+        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 14, background: 'rgba(8,20,38,.72)' }}>
           <button aria-label="닫기" onClick={() => setGalleryOpen(false)} style={{ position: 'absolute', inset: 0, border: 'none', background: 'transparent', cursor: 'pointer' }} />
-          <div className="fade-up" style={{ position: 'absolute', left: 18, right: 18, top: '8%', bottom: '8%', display: 'flex', flexDirection: 'column', gap: 12, zIndex: 1 }}>
+          <div className="motion-dialog" style={{ position: 'absolute', left: 18, right: 18, top: '8%', bottom: '8%', display: 'flex', flexDirection: 'column', gap: 12, zIndex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.66)' }}>{poi.district}</div>
@@ -413,12 +413,12 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
               {galleryImages.length > 1 && (
                 <>
-                  <button onClick={() => moveGallery(-1)} aria-label="이전 사진" className="btn" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,37,64,.72)', color: '#fff', padding: 0 }}>
+                  <button onClick={() => moveGallery(-1)} aria-label="이전 사진" className="btn gallery-nav" style={{ position: 'absolute', left: 10, top: '50%', width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,37,64,.72)', color: '#fff', padding: 0 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
                       <path d="M15 5 L8 12 L15 19" />
                     </svg>
                   </button>
-                  <button onClick={() => moveGallery(1)} aria-label="다음 사진" className="btn" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,37,64,.72)', color: '#fff', padding: 0 }}>
+                  <button onClick={() => moveGallery(1)} aria-label="다음 사진" className="btn gallery-nav" style={{ position: 'absolute', right: 10, top: '50%', width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,37,64,.72)', color: '#fff', padding: 0 }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
                       <path d="M9 5 L16 12 L9 19" />
                     </svg>
@@ -435,9 +435,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       )}
 
       {infoOpen && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
+        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
           <button aria-label="닫기" onClick={() => setInfoOpen(false)} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(12,26,54,.45)', cursor: 'pointer' }} />
-          <div className="fade-up no-scrollbar" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '78%', overflowY: 'auto', background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(28px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.22)' }}>
+          <div className="motion-sheet no-scrollbar" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '78%', overflowY: 'auto', background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(28px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.22)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
               <div>
                 <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--l-primary)' }}>이 동네 이야기</div>
@@ -511,7 +511,7 @@ function FestivalBanner({ festival }: { festival: Festival }) {
       href={mapHref}
       target="_blank"
       rel="noreferrer"
-      className="fade-up"
+      className="motion-card-enter"
       style={{
         display: 'block',
         marginBottom: 14,

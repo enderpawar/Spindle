@@ -28,6 +28,31 @@
   --l-line: #dbe6fa;
   --l-soft: #e8f0ff;
   --l-orange: #e0603f;
+
+  /* 쫀득한 네이티브 모션 — 빠른 눌림 + 또렷한 스프링 복원(입력 피드백)·히어로 등장 팝 */
+  --motion-press: 120ms;
+  --motion-press-in: 70ms;
+  --motion-release: 440ms;
+  --motion-control: 180ms;
+  --motion-screen: 300ms;
+  --motion-sheet: 240ms;
+  --motion-hero: 560ms;
+  --ease-motion: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-smooth-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-touch-release: cubic-bezier(0.16, 1.36, 0.3, 1);
+  --ease-touch-down: cubic-bezier(0.2, 0, 0.2, 1);
+  /* 히어로 등장(리빌·결과·도장·탭 선택)용 — 살짝 지나쳤다 정착하는 팝 */
+  --spring-pop: cubic-bezier(0.22, 1.32, 0.36, 1);
+}
+
+/* linear() 지원 브라우저는 진짜 스프링 곡선으로 교체 (미지원은 위 cubic-bezier 폴백) */
+@supports (animation-timing-function: linear(0, 1)) {
+  :root {
+    /* 복원 스프링 — 손 떼면 1.0을 ~6% 지나쳤다 정착 (또렷한 토스식 바운스) */
+    --ease-touch-release: linear(0, 0.02 4%, 0.3 12%, 0.63 20%, 0.9 28%, 1.048 40%, 1.062 47%, 1.03 57%, 0.992 70%, 1.005 84%, 1);
+    /* 등장 팝 — 0→1을 ~3.5% 지나쳤다 정착 (카드·도장·탭이 톡 올라오는 감각) */
+    --spring-pop: linear(0, 0.05 4%, 0.38 12%, 0.7 20%, 0.92 28%, 1.028 40%, 1.045 49%, 1.02 60%, 0.995 76%, 1.003 88%, 1);
+  }
 }
 
 * {
@@ -85,6 +110,176 @@ button {
 
 .screen > * {
   min-width: 0;
+}
+
+/* ─── 화면 전환 ─── */
+/* 배경과 하단 내비게이션은 고정하고 화면의 실제 콘텐츠만 짧게 진입시킨다. */
+.screen-transition {
+  width: 100%;
+  height: 100svh;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  view-transition-name: spindle-screen;
+}
+
+.bottom-nav {
+  view-transition-name: spindle-nav;
+}
+
+/* 지원 브라우저에서는 View Transition 스냅샷만으로 전환한다.
+   (아래 screenEnter* CSS 폴백은 @supports not (view-transition-name) 로 미지원 브라우저에만 적용 —
+   VT 종료 직후 라이브 DOM 진입 애니메이션이 재발화하며 화면이 한 번 더 깜빡이던 문제를 없앤다) */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-group(spindle-screen) {
+  animation-duration: 380ms;
+  animation-timing-function: var(--ease-smooth-spring);
+}
+
+/* 탭·전진·복귀는 방향 슬라이드 없이 자연스러운 디졸브 —
+   이전 화면은 그대로 고정하고, 새 화면이 그 위에서 살짝 확대되며 페이드인한다.
+   (가로 이동 0, 중간에 배경이 비쳐 깜빡이는 dip 없음) */
+html[data-view-transition='tab']::view-transition-old(spindle-screen),
+html[data-view-transition='forward']::view-transition-old(spindle-screen),
+html[data-view-transition='back']::view-transition-old(spindle-screen) {
+  animation: none;
+}
+
+html[data-view-transition='tab']::view-transition-new(spindle-screen) {
+  animation: viewNewFade 320ms ease-out both;
+}
+
+html[data-view-transition='forward']::view-transition-new(spindle-screen) {
+  animation: viewNewEnter 380ms var(--ease-smooth-spring) both;
+}
+
+html[data-view-transition='back']::view-transition-new(spindle-screen) {
+  animation: viewNewBack 360ms var(--ease-smooth-spring) both;
+}
+
+html[data-view-transition='ritual']::view-transition-old(spindle-screen) {
+  animation: viewOldRitual 380ms ease-out both;
+}
+
+html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
+  animation: viewNewRitual 460ms var(--spring-pop) both;
+}
+
+::view-transition-group(spindle-nav) {
+  animation-duration: 300ms;
+}
+
+::view-transition-old(spindle-nav),
+::view-transition-new(spindle-nav) {
+  mix-blend-mode: normal;
+  animation: viewNavFade 300ms ease-in-out both;
+}
+
+/* 탭 간 이동(위계 변화 없음) — 방향·깊이 없는 잔잔한 디졸브 */
+@keyframes viewNewFade {
+  from { opacity: 0; transform: scale(0.992); }
+  to { opacity: 1; transform: none; }
+}
+
+/* forward(더 깊은 화면 진입) — 살짝 확대되며 안착하는 zoom-in enter. 좌우 이동 없이 '들어가는' 깊이감 */
+@keyframes viewNewEnter {
+  0% { opacity: 0; transform: scale(0.94); }
+  45% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+
+/* back(상위 화면 복귀) — 살짝 축소되며 안착하는 zoom-out. 좌우 이동 없이 '빠져나오는' 깊이감 */
+@keyframes viewNewBack {
+  0% { opacity: 0; transform: scale(1.04); }
+  45% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes viewOldRitual {
+  to { opacity: 0; transform: scale(1.008); }
+}
+
+@keyframes viewNewRitual {
+  from { opacity: 0; transform: scale(0.982); }
+}
+
+@keyframes viewNavFade {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.9; }
+}
+
+/* View Transition 미지원 브라우저 전용 폴백 — 지원 브라우저는 스냅샷 전환이 담당하므로 적용하지 않는다. */
+@supports not (view-transition-name: none) {
+  .screen-transition > .screen > :not(.bottom-nav) {
+    animation-duration: var(--motion-screen);
+    animation-timing-function: var(--spring-pop);
+    animation-fill-mode: both;
+  }
+
+  .screen-transition[data-transition='tab'] > .screen > :not(.bottom-nav) {
+    animation-name: screenEnterTab;
+  }
+
+  .screen-transition[data-transition='forward'] > .screen > :not(.bottom-nav) {
+    animation-name: screenEnterForward;
+  }
+
+  .screen-transition[data-transition='back'] > .screen > :not(.bottom-nav) {
+    animation-name: screenEnterBack;
+  }
+
+  .screen-transition[data-transition='ritual'] > .screen > :not(.bottom-nav) {
+    animation-name: screenEnterRitual;
+  }
+}
+
+@keyframes screenEnterTab {
+  from {
+    opacity: 0;
+    transform: scale(0.994);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screenEnterForward {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screenEnterBack {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screenEnterRitual {
+  from {
+    opacity: 0;
+    transform: scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ─── 홈: 좁은 기기에서도 카드가 잘리지 않는 반응형 레이아웃 ─── */
@@ -401,6 +596,177 @@ button {
   }
 }
 
+/* ─── 설정 > 사용법 다시 보기: 실제 홈 위 인앱 코치마크 ─── */
+.home-guide {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 100;
+  width: min(100%, 480px);
+  height: 100svh;
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.home-guide-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 20, 38, 0.72);
+  animation: motionBackdropIn var(--motion-control) ease-out both;
+}
+
+.home-guide-spotlight {
+  position: absolute;
+  z-index: 1;
+  border: 2px solid rgba(255, 255, 255, 0.96);
+  border-radius: 22px;
+  box-shadow: 0 0 0 9999px rgba(8, 20, 38, 0.72), 0 0 0 6px rgba(91, 147, 255, 0.28);
+  transition: top 0.28s ease, left 0.28s ease, width 0.28s ease, height 0.28s ease;
+  pointer-events: none;
+}
+
+.home-guide-panel {
+  position: absolute;
+  right: 16px;
+  left: 16px;
+  z-index: 2;
+  padding: 18px;
+  border: 1px solid rgba(219, 230, 250, 0.9);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 24px 54px -24px rgba(5, 18, 45, 0.68);
+  color: var(--l-ink);
+  text-align: left;
+  animation: motionDialogIn var(--motion-sheet) var(--ease-motion) both;
+}
+
+.home-guide-panel--top {
+  top: calc(18px + env(safe-area-inset-top));
+}
+
+.home-guide-panel--bottom {
+  bottom: calc(18px + env(safe-area-inset-bottom));
+}
+
+.home-guide-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--l-ink-3);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.home-guide-panel-head button {
+  min-height: 44px;
+  margin: -12px -8px -8px 0;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--l-ink-3);
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.home-guide-eyebrow {
+  margin-top: 4px;
+  color: var(--l-primary);
+  font-size: 11.5px;
+  font-weight: 900;
+}
+
+.home-guide-panel h2 {
+  margin: 5px 0 0;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: -0.4px;
+  word-break: keep-all;
+}
+
+.home-guide-panel p {
+  margin: 8px 0 0;
+  color: var(--l-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.home-guide-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.home-guide-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.home-guide-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #cfdbef;
+  transition: width var(--motion-control) ease, background var(--motion-control) ease;
+}
+
+.home-guide-dots span.on {
+  width: 18px;
+  background: var(--l-primary);
+}
+
+.home-guide-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.home-guide-actions button {
+  min-width: 68px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.home-guide-prev {
+  border: 1px solid var(--l-line);
+  background: #fff;
+  color: var(--l-ink-2);
+}
+
+.home-guide-next {
+  border: 0;
+  background: var(--l-primary);
+  color: #fff;
+}
+
+.home-guide-copy {
+  animation: motionStatusIn var(--motion-control) var(--ease-motion) both;
+}
+
+@media (max-width: 319px) {
+  .home-guide-panel {
+    right: 10px;
+    left: 10px;
+    padding: 15px;
+  }
+
+  .home-guide-panel h2 {
+    font-size: 17px;
+  }
+
+  .home-guide-panel p {
+    font-size: 12px;
+  }
+}
+
 /* ─── 스핀 원판 중앙: 캐릭터 대신 기능이 명확한 나침반 허브 ─── */
 .spin-compass-hub {
   position: absolute;
@@ -557,7 +923,8 @@ button {
   bottom: -4px;
   z-index: 4;
   width: 98px;
-  animation: bob 3s ease-in-out infinite;
+  transform-origin: 78% 88%;
+  animation: mascotPopIn 640ms var(--spring-pop) 220ms both, bob 3s ease-in-out 880ms infinite;
   filter: drop-shadow(0 8px 12px rgba(20, 40, 90, 0.28));
 }
 
@@ -754,15 +1121,27 @@ button {
   border-radius: 18px;
   font-weight: 800;
   min-height: 44px;
-  transition: transform 0.15s ease, opacity 0.2s ease;
+  transition: transform var(--motion-release) var(--ease-touch-release), opacity var(--motion-control) ease, box-shadow 260ms ease;
 }
-.btn:active {
-  transform: scale(0.96);
+.btn:active:not(:disabled),
+.btn.is-pressing:not(:disabled) {
+  transform: translateY(1px) scale(0.975);
+  transition-duration: var(--motion-press-in);
+  transition-timing-function: var(--ease-touch-down);
 }
-/* 주요 CTA(파란·오렌지)는 눌림을 조금 더 또렷하게 */
-.btn-blue:active,
-.btn-primary:active {
-  transform: scale(0.945);
+
+.btn-primary:active:not(:disabled),
+.btn-primary.is-pressing:not(:disabled),
+.btn-blue:active:not(:disabled),
+.btn-blue.is-pressing:not(:disabled) {
+  transform: translateY(2px) scale(0.94);
+  box-shadow: 0 4px 10px -8px rgba(30, 79, 216, 0.42);
+}
+
+button:disabled,
+.btn:disabled {
+  cursor: default;
+  opacity: 0.58;
 }
 
 .btn-primary {
@@ -823,7 +1202,14 @@ button {
   align-items: center;
   justify-content: center;
   gap: 1px;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background var(--motion-control) ease, color var(--motion-control) ease, box-shadow var(--motion-control) ease, transform 360ms var(--ease-touch-release);
+}
+
+.seg button:active:not(:disabled),
+.seg button.is-pressing:not(:disabled) {
+  transform: scale(0.965);
+  transition-duration: var(--motion-press-in);
+  transition-timing-function: var(--ease-touch-down);
 }
 .seg button.on {
   background: var(--l-primary);
@@ -859,6 +1245,85 @@ button {
   animation: fadeUp 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
+/* 카드·시트·상태 변화에 공통으로 쓰는 의미 모션 */
+.motion-card {
+  transition: transform var(--motion-release) var(--ease-touch-release), filter 320ms ease, box-shadow 260ms ease, border-color var(--motion-control) ease, background-color var(--motion-control) ease;
+}
+
+.motion-card:active:not(:disabled),
+.motion-card.is-pressing:not(:disabled) {
+  transform: translateY(2px) scale(0.972);
+  filter: brightness(0.975);
+  transition-duration: var(--motion-press-in);
+  transition-timing-function: var(--ease-touch-down);
+}
+
+.motion-card-enter {
+  transform-origin: center 60%;
+  animation: motionCardIn 440ms var(--spring-pop) both;
+  will-change: transform, opacity;
+}
+
+.motion-card-list > .motion-card-enter:nth-child(2) { animation-delay: 45ms; }
+.motion-card-list > .motion-card-enter:nth-child(3) { animation-delay: 90ms; }
+.motion-card-list > .motion-card-enter:nth-child(4) { animation-delay: 135ms; }
+.motion-card-list > .motion-card-enter:nth-child(5) { animation-delay: 180ms; }
+.motion-card-list > .motion-card-enter:nth-child(n + 6) { animation-delay: 225ms; }
+
+.motion-reveal-card {
+  transform-origin: center 62%;
+  animation: motionRevealCardIn var(--motion-hero) var(--spring-pop) 70ms both;
+  will-change: transform, opacity;
+}
+
+.poi-photo,
+.poi-photo-scrim {
+  opacity: 0;
+  transition: opacity 420ms ease-out;
+}
+
+.poi-photo.is-loaded,
+.poi-photo-scrim.is-loaded {
+  opacity: 1;
+}
+
+.motion-overlay {
+  animation: motionBackdropIn var(--motion-control) ease-out both;
+}
+
+.motion-sheet {
+  animation: motionSheetIn var(--motion-sheet) var(--ease-motion) both;
+}
+
+.motion-dialog {
+  animation: motionDialogIn var(--motion-sheet) var(--ease-motion) both;
+}
+
+.motion-status {
+  animation: motionStatusIn var(--motion-control) var(--ease-motion) both;
+}
+
+/* 도장 획득 — 인라인 안내가 톡 튀어오르고 도장 마크가 찍히듯 정착 (히어로 순간) */
+.motion-stamp-pop {
+  transform-origin: center 45%;
+  animation: motionStampPop var(--motion-hero) var(--spring-pop) both;
+}
+
+.motion-stamp-pop img {
+  animation: stampImpact 540ms var(--spring-pop) 130ms both;
+}
+
+.gallery-nav,
+.gallery-nav:active:not(:disabled),
+.gallery-nav.is-pressing:not(:disabled) {
+  transform: translateY(-50%);
+}
+
+.gallery-nav:active:not(:disabled),
+.gallery-nav.is-pressing:not(:disabled) {
+  transform: translateY(-50%) scale(0.96);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -883,6 +1348,7 @@ button {
   place-items: center;
   box-shadow: 0 6px 14px -6px rgba(20, 40, 90, 0.3);
   cursor: pointer;
+  transition: transform 360ms var(--ease-touch-release), box-shadow 260ms ease;
 }
 
 .l-zone-chip {
@@ -896,6 +1362,7 @@ button {
   border: 1.5px solid var(--l-line);
   color: #7089b8;
   min-height: 38px;
+  transition: color var(--motion-control) ease, background var(--motion-control) ease, border-color var(--motion-control) ease, transform 360ms var(--ease-touch-release);
 }
 .l-zone-chip.on {
   background: var(--l-primary);
@@ -958,14 +1425,6 @@ button {
     transform: rotate(7deg);
   }
 }
-@keyframes reelL {
-  from {
-    transform: translateX(-50%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
 @keyframes glow {
   0%,
   100% {
@@ -1020,38 +1479,142 @@ button {
   }
 }
 
-/* ─── 화면 전환 (라우터 레벨 진입 연출) ─── */
-/* ui.md §91 "애니메이션은 스핀 원판과 화면 전환에만" — App.tsx가 key={screen} 래퍼로 감싸
-   매 내비게이션마다 재생. 탭 전환은 fade, 드릴다운·스핀 의식은 오른쪽에서 slide-in.
-   래퍼가 #root(flex,center)의 자식이 되므로 .screen 중앙정렬을 여기서 재현한다. */
-.screen-anim {
-  width: 100%;
-  /* #root의 뷰포트-높이 컨텍스트를 대신 재현 — .screen(overflow:hidden, 내부 flex 스크롤)을
-     정확히 뷰포트 높이로 가둬 BottomNav(absolute bottom)가 하단에 앵커되도록 한다. */
-  height: 100svh;
-  display: flex;
-  justify-content: center;
+/* 하단 내비게이션은 화면 전환 중 고정하고 선택 상태만 짧게 확인시킨다. */
+.bottom-nav button,
+.nav-icon,
+.nav-fab {
+  transition: transform 360ms var(--ease-touch-release), color var(--motion-control) ease, opacity var(--motion-control) ease;
 }
-.screen-anim[data-transition='fade'] {
-  animation: screenFade 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+.nav-icon {
+  display: grid;
+  place-items: center;
 }
-.screen-anim[data-transition='push'] {
-  animation: screenPush 0.34s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+.nav-item.is-active .nav-icon,
+.nav-fab.is-active > svg {
+  animation: navSelect 420ms var(--spring-pop) both;
 }
-@keyframes screenFade {
+
+.nav-item:active:not(:disabled),
+.nav-item.is-pressing:not(:disabled) {
+  transform: none;
+}
+
+.nav-item:active:not(:disabled) .nav-icon,
+.nav-item.is-pressing:not(:disabled) .nav-icon {
+  transform: translateY(1px) scale(0.9);
+  transition-duration: var(--motion-press-in);
+  transition-timing-function: var(--ease-touch-down);
+}
+
+.nav-fab:active:not(:disabled),
+.nav-fab.is-pressing:not(:disabled) {
+  transform: translateY(2px) scale(0.91);
+  transition-duration: var(--motion-press-in);
+  transition-timing-function: var(--ease-touch-down);
+}
+
+@keyframes navSelect {
+  from {
+    opacity: 0.72;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes motionBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes motionSheetIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.994);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-@keyframes screenPush {
+
+@keyframes motionDialogIn {
   from {
     opacity: 0;
-    transform: translateX(18px);
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes motionStatusIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes mascotPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes motionStampPop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes stampImpact {
+  from {
+    opacity: 0;
+    transform: scale(1.4) rotate(-6deg);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes motionCardIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.978);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes motionRevealCardIn {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0) scale(0.93);
   }
   to {
     opacity: 1;
@@ -1197,39 +1760,14 @@ input:focus-visible,
   outline-offset: 2px;
 }
 /* 카드·아이콘 버튼에도 눌림 반응을 줘 네이티브 같은 촉각 피드백 (.btn은 자체 :active 유지) */
-/* 릴리즈 시 살짝 탄성(overshoot) — 절제된 스프링 */
 button {
-  transition: transform 0.14s cubic-bezier(0.34, 1.4, 0.64, 1);
+  transition: transform 360ms var(--ease-touch-release);
 }
-button:active {
-  transform: scale(0.96);
-}
-
-/* 하단 스핀 FAB — 눌림 강조 */
-.nav-fab {
-  transition: transform 0.14s cubic-bezier(0.34, 1.5, 0.64, 1);
-}
-.nav-fab:active {
-  transform: scale(0.92);
-}
-/* 하단 탭 아이콘 — 활성화되는 순간 팝 */
-.nav-icon {
-  display: grid;
-  place-items: center;
-}
-.nav-icon--active {
-  animation: navPop 0.34s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
-}
-@keyframes navPop {
-  0% {
-    transform: scale(0.82);
-  }
-  55% {
-    transform: scale(1.15);
-  }
-  100% {
-    transform: scale(1);
-  }
+button:active:not(:disabled),
+button.is-pressing:not(:disabled) {
+  transform: translateY(1px) scale(0.975);
+  transition-duration: var(--motion-press-in);
+  transition-timing-function: var(--ease-touch-down);
 }
 
 /* ui.md 공통 규칙 — 애니메이션 절제: 시스템 설정 존중 */
@@ -1240,5 +1778,11 @@ button:active {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  :where(button, .motion-card):active,
+  .is-pressing {
+    filter: none !important;
+    transform: none !important;
   }
 }
