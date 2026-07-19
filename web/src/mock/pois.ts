@@ -195,8 +195,9 @@ export const DEPARTURES: Departure[] = [
 ]
 
 /**
- * 이동시간 다이얼 — 3단 고정이 아니라 20분~하루를 자연스러운 눈금으로 좌우 조정한다.
- * 값은 분 단위 예산으로 엔진에 그대로 전달되며, Infinity = 하루(권역 내 무제한).
+ * 이동시간 다이얼 앵커 눈금 — 슬라이더는 이 앵커 사이를 1분 단위로 부드럽게 보간한다
+ * (스냅 없음, components/DialSlider). 값은 분 단위 예산으로 엔진에 그대로 전달되며,
+ * Infinity = 하루(권역 내 무제한).
  */
 export const DIAL_STEPS: readonly number[] = [20, 30, 40, 60, 90, 120, 180, 240, Infinity]
 
