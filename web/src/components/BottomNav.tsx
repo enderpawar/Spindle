@@ -77,9 +77,10 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
             placeItems: 'center',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} aria-hidden>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinejoin="round" aria-hidden>
             <circle cx="12" cy="12" r="9" />
-            <path d="M15 9 L10 14 L13 11 Z" fill="#fff" />
+            <polygon points="16 8 13.4 13.4 8 16 10.6 10.6" fill="#fff" />
+            <circle cx="12" cy="12" r="1" fill="var(--l-primary)" stroke="none" />
           </svg>
         </button>
         <span style={{ fontSize: 11, fontWeight: 800, color: c('spin') }}>스핀</span>

@@ -29,10 +29,11 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     if (selectedId && !list.some((p) => p.id === selectedId)) setSelectedId(null)
   }, [list, selectedId])
 
-  // ── 카드 스트립 ↔ 핀 양방향 동기화 ──
+  // ── 핀 → 카드 단방향 동기화 ──
+  // 카드 스트립 스크롤은 지도를 움직이지 않는다(브라우즈 전용). 선택·지도 이동은
+  // 핀 탭으로만 일어나며, 핀을 탭하면 해당 카드로 스트립을 스크롤해 준다.
   const stripRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef(new Map<string, HTMLDivElement>())
-  const programmatic = useRef(false)
 
   const pick = (id: string | null) => {
     setSelectedId(id)
@@ -40,27 +41,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     const el = cardRefs.current.get(id)
     const strip = stripRef.current
     if (el && strip) {
-      programmatic.current = true
       strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.clientWidth) / 2, behavior: 'smooth' })
-      window.setTimeout(() => (programmatic.current = false), 450)
     }
-  }
-
-  const onStripScroll = () => {
-    if (programmatic.current) return
-    const strip = stripRef.current
-    if (!strip) return
-    const center = strip.scrollLeft + strip.clientWidth / 2
-    let best: string | null = null
-    let bestDist = Infinity
-    cardRefs.current.forEach((el, id) => {
-      const d = Math.abs(el.offsetLeft + el.clientWidth / 2 - center)
-      if (d < bestDist) {
-        bestDist = d
-        best = id
-      }
-    })
-    if (best && best !== selectedId) setSelectedId(best)
   }
 
   return (
@@ -110,10 +92,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.6)' }}>
           <MapView pois={list} departure={departure} selectedId={selectedId} onPick={pick} onOpen={onSelect} />
 
-          {/* 하단 카드 스트립 — 스와이프하면 지도가 따라간다 */}
+          {/* 하단 카드 스트립 — 브라우즈 전용. 스크롤해도 지도는 움직이지 않는다(핀 탭으로만 이동). */}
           <div
             ref={stripRef}
-            onScroll={onStripScroll}
             className="no-scrollbar motion-card-list"
             style={{
               position: 'absolute',
