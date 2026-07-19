@@ -1230,25 +1230,6 @@ button:disabled,
   transition: width var(--motion-control) var(--ease-touch-release);
 }
 
-.dial-slider-mark {
-  position: absolute;
-  top: 50%;
-  width: 7px;
-  height: 7px;
-  border: 2px solid #fff;
-  border-radius: 50%;
-  background: #aebfdd;
-  box-shadow: 0 0 0 1px rgba(114, 142, 191, 0.25);
-  transform: translate(-50%, -50%);
-  transition: background var(--motion-control) ease;
-}
-
-/* 눈금 좌표는 DialSlider가 인라인 left로 지정한다 (자연 눈금 개수 가변) */
-
-.dial-slider-mark.is-active {
-  background: var(--l-primary);
-}
-
 .dial-slider-input {
   position: relative;
   z-index: 1;

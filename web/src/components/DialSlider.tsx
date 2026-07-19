@@ -98,13 +98,6 @@ export function DialSlider({ minutes, onChange }: Props) {
       <div className="dial-slider-control">
         <div className="dial-slider-track" aria-hidden>
           <span className="dial-slider-fill" style={{ width: `${(raw / RAW_MAX) * 100}%` }} />
-          {DIAL_STEPS.map((m, i) => (
-            <span
-              key={m}
-              className={`dial-slider-mark${i * SEG <= raw ? ' is-active' : ''}`}
-              style={{ left: `${(i / SEGMENTS) * 100}%` }}
-            />
-          ))}
         </div>
         <input
           className="dial-slider-input"
