@@ -81,7 +81,9 @@ export function HomeGuide({ onClose }: { onClose: () => void }) {
     }
   }, [step])
 
-  const panelAtTop = targetRect ? targetRect.top + targetRect.height / 2 > targetRect.frameHeight * 0.48 : false
+  const panelAtTop = !last && targetRect
+    ? targetRect.top + targetRect.height / 2 > targetRect.frameHeight * 0.48
+    : false
 
   return (
     <div className="home-guide" role="dialog" aria-modal="true" aria-label="Spindle 화면 사용법">

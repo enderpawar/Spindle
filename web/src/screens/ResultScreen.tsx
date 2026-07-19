@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, type PoiDetail } from '../api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { pickFestivalForDirection, type Festival } from '../engine/festival'
+import { parseOperationStatus } from '../engine/operation'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { StampNotice } from '../components/StampNotice'
 import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
@@ -144,6 +145,16 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const addressText = infoDetail?.addr1 ?? `부산 ${poi.district}`
   const useTimeText = fullDetail?.usetime ?? poi.open.text
   const restDateText = fullDetail?.restdate ?? '별도 휴무 정보 없음'
+  const operationStatus = parseOperationStatus(fullDetail?.restdate, new Date())
+  const operationLabel = fullDetailLoading
+    ? '운영정보 확인 중'
+    : operationStatus.kind === 'open'
+      ? '오늘 이용 가능'
+      : operationStatus.kind === 'closed'
+        ? '오늘 휴무'
+        : poi.open.known
+          ? poi.open.text
+          : '운영정보 확인 필요'
   const activeGalleryImage = galleryImages[galleryIndex] ?? detailImageUrl
 
   const mapQuery = encodeURIComponent(`부산 ${poi.name}`)
@@ -205,9 +216,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
           <ResultSkeleton />
         ) : (
           <div key={poi.id} className="motion-card-enter">
-            {/* 대표 이미지 — TourAPI 상세 이미지가 있으면 표시, 없으면 방위색 폴백.
-                긴 화면에서는 히어로가 자라며 빈 공간을 흡수한다 (최대 화면 높이의 ~38%). */}
-            <div style={{ height: 'clamp(196px, 38svh, 400px)', borderRadius: 24, position: 'relative', background: `linear-gradient(135deg, ${direction.color}, #1e4fd8 130%)`, overflow: 'hidden' }}>
+            {/* 대표 이미지는 첫 화면의 이동·운영 정보가 함께 보이도록 높이를 제한한다. */}
+            <div style={{ height: 'clamp(190px, 30svh, 300px)', borderRadius: 24, position: 'relative', background: `linear-gradient(135deg, ${direction.color}, #1e4fd8 130%)`, overflow: 'hidden' }}>
               {detailImageUrl && !imageFailed ? (
                 <img
                   src={detailImageUrl}
@@ -271,11 +281,18 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             <div style={{ padding: '18px 2px 0' }}>
               <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.6, lineHeight: 1.2, color: 'var(--l-ink)' }}>{poi.name}</h2>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-                {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분
+                {poi.category} · {poi.district}
               </div>
 
-              {/* 프리뷰 팩트 — 주소 한 줄만. 이동·운영·휴무 원문 표는 [자세히 보기] 시트에 유지 (ui.md S4). */}
-              <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              {/* 이동과 오늘 운영 상태를 별도 장식 없이 한 줄로 먼저 보여준다. */}
+              <div className="result-decision-line" aria-label="방문 핵심 정보">
+                <span>도보 약 {poi.walkMinutes}분</span>
+                <span aria-hidden>·</span>
+                <span>{operationLabel}</span>
+              </div>
+
+              {/* 주소와 운영·휴무 원문 표는 [자세히 보기] 시트에 유지한다. */}
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.2} strokeLinecap="round" aria-hidden style={{ flex: 'none', marginTop: 3 }}>
                   <path d="M12 21 C8.5 17.5 5 13.6 5 9.5 a7 7 0 0 1 14 0 c0 4.1-3.5 8-7 11.5 z" />
                   <circle cx="12" cy="9.5" r="2.4" />
@@ -589,7 +606,7 @@ function NavLink({ href, label, brand }: { href: string; label: string; brand: '
 function ResultSkeleton() {
   return (
     <div aria-label="불러오는 중">
-      <div className="skeleton" style={{ height: 'clamp(196px, 38svh, 400px)', borderRadius: 24 }} />
+      <div className="skeleton" style={{ height: 'clamp(190px, 30svh, 300px)', borderRadius: 24 }} />
       <div style={{ padding: '16px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="skeleton" style={{ height: 28, width: '58%' }} />
         <div className="skeleton" style={{ height: 14, width: '76%' }} />
