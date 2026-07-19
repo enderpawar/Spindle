@@ -1180,50 +1180,166 @@ button:disabled,
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* 세그먼트 컨트롤 (이동시간 다이얼) — 스핀 전용, 라이트 테마 */
-.seg {
-  display: flex;
-  padding: 5px;
-  gap: 4px;
-  border-radius: 18px;
-  background: #fff;
+/* 이동시간 다이얼 — 세 단계에 스냅되는 드래그 슬라이더 */
+.dial-slider {
+  padding: 10px 16px 8px;
   border: 1px solid var(--l-line);
-}
-.seg button {
-  flex: 1;
-  min-height: 48px;
-  border: none;
-  border-radius: 14px;
-  background: none;
-  cursor: pointer;
-  color: var(--l-ink-3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  transition: background var(--motion-control) ease, color var(--motion-control) ease, box-shadow var(--motion-control) ease, transform 360ms var(--ease-touch-release);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 28px -24px rgba(30, 79, 216, 0.6);
 }
 
-.seg button:active:not(:disabled),
-.seg button.is-pressing:not(:disabled) {
-  transform: scale(0.965);
-  transition-duration: var(--motion-press-in);
-  transition-timing-function: var(--ease-touch-down);
+.dial-slider-summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+  min-height: 22px;
+  color: var(--l-primary);
 }
-.seg button.on {
-  background: var(--l-primary);
-  color: #fff;
-  box-shadow: 0 6px 16px -10px rgba(30, 79, 216, 0.6);
-}
-.seg .seg-label {
+
+.dial-slider-summary span:first-child {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 900;
 }
-.seg .seg-desc {
+
+.dial-slider-summary span:last-child {
   font-size: 10.5px;
-  font-weight: 600;
-  opacity: 0.75;
+  font-weight: 700;
+  color: var(--l-ink-3);
+}
+
+.dial-slider-control {
+  position: relative;
+  height: 32px;
+}
+
+.dial-slider-track {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  left: 14px;
+  height: 7px;
+  border-radius: 999px;
+  background: #dfe8f8;
+  transform: translateY(-50%);
+}
+
+.dial-slider-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #6d8fff, var(--l-primary));
+  transition: width var(--motion-control) var(--ease-touch-release);
+}
+
+.dial-slider-mark {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #aebfdd;
+  box-shadow: 0 0 0 1px rgba(114, 142, 191, 0.25);
+  transform: translate(-50%, -50%);
+  transition: background var(--motion-control) ease;
+}
+
+.dial-slider-mark:nth-of-type(2) { left: 0; }
+.dial-slider-mark:nth-of-type(3) { left: 50%; }
+.dial-slider-mark:nth-of-type(4) { left: 100%; }
+
+.dial-slider-mark.is-active {
+  background: var(--l-primary);
+}
+
+.dial-slider-input {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: grab;
+  background: transparent;
+  touch-action: pan-y;
+}
+
+.dial-slider-input:active {
+  cursor: grabbing;
+}
+
+.dial-slider-input::-webkit-slider-runnable-track {
+  height: 7px;
+  background: transparent;
+}
+
+.dial-slider-input::-moz-range-track {
+  height: 7px;
+  background: transparent;
+}
+
+.dial-slider-input::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  margin-top: -10.5px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--l-primary);
+  box-shadow: 0 5px 14px -5px rgba(30, 79, 216, 0.85), 0 0 0 1px rgba(47, 92, 255, 0.12);
+  transition: transform var(--motion-control) var(--ease-touch-release);
+}
+
+.dial-slider-input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: var(--l-primary);
+  box-shadow: 0 5px 14px -5px rgba(30, 79, 216, 0.85), 0 0 0 1px rgba(47, 92, 255, 0.12);
+  transition: transform var(--motion-control) var(--ease-touch-release);
+}
+
+.dial-slider-input:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.dial-slider-input:active::-moz-range-thumb {
+  transform: scale(1.12);
+}
+
+.dial-slider-input:focus-visible {
+  outline: none;
+}
+
+.dial-slider-input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.2), 0 5px 14px -5px rgba(30, 79, 216, 0.85);
+}
+
+.dial-slider-input:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(47, 92, 255, 0.2), 0 5px 14px -5px rgba(30, 79, 216, 0.85);
+}
+
+.dial-slider-labels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: -1px;
+  color: var(--l-ink-3);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dial-slider-labels span:nth-child(1) { text-align: left; }
+.dial-slider-labels span:nth-child(2) { text-align: center; }
+.dial-slider-labels span:nth-child(3) { text-align: right; }
+
+.dial-slider-labels .is-active {
+  color: var(--l-primary);
+  font-weight: 900;
 }
 
 /* 스켈레톤 */
