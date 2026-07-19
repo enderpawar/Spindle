@@ -398,7 +398,8 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 .home-theme-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  column-gap: 10px;
+  row-gap: 14px;
   padding: 0 20px 2px;
 }
 
@@ -1066,10 +1067,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   border: 1px solid var(--l-line);
   border-radius: 18px;
   background: #f8fbff;
-}
-
-.result-info-facts--preview {
-  margin-top: 0;
 }
 
 .result-info-row {
