@@ -1224,7 +1224,7 @@ button:disabled,
   inset: 0 auto 0 0;
   border-radius: inherit;
   background: linear-gradient(90deg, #6d8fff, var(--l-primary));
-  transition: width var(--motion-control) var(--ease-touch-release);
+  /* 트랜지션 없음 — 연속(1분 단위) 드래그에서 썸을 즉시 따라와야 한다 */
 }
 
 .dial-slider-input {
