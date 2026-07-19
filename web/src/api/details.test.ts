@@ -7,8 +7,11 @@ import {
   fetchPoiGalleryImagesCached,
   fetchPoiImageCached,
   firstSentence,
+  normalizeIntroValue,
   poiImageProxyUrl,
+  selectPrimaryVisitFacts,
   stripHtml,
+  visitFactsFromIntro,
 } from "./details";
 import { TourApiError } from "./tourapi";
 
@@ -91,6 +94,74 @@ describe("firstSentence — 한 줄 소개", () => {
   });
 });
 
+describe("detailIntro2 방문정보 정규화", () => {
+  it("HTML을 제거하고 br 줄바꿈은 유지한다", () => {
+    expect(normalizeIntroValue("09:00~18:00<br>입장 마감 17:30")).toBe("09:00~18:00\n입장 마감 17:30");
+    expect(normalizeIntroValue("<b>무료</b>&nbsp;관람")).toBe("무료 관람");
+    expect(normalizeIntroValue(" - ")).toBeUndefined();
+  });
+
+  it("관광지는 이용시간·휴무·체험·주차를 우선한다", () => {
+    const facts = visitFactsFromIntro("12", {
+      contentid: "1",
+      usetime: "09:00~18:00",
+      restdate: "매주 월요일",
+      expguide: "마을 해설 투어",
+      parking: "인근 공영주차장 이용",
+      infocenter: "051-000-0000",
+    });
+    expect(facts.slice(0, 4).map(({ key, label }) => ({ key, label }))).toEqual([
+      { key: "hours", label: "이용시간" },
+      { key: "closed", label: "휴무일" },
+      { key: "experience", label: "체험 안내" },
+      { key: "parking", label: "주차" },
+    ]);
+  });
+
+  it.each([
+    ["14", { usetimeculture: "10:00~18:00", restdateculture: "월요일", usefee: "무료", spendtime: "약 1시간" }, ["hours", "closed", "fee", "duration"]],
+    ["28", { usetimeleports: "09:00~17:00", restdateleports: "화요일", usefeeleports: "10,000원", reservation: "전화 예약" }, ["hours", "closed", "fee", "reservation"]],
+    ["38", { opentime: "08:00~20:00", restdateshopping: "일요일", saleitem: "수산물", fairday: "매월 5일" }, ["hours", "closed", "items", "marketDay"]],
+    ["39", { opentimefood: "11:00~21:00", restdatefood: "연중무휴", firstmenu: "밀면", reservationfood: "예약 가능" }, ["hours", "closed", "menu", "reservation"]],
+  ])("contentType %s의 상위 방문정보 순서를 고정한다", (contentTypeId, intro, expectedKeys) => {
+    expect(visitFactsFromIntro(contentTypeId, intro).map((fact) => fact.key)).toEqual(expectedKeys);
+  });
+
+  it("빈 필드를 제외해 후순위 정보가 앞으로 온다", () => {
+    const facts = visitFactsFromIntro("14", {
+      usetimeculture: "",
+      restdateculture: " ",
+      parkingculture: "주차 가능",
+      infocenterculture: "051-000-0000",
+    });
+    expect(facts).toEqual([
+      { key: "parking", label: "주차", value: "주차 가능" },
+      { key: "contact", label: "문의", value: "051-000-0000" },
+    ]);
+  });
+
+  it("지원하지 않는 contentType은 빈 목록을 반환한다", () => {
+    expect(visitFactsFromIntro("32", { roomcount: "10" })).toEqual([]);
+  });
+
+  it("결과 본문에는 우선순위가 높은 정보 최대 4개만 선택한다", () => {
+    const facts = visitFactsFromIntro("12", {
+      usetime: "09:00~18:00",
+      restdate: "월요일",
+      expguide: "해설",
+      parking: "가능",
+      expagerange: "전 연령",
+      infocenter: "051-000-0000",
+    });
+    expect(selectPrimaryVisitFacts(facts).map((fact) => fact.key)).toEqual([
+      "hours",
+      "closed",
+      "experience",
+      "parking",
+    ]);
+  });
+});
+
 describe("fetchPoiDetailCached — 상세 3종 결합", () => {
   it("common+intro+image를 합쳐 PoiDetail로 반환한다", async () => {
     const common = {
@@ -109,6 +180,11 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     expect(detail.imageUrl).toBe("https://img/1.jpg");
     expect(detail.usetime).toBe("09:00~18:00");
     expect(detail.restdate).toBe("매주 월요일");
+    expect(detail.visitFacts).toEqual([
+      { key: "hours", label: "이용시간", value: "09:00~18:00" },
+      { key: "closed", label: "휴무일", value: "매주 월요일" },
+    ]);
+    expect(detail.visitFactsStatus).toBe("ready");
     expect(detail.overview).toContain("산비탈 마을이에요.");
     expect(detail.overview).not.toContain("<p>"); // HTML 제거 확인
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
@@ -151,6 +227,17 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     expect(detail.imageUrl).toBe("https://img/y.jpg");
     expect(detail.usetime).toBeUndefined();
     expect(detail.restdate).toBeUndefined();
+    expect(detail.visitFacts).toEqual([]);
+    expect(detail.visitFactsStatus).toBe("error");
+  });
+
+  it("소개정보 부분 실패는 캐시하지 않아 다음 호출에서 재시도한다", async () => {
+    const common = { contentid: "102-retry", contenttypeid: "12", title: "재시도" };
+    const fetchMock = makeFetch({ common, introReject: true });
+    await fetchPoiDetailCached("102-retry", fetchMock as typeof fetch);
+    await fetchPoiDetailCached("102-retry", fetchMock as typeof fetch);
+    expect(fetchMock.mock.calls.filter((call) => String(call[0]).includes("detailIntro2"))).toHaveLength(2);
+    expect(fetchMock.mock.calls.filter((call) => String(call[0]).includes("detailCommon2"))).toHaveLength(1);
   });
 
   it("detailCommon2가 비면 TourApiError를 던진다", async () => {
@@ -194,6 +281,7 @@ describe("fetchPoiCardDetailCached — 결과 카드용 빠른 상세", () => {
     expect(detail.title).toBe("빠른 카드");
     expect(detail.overview).toBe("바로 보여줄 소개.");
     expect(detail.imageUrl).toBe("https://img/card.jpg");
+    expect(detail.visitFactsStatus).toBe("not-requested");
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailIntro2"))).toHaveLength(0);
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
   });

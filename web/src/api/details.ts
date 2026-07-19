@@ -16,7 +16,7 @@ interface DetailCommonItem {
   addr1?: string;
 }
 
-/** detailIntro2는 contentTypeId별로 이용시간·쉬는날 필드명이 다르다 */
+/** detailIntro2는 contentTypeId별로 필드명이 다르다 */
 type DetailIntroItem = Record<string, string | undefined>;
 
 interface DetailImageItem {
@@ -28,12 +28,91 @@ interface DetailImageItem {
 type DetailCommonBody = ListBody<DetailCommonItem>;
 type DetailImageBody = ListBody<DetailImageItem>;
 
-const INTRO_FIELDS: Record<string, { usetime: string; restdate: string }> = {
-  "12": { usetime: "usetime", restdate: "restdate" }, // 관광지
-  "14": { usetime: "usetimeculture", restdate: "restdateculture" }, // 문화시설
-  "28": { usetime: "usetimeleports", restdate: "restdateleports" }, // 레포츠
-  "38": { usetime: "opentime", restdate: "restdateshopping" }, // 쇼핑
-  "39": { usetime: "opentimefood", restdate: "restdatefood" }, // 음식점
+export type PoiVisitFactKey =
+  | "hours"
+  | "closed"
+  | "experience"
+  | "age"
+  | "parking"
+  | "contact"
+  | "season"
+  | "capacity"
+  | "fee"
+  | "duration"
+  | "reservation"
+  | "items"
+  | "marketDay"
+  | "restroom"
+  | "menu"
+  | "menuList"
+  | "packing"
+  | "kids";
+
+export interface PoiVisitFact {
+  key: PoiVisitFactKey;
+  label: string;
+  value: string;
+}
+
+interface IntroFieldDefinition {
+  key: PoiVisitFactKey;
+  label: string;
+  field: string;
+}
+
+/**
+ * 관광객의 방문 결정에 유용한 순서. 앞의 네 항목은 결과 본문에, 전체 항목은 상세 시트에 쓴다.
+ * 값이 없는 항목은 건너뛰므로 후순위 정보가 자연스럽게 자리를 채운다.
+ */
+const INTRO_FIELDS: Record<string, readonly IntroFieldDefinition[]> = {
+  "12": [
+    { key: "hours", label: "이용시간", field: "usetime" },
+    { key: "closed", label: "휴무일", field: "restdate" },
+    { key: "experience", label: "체험 안내", field: "expguide" },
+    { key: "parking", label: "주차", field: "parking" },
+    { key: "age", label: "체험 연령", field: "expagerange" },
+    { key: "season", label: "이용 시기", field: "useseason" },
+    { key: "contact", label: "문의", field: "infocenter" },
+    { key: "capacity", label: "수용 인원", field: "accomcount" },
+  ],
+  "14": [
+    { key: "hours", label: "관람시간", field: "usetimeculture" },
+    { key: "closed", label: "휴무일", field: "restdateculture" },
+    { key: "fee", label: "이용요금", field: "usefee" },
+    { key: "duration", label: "관람 소요시간", field: "spendtime" },
+    { key: "parking", label: "주차", field: "parkingculture" },
+    { key: "contact", label: "문의", field: "infocenterculture" },
+  ],
+  "28": [
+    { key: "hours", label: "이용시간", field: "usetimeleports" },
+    { key: "closed", label: "휴무일", field: "restdateleports" },
+    { key: "fee", label: "이용요금", field: "usefeeleports" },
+    { key: "reservation", label: "예약 안내", field: "reservation" },
+    { key: "parking", label: "주차", field: "parkingleports" },
+    { key: "age", label: "체험 연령", field: "expagerangeleports" },
+    { key: "season", label: "운영 기간", field: "openperiod" },
+    { key: "contact", label: "문의", field: "infocenterleports" },
+  ],
+  "38": [
+    { key: "hours", label: "영업시간", field: "opentime" },
+    { key: "closed", label: "휴무일", field: "restdateshopping" },
+    { key: "items", label: "주요 품목", field: "saleitem" },
+    { key: "marketDay", label: "장날", field: "fairday" },
+    { key: "parking", label: "주차", field: "parkingshopping" },
+    { key: "restroom", label: "화장실", field: "restroom" },
+    { key: "contact", label: "문의", field: "infocentershopping" },
+  ],
+  "39": [
+    { key: "hours", label: "영업시간", field: "opentimefood" },
+    { key: "closed", label: "휴무일", field: "restdatefood" },
+    { key: "menu", label: "대표 메뉴", field: "firstmenu" },
+    { key: "reservation", label: "예약 안내", field: "reservationfood" },
+    { key: "menuList", label: "취급 메뉴", field: "treatmenu" },
+    { key: "parking", label: "주차", field: "parkingfood" },
+    { key: "packing", label: "포장", field: "packing" },
+    { key: "kids", label: "어린이 시설", field: "kidsfacility" },
+    { key: "contact", label: "문의", field: "infocenterfood" },
+  ],
 };
 
 export interface PoiDetail {
@@ -47,6 +126,10 @@ export interface PoiDetail {
   /** 자유 텍스트 원문 (파싱은 표시 시점에) */
   usetime?: string;
   restdate?: string;
+  /** contentType별 TourAPI 소개정보를 관광객용 라벨·값으로 정규화한 목록 */
+  visitFacts: PoiVisitFact[];
+  /** 카드 경량 조회는 not-requested, 상세 소개 성공/실패는 ready/error */
+  visitFactsStatus: "not-requested" | "ready" | "error";
 }
 
 /** TourAPI 텍스트 필드의 HTML 태그·엔티티 정리 */
@@ -60,6 +143,42 @@ export function stripHtml(text: string): string {
     .replace(/&gt;/gi, ">")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** TourAPI 소개정보의 줄바꿈은 유지하고 나머지 HTML·엔티티만 정리한다. */
+export function normalizeIntroValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const normalized = value
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+  return normalized && normalized !== "-" ? normalized : undefined;
+}
+
+export function visitFactsFromIntro(
+  contentTypeId: string,
+  intro: DetailIntroItem | undefined,
+): PoiVisitFact[] {
+  if (!intro) return [];
+  return (INTRO_FIELDS[contentTypeId] ?? []).flatMap((definition) => {
+    const value = normalizeIntroValue(intro[definition.field]);
+    return value ? [{ key: definition.key, label: definition.label, value }] : [];
+  });
+}
+
+export function selectPrimaryVisitFacts(
+  facts: readonly PoiVisitFact[],
+  limit = 4,
+): PoiVisitFact[] {
+  return facts.slice(0, Math.max(0, limit));
 }
 
 /** 소개 첫 문장 (ui.md S4: "한 줄 소개") — 과도하게 길면 말줄임 */
@@ -213,6 +332,8 @@ function detailFromCommon(common: DetailCommonItem, imageUrl: string | null): Po
     overview: common.overview ? stripHtml(common.overview) : undefined,
     imageUrl: imageUrl ?? undefined,
     addr1: common.addr1 || undefined,
+    visitFacts: [],
+    visitFactsStatus: "not-requested",
   };
 }
 
@@ -237,12 +358,13 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
 
   let usetime: string | undefined;
   let restdate: string | undefined;
+  let visitFacts: PoiVisitFact[] = [];
   if (introResult.status === "fulfilled") {
     const intro = extractItems(introResult.value)[0];
-    const fields = INTRO_FIELDS[common.contenttypeid];
-    if (intro && fields) {
-      usetime = intro[fields.usetime] || undefined;
-      restdate = intro[fields.restdate] || undefined;
+    visitFacts = visitFactsFromIntro(common.contenttypeid, intro);
+    if (intro) {
+      usetime = visitFacts.find((fact) => fact.key === "hours")?.value;
+      restdate = visitFacts.find((fact) => fact.key === "closed")?.value;
     }
   }
 
@@ -255,6 +377,8 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
     ...base,
     usetime,
     restdate,
+    visitFacts,
+    visitFactsStatus: introResult.status === "fulfilled" ? "ready" : "error",
   };
 }
 
@@ -268,10 +392,16 @@ export function fetchPoiDetailCached(
 ): Promise<PoiDetail> {
   const cached = detailCache.get(contentId);
   if (cached) return cached;
-  const pending = fetchDetail(contentId, fetchImpl).catch((err: unknown) => {
-    detailCache.delete(contentId);
-    throw err;
-  });
+  const pending = fetchDetail(contentId, fetchImpl)
+    .then((detail) => {
+      // 소개정보 부분 실패는 카드 표시를 막지 않되, 다음 재시도가 실제 호출하도록 캐시하지 않는다.
+      if (detail.visitFactsStatus === "error") detailCache.delete(contentId);
+      return detail;
+    })
+    .catch((err: unknown) => {
+      detailCache.delete(contentId);
+      throw err;
+    });
   detailCache.set(contentId, pending);
   return pending;
 }

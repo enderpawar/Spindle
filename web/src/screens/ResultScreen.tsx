@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, type PoiDetail } from '../api/details'
+import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, selectPrimaryVisitFacts, type PoiDetail, type PoiVisitFact } from '../api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { pickFestivalForDirection, type Festival } from '../engine/festival'
-import { parseOperationStatus } from '../engine/operation'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { StampNotice } from '../components/StampNotice'
 import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
@@ -43,6 +42,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [infoOpen, setInfoOpen] = useState(false)
   const [fullDetail, setFullDetail] = useState<PoiDetail | null>(null)
   const [fullDetailLoading, setFullDetailLoading] = useState(false)
+  const [fullDetailError, setFullDetailError] = useState(false)
 
   // 목 단계: 상세 API(Phase 3 detailCommon2) 로딩을 흉내 낸 스켈레톤
   useEffect(() => {
@@ -59,6 +59,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     setInfoOpen(false)
     setFullDetail(null)
     setFullDetailLoading(false)
+    setFullDetailError(false)
     setCourseNotice(null)
   }, [poi.contentId])
 
@@ -68,12 +69,19 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     let cancelled = false
     setFullDetail(null)
     setFullDetailLoading(true)
+    setFullDetailError(false)
     fetchPoiDetailCached(poi.contentId)
       .then((d) => {
-        if (!cancelled) setFullDetail(d)
+        if (!cancelled) {
+          setFullDetail(d)
+          setFullDetailError(d.visitFactsStatus === 'error')
+        }
       })
       .catch(() => {
-        if (!cancelled) setFullDetail(null)
+        if (!cancelled) {
+          setFullDetail(null)
+          setFullDetailError(true)
+        }
       })
       .finally(() => {
         if (!cancelled) setFullDetailLoading(false)
@@ -143,18 +151,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const infoStory = (infoDetail?.overview ?? poi.story).trim()
   const infoParagraphs = splitStoryParagraphs(infoStory)
   const addressText = infoDetail?.addr1 ?? `부산 ${poi.district}`
-  const useTimeText = fullDetail?.usetime ?? poi.open.text
-  const restDateText = fullDetail?.restdate ?? '별도 휴무 정보 없음'
-  const operationStatus = parseOperationStatus(fullDetail?.restdate, new Date())
-  const operationLabel = fullDetailLoading
-    ? '운영정보 확인 중'
-    : operationStatus.kind === 'open'
-      ? '오늘 이용 가능'
-      : operationStatus.kind === 'closed'
-        ? '오늘 휴무'
-        : poi.open.known
-          ? poi.open.text
-          : '운영정보 확인 필요'
+  const primaryVisitFacts = selectPrimaryVisitFacts(fullDetail?.visitFacts ?? [])
   const activeGalleryImage = galleryImages[galleryIndex] ?? detailImageUrl
 
   const mapQuery = encodeURIComponent(`부산 ${poi.name}`)
@@ -185,10 +182,21 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const openInfo = () => {
     setInfoOpen(true)
     if (fullDetail || fullDetailLoading) return
+    retryFullDetail()
+  }
+
+  const retryFullDetail = () => {
     setFullDetailLoading(true)
+    setFullDetailError(false)
     fetchPoiDetailCached(poi.contentId)
-      .then((d) => setFullDetail(d))
-      .catch(() => setFullDetail(null))
+      .then((d) => {
+        setFullDetail(d)
+        setFullDetailError(d.visitFactsStatus === 'error')
+      })
+      .catch(() => {
+        setFullDetail(null)
+        setFullDetailError(true)
+      })
       .finally(() => setFullDetailLoading(false))
   }
 
@@ -281,14 +289,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             <div style={{ padding: '18px 2px 0' }}>
               <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.6, lineHeight: 1.2, color: 'var(--l-ink)' }}>{poi.name}</h2>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-                {poi.category} · {poi.district}
-              </div>
-
-              {/* 이동과 오늘 운영 상태를 별도 장식 없이 한 줄로 먼저 보여준다. */}
-              <div className="result-decision-line" aria-label="방문 핵심 정보">
-                <span>도보 약 {poi.walkMinutes}분</span>
-                <span aria-hidden>·</span>
-                <span>{operationLabel}</span>
+                {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분
               </div>
 
               {/* 주소와 운영·휴무 원문 표는 [자세히 보기] 시트에 유지한다. */}
@@ -300,47 +301,30 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
               </div>
 
-              {/* 결과 카드에는 소개 앞부분 3~4줄, 전체 원문은 아래 자세히 보기에서 제공 (ui.md S4). */}
-              <p
-                style={{
-                  margin: '18px 0 0',
-                  fontSize: 15,
-                  lineHeight: 1.72,
-                  fontWeight: 600,
-                  letterSpacing: -0.05,
-                  color: '#314b79',
-                  wordBreak: 'keep-all',
-                  overflowWrap: 'break-word',
-                  display: '-webkit-box',
-                  WebkitBoxOrient: 'vertical',
-                  WebkitLineClamp: 4,
-                  overflow: 'hidden',
-                }}
-              >
-                {storyText}
-              </p>
-              <button
-                type="button"
-                onClick={openInfo}
-                style={{ marginTop: 10, padding: 0, background: 'none', border: 'none', color: 'var(--l-primary)', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
-              >
-                자세히 보기 ›
-              </button>
+              <section className="result-attraction-section" aria-labelledby="result-attraction-title">
+                <h3 id="result-attraction-title">이곳의 매력</h3>
+                <p>{storyText}</p>
+                <button type="button" onClick={openInfo}>자세히 보기 ›</button>
+              </section>
+
+              {fullDetailLoading && <VisitFactsSkeleton />}
+              {!fullDetailLoading && primaryVisitFacts.length > 0 && (
+                <VisitFactsSection facts={primaryVisitFacts} />
+              )}
+              {!fullDetailLoading && fullDetailError && (
+                <p className="result-visit-error">
+                  방문 정보를 불러오지 못했어요.
+                  <button type="button" onClick={retryFullDetail}>다시 시도</button>
+                </p>
+              )}
 
               {/* 이 방향으로 코스 짜기 — 단일 추천을 2~4곳 코스로 확장 (docs/course.md).
                   주 CTA(길찾기)와 경쟁하지 않도록 중립 톤 카드로 표현한다. */}
               <button
                 type="button"
                 onClick={buildCourse}
-                className="btn"
-                style={{ width: '100%', marginTop: 20, minHeight: 66, padding: '13px 15px', borderRadius: 18, border: '1.5px solid var(--l-line)', background: '#fff', color: 'var(--l-ink)', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, textAlign: 'left', boxShadow: '0 8px 20px -16px rgba(20,40,90,.35)' }}
+                className="btn result-course-action"
               >
-                <span aria-hidden style={{ width: 38, height: 38, borderRadius: 13, background: 'var(--l-soft)', display: 'grid', placeItems: 'center', flex: 'none' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2.1} strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="9" />
-                    <polygon points="16 8 13.4 13.4 8 16 10.6 10.6" fill="var(--l-primary)" stroke="none" />
-                  </svg>
-                </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14.5, fontWeight: 900, letterSpacing: -0.2 }}>이 방향으로 코스 짜기</span>
                   <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
@@ -350,14 +334,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 </svg>
               </button>
               {courseNotice && (
-                <div className="motion-status" role="status" style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, padding: '11px 13px', background: '#eef2fb', borderRadius: 13, fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.2} aria-hidden>
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 8 v5" strokeLinecap="round" />
-                    <circle cx="12" cy="16.5" r="0.6" fill="var(--l-ink-3)" />
-                  </svg>
-                  {courseNotice}
-                </div>
+                <p className="result-course-notice" role="status">{courseNotice}</p>
               )}
 
               {rec.candidates.length > 1 && (
@@ -486,9 +463,18 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             <div className="result-info-facts">
               <InfoRow label="주소" value={addressText} />
               <InfoRow label="이동" value={`걸어서 약 ${poi.walkMinutes}분`} />
-              <InfoRow label="운영" value={useTimeText} loading={fullDetailLoading && !fullDetail?.usetime} />
-              <InfoRow label="휴무" value={restDateText} loading={fullDetailLoading && !fullDetail?.restdate} />
+              {fullDetail?.visitFacts.map((fact) => (
+                <InfoRow key={fact.key} label={fact.label} value={fact.value} />
+              ))}
             </div>
+
+            {fullDetailLoading && <VisitFactsSkeleton compact />}
+            {!fullDetailLoading && fullDetailError && (
+              <p className="result-visit-error result-visit-error--sheet">
+                방문 정보를 불러오지 못했어요.
+                <button type="button" onClick={retryFullDetail}>다시 시도</button>
+              </p>
+            )}
 
             <div className="result-info-story">
               {infoParagraphs.map((paragraph, index) => (
@@ -543,28 +529,40 @@ function FestivalBanner({ festival }: { festival: Festival }) {
       href={mapHref}
       target="_blank"
       rel="noreferrer"
-      className="motion-card-enter"
-      style={{
-        display: 'block',
-        marginBottom: 14,
-        padding: '14px 16px',
-        borderRadius: 18,
-        background: 'linear-gradient(135deg,#ff9e7a,#e0603f)',
-        color: '#fff',
-        textDecoration: 'none',
-        boxShadow: '0 12px 26px -14px rgba(224,96,63,.7)',
-      }}
+      className="motion-card-enter result-festival-notice"
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, fontWeight: 800, letterSpacing: 0.2 }}>
-        <span aria-hidden>🎉</span>
-        지금 이 방향에서 축제 진행 중
-      </div>
-      <div style={{ marginTop: 6, fontSize: 17, fontWeight: 900, letterSpacing: -0.3 }}>{festival.title}</div>
-      <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, opacity: 0.95 }}>
+      <div className="result-festival-kicker">현재 진행 중인 행사</div>
+      <div className="result-festival-title">{festival.title}</div>
+      <div className="result-festival-meta">
         {festival.district ? `${festival.district} · ` : ''}
         {shortDate(festival.startDate)}–{shortDate(festival.endDate)} · 지도에서 보기 ›
       </div>
     </a>
+  )
+}
+
+function VisitFactsSection({ facts }: { facts: readonly PoiVisitFact[] }) {
+  return (
+    <section className="result-visit-section" aria-labelledby="result-visit-title">
+      <h3 id="result-visit-title">방문 정보</h3>
+      <div className="result-visit-facts">
+        {facts.map((fact) => <InfoRow key={fact.key} label={fact.label} value={fact.value} />)}
+      </div>
+    </section>
+  )
+}
+
+function VisitFactsSkeleton({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={compact ? 'result-visit-skeleton result-visit-skeleton--compact' : 'result-visit-skeleton'} aria-label="방문 정보 불러오는 중">
+      {!compact && <div className="skeleton" style={{ width: 72, height: 18, borderRadius: 4 }} />}
+      {[0, 1, 2].map((index) => (
+        <div key={index} className="result-visit-skeleton-row">
+          <div className="skeleton" />
+          <div className="skeleton" />
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -610,9 +608,11 @@ function ResultSkeleton() {
       <div style={{ padding: '16px 2px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="skeleton" style={{ height: 28, width: '58%' }} />
         <div className="skeleton" style={{ height: 14, width: '76%' }} />
-        <div className="skeleton" style={{ height: 34, width: 140, borderRadius: 12 }} />
-        <div className="skeleton" style={{ height: 84, width: '100%', borderRadius: 18 }} />
-        <div className="skeleton" style={{ height: 58, width: '100%', borderRadius: 16 }} />
+        <div className="skeleton" style={{ height: 14, width: '90%' }} />
+        <div className="skeleton" style={{ height: 18, width: 88, marginTop: 8 }} />
+        <div className="skeleton" style={{ height: 16, width: '100%' }} />
+        <div className="skeleton" style={{ height: 16, width: '92%' }} />
+        <div className="skeleton" style={{ height: 16, width: '74%' }} />
       </div>
     </div>
   )
