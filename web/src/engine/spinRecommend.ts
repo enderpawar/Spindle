@@ -9,18 +9,14 @@
  */
 import { TIER_WEIGHT, type Tier as CurationTier } from './curation'
 import { haversineMeters, type GeoPoint } from './geo'
-import { recommend as scoreRecommend, type Dial, type EnginePoi } from './recommend'
+import { recommend as scoreRecommend, type DialMinutes, type EnginePoi } from './recommend'
 import {
   DIRECTIONS,
   POI_POOL,
   type Departure,
-  type DialId,
   type Poi,
   type Recommendation,
 } from '../mock/pois'
-
-/** 앱 다이얼 → 엔진 다이얼 (하루=day는 권역 내 무제한) — 코스 브리지도 공유 */
-export const DIAL_MAP: Record<DialId, Dial> = { light: 'light', half: 'half', full: 'day' }
 
 /** 정적 Poi.tier(1/2/3) → 큐레이션 티어 (curation.ts TIER_WEIGHT 재사용) */
 const TIER_KEY: Record<Poi['tier'], CurationTier> = { 1: 'T1', 2: 'T2', 3: 'T3' }
@@ -50,7 +46,8 @@ export function toGeo(d: Departure): GeoPoint {
 export interface SpinRecommendInput {
   heading: number
   departure: Departure
-  dial: DialId
+  /** 이동시간 예산(분) — Infinity = 하루 */
+  budgetMinutes: DialMinutes
   /** 직전 당첨 contentId — 다시 돌리기 시 즉시 반복 방지 */
   prevContentId?: string
   /** 테스트용 시드 주입 (기본 Math.random) */
@@ -63,21 +60,21 @@ export interface SpinRecommendInput {
  */
 export function recommendFromSpin(input: SpinRecommendInput): Recommendation {
   const rng = input.rng ?? Math.random
-  const run = (dial: Dial) =>
+  const run = (budgetMinutes: DialMinutes) =>
     scoreRecommend({
       origin: toGeo(input.departure),
       heading: input.heading,
-      dial,
+      budgetMinutes,
       pois: ENGINE_POIS,
       rng,
       prevContentId: input.prevContentId,
       dispersionWeightOf,
     })
 
-  let result = run(DIAL_MAP[input.dial])
+  let result = run(input.budgetMinutes)
   let dialWidened = false
-  if (!result.picked && input.dial !== 'full') {
-    result = run('day') // 이 시간 예산엔 없음 → 권역 전체로 최종 폴백
+  if (!result.picked && Number.isFinite(input.budgetMinutes)) {
+    result = run(Infinity) // 이 시간 예산엔 없음 → 권역 전체(하루)로 최종 폴백
     dialWidened = true
   }
 

@@ -3,7 +3,7 @@ import { fetchPoiCardDetailCached } from './api/details'
 import { fetchAllOldTownPois } from './api/tourapi'
 import { recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
-import { DEPARTURES, DIRECTIONS, type Departure, type DialId, type Poi, type Recommendation } from './mock/pois'
+import { DEPARTURES, DIAL_DEFAULT_MINUTES, DIRECTIONS, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
@@ -36,7 +36,8 @@ function App() {
   const [booting, setBooting] = useState(true)
   const [screen, setScreen] = useState<Screen>(() => (localStorage.getItem(ONBOARD_KEY) ? 'home' : 'onboarding'))
   const [departure, setDeparture] = useState<Departure>(DEPARTURES[0])
-  const [dial, setDial] = useState<DialId>('half')
+  // 이동시간 예산(분) — 20분~하루(Infinity)를 눈금으로 조정 (mock/pois DIAL_STEPS)
+  const [dial, setDial] = useState<number>(DIAL_DEFAULT_MINUTES)
   const [rec, setRec] = useState<Recommendation | null>(null)
   const [candidateIndex, setCandidateIndex] = useState(0)
   const [departureReturn, setDepartureReturn] = useState<Screen>('home')
@@ -80,7 +81,7 @@ function App() {
     const nextRec = recommendFromSpin({
       heading: headingDeg,
       departure,
-      dial,
+      budgetMinutes: dial,
       prevContentId: rec?.candidates[0]?.contentId,
     })
     setRec(nextRec)
@@ -122,7 +123,7 @@ function App() {
    * 결과 카드가 단일 추천을 유지한 채 사유만 표시하게 한다 (docs/course.md §4).
    */
   const openCourse = (anchor: Poi): string | null => {
-    const result = buildCourseFromAnchor({ departure, dial, anchor, noteReason: rec?.expandReason })
+    const result = buildCourseFromAnchor({ departure, budgetMinutes: dial, anchor, noteReason: rec?.expandReason })
     if (result.status === 'ready') {
       setCourse(result)
       goTo('course')

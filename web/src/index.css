@@ -1246,9 +1246,7 @@ button:disabled,
   transition: background var(--motion-control) ease;
 }
 
-.dial-slider-mark:nth-of-type(2) { left: 0; }
-.dial-slider-mark:nth-of-type(3) { left: 50%; }
-.dial-slider-mark:nth-of-type(4) { left: 100%; }
+/* 눈금 좌표는 DialSlider가 인라인 left로 지정한다 (자연 눈금 개수 가변) */
 
 .dial-slider-mark.is-active {
   background: var(--l-primary);

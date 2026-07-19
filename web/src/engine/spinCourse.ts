@@ -1,7 +1,7 @@
 /**
  * 스핀 단일 추천 → 방향 기반 여행 코스 브리지 (docs/course.md).
  *
- * 화면(별이 앱)의 Poi·Departure·DialId를 코스 엔진(engine/course)에 연결하고,
+ * 화면(별이 앱)의 Poi·Departure·이동시간 예산을 코스 엔진(engine/course)에 연결하고,
  * 결과를 다시 화면용 Poi 배열로 되돌린다. 후보 선정·구간 이동비용·방문 순서 계산은
  * 전부 단말 내에서 수행하고, 외부 경로 API는 호출하지 않는다 (AGENTS.md 절대 원칙 1).
  *
@@ -14,16 +14,15 @@ import { directionScore, sectorCenterDeg, sectorOf } from './compass'
 import { COURSE_REASON, buildCourse } from './course'
 import { tierOf } from './curation'
 import { bearingDeg } from './geo'
-import type { RankedCandidate } from './recommend'
+import type { DialMinutes, RankedCandidate } from './recommend'
 import {
-  DIAL_MAP,
   ENGINE_POIS,
   POI_BY_CONTENT_ID,
   dispersionWeightOf,
   toGeo,
 } from './spinRecommend'
 import { travelMinutes, type TravelEstimate } from './zones'
-import { directionFromHeading, type Departure, type DialId, type DirectionInfo, type Poi } from '../mock/pois'
+import { directionFromHeading, type Departure, type DirectionInfo, type Poi } from '../mock/pois'
 
 export interface CourseStopView {
   poi: Poi
@@ -50,7 +49,8 @@ export type AppCourse = ReadyCourse | { status: 'unavailable'; reason: string }
 
 export interface BuildCourseFromAnchorInput {
   departure: Departure
-  dial: DialId
+  /** 이동시간 예산(분) — Infinity = 하루 */
+  budgetMinutes: DialMinutes
   /** 단일 추천에서 사용자가 보고 있던 장소 — 코스의 첫 장소로 고정 */
   anchor: Poi
   /** 단일 추천에서 방위 확장 등이 있었으면 그 사유를 코스 화면에도 유지 (docs/course.md §3) */
@@ -81,7 +81,7 @@ export function buildCourseFromAnchor(input: BuildCourseFromAnchorInput): AppCou
   const result = buildCourse({
     origin,
     heading,
-    dial: DIAL_MAP[input.dial],
+    budgetMinutes: input.budgetMinutes,
     pois: ENGINE_POIS,
     first,
     expansion: 'none',

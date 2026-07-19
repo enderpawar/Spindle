@@ -1,11 +1,13 @@
 import { BottomNav, type NavTab } from '../components/BottomNav'
+import { DialSlider } from '../components/DialSlider'
 import { ScreenFrame } from '../components/ScreenFrame'
-import { DIALS, type Departure, type DialId } from '../mock/pois'
+import type { Departure } from '../mock/pois'
 
 interface Props {
   departure: Departure
-  dial: DialId
-  onDialChange: (dial: DialId) => void
+  /** 이동시간 예산(분) — Infinity = 하루 */
+  dial: number
+  onDialChange: (minutes: number) => void
   onOpenDeparture: () => void
   onReplayGuide: () => void
   onNavigate: (tab: NavTab) => void
@@ -37,37 +39,7 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
         {/* 이동시간 기본값 */}
         <div style={{ padding: '16px 16px', background: '#fff', borderRadius: 18, boxShadow: '0 8px 20px -14px rgba(20,40,90,.25)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--l-ink-3)', marginBottom: 10 }}>이동시간 기본값</div>
-          <div style={{ display: 'flex', gap: 6 }} role="radiogroup" aria-label="이동시간 기본값">
-            {DIALS.map((d) => {
-              const on = d.id === dial
-              return (
-                <button
-                  key={d.id}
-                  onClick={() => onDialChange(d.id)}
-                  className="motion-card"
-                  role="radio"
-                  aria-checked={on}
-                  style={{
-                    flex: 1,
-                    minHeight: 48,
-                    border: on ? 'none' : '1.5px solid var(--l-line)',
-                    borderRadius: 13,
-                    background: on ? 'var(--l-primary)' : '#fff',
-                    color: on ? '#fff' : '#7089b8',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 1,
-                  }}
-                >
-                  <span style={{ fontSize: 13.5, fontWeight: 800 }}>{d.label}</span>
-                  <span style={{ fontSize: 10, fontWeight: 600, opacity: 0.8 }}>{d.desc}</span>
-                </button>
-              )
-            })}
-          </div>
+          <DialSlider minutes={dial} onChange={onDialChange} />
         </div>
 
         {/* 실제 홈 화면 위 코치마크 다시 보기 */}

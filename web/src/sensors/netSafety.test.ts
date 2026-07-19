@@ -56,7 +56,7 @@ describe("현장 모드 네트워크 안전 — 좌표·방위각 무전송", ()
     recommend({
       origin: fix.origin,
       heading: fix.heading,
-      dial: "half",
+      budgetMinutes: 40,
       pois: [{ contentId: "1", title: "t", point: { lat: 35.1, lng: 129.03 } }],
       rng: () => 0,
     });

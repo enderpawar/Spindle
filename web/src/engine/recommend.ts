@@ -15,21 +15,17 @@ import { bearingDeg, type GeoPoint } from "./geo";
 import { travelMinutes, type TravelEstimate } from "./zones";
 import type { Rng } from "./rng";
 
-/** 이동시간 다이얼 (ui.md S1: 가볍게 / 반나절 / 하루 나들이) */
-export type Dial = "light" | "half" | "day";
+/**
+ * 이동시간 예산(분) — 다이얼은 20분~하루를 자연스러운 눈금으로 조정한다 (ui.md S1).
+ * Infinity = 하루(권역 내 무제한).
+ */
+export type DialMinutes = number;
 
-/** 다이얼 임계값(분) — 초과 = 제외. 하루 나들이는 권역 내 무제한 (algorithm 스킬) */
-export const DIAL_LIMIT_MIN: Record<Dial, number> = {
-  light: 20,
-  half: 40,
-  day: Infinity,
-};
-
-/** 임계 "초과"만 제외 — 경계값(20분·40분 정각)은 포함 */
-export function withinDial(estimate: TravelEstimate, dial: Dial): boolean {
-  if (dial === "day") return true; // 권역 내 전체 허용 (연결 미정의 존 쌍 포함)
-  if (!estimate.connected) return false; // 연결 정의 없는 존 쌍은 하루 나들이 전용 (zones.md)
-  return estimate.minutes <= DIAL_LIMIT_MIN[dial];
+/** 예산 "초과"만 제외 — 경계값(예: 40분 정각)은 포함 */
+export function withinDial(estimate: TravelEstimate, budgetMinutes: DialMinutes): boolean {
+  if (!Number.isFinite(budgetMinutes)) return true; // 하루 — 권역 내 전체 허용 (연결 미정의 존 쌍 포함)
+  if (!estimate.connected) return false; // 연결 정의 없는 존 쌍은 하루 전용 (zones.md)
+  return estimate.minutes <= budgetMinutes;
 }
 
 /** 엔진 입력 POI — API 계층에서 변환해 전달 (좌표는 단말 내 계산 전용) */
@@ -62,7 +58,7 @@ export interface RecommendInput {
   origin: GeoPoint;
   /** 스핀 정지 방위각 — 연출 최종 각도와 반드시 동일 값 (sensors 스킬) */
   heading: number;
-  dial: Dial;
+  budgetMinutes: DialMinutes;
   pois: readonly EnginePoi[];
   rng: Rng;
   /** 직전 당첨 POI — 같은 세션 연속 당첨 방지로 임시 제외 */
@@ -109,7 +105,7 @@ function rankCandidates(
     const direction = directionScore(bearing, sectorCenter, halfWidth);
     if (direction === 0) continue;
     const travel = travelMinutes(input.origin, poi.point);
-    if (!withinDial(travel, input.dial)) continue; // 접근 가능성 0 → 제외
+    if (!withinDial(travel, input.budgetMinutes)) continue; // 접근 가능성 0 → 제외
     const score = direction * 1 * operationScoreOf(poi.contentId) * dispersionWeightOf(poi.contentId);
     if (score <= 0) continue;
     ranked.push({ poi, score, bearing, travel, tier: tierOf(poi.contentId) });

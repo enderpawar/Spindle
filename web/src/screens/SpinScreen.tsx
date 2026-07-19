@@ -2,12 +2,14 @@ import { useCallback, useRef, useState } from 'react'
 import { CompassRose, type CompassRoseHandle } from '../components/CompassRose'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
-import { DIALS, DIRECTIONS, directionFromHeading, type Departure, type DialId } from '../mock/pois'
+import { DialSlider } from '../components/DialSlider'
+import { DIRECTIONS, directionFromHeading, type Departure } from '../mock/pois'
 
 interface Props {
   departure: Departure
-  dial: DialId
-  onDialChange: (dial: DialId) => void
+  /** 이동시간 예산(분) — Infinity = 하루 */
+  dial: number
+  onDialChange: (minutes: number) => void
   onOpenDeparture: () => void
   onSpun: (headingDeg: number) => void
   onNavigate: (tab: NavTab) => void
@@ -20,8 +22,6 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
   const [settled, setSettled] = useState(false)
   const [dirIndex, setDirIndex] = useState(0)
   const liveDir = DIRECTIONS[dirIndex]
-  const dialIndex = Math.max(0, DIALS.findIndex((item) => item.id === dial))
-  const selectedDial = DIALS[dialIndex]
 
   // 방위 라벨이 바뀔 때만 리렌더 (매 프레임 setState 방지)
   const lastIndex = useRef(0)
@@ -114,36 +114,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
       {/* 하단 컨트롤 — 내브 높이만큼 여백 (스핀 중에는 페이드아웃) */}
       <div style={{ position: 'relative', minHeight: 150, padding: '0 24px calc(104px + env(safe-area-inset-bottom))', zIndex: 2 }}>
         <div style={{ opacity: busy ? 0 : 1, pointerEvents: busy ? 'none' : 'auto', transition: 'opacity .25s ease', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="dial-slider">
-            <div className="dial-slider-summary" aria-hidden>
-              <span>{selectedDial.label}</span>
-              <span>{selectedDial.desc}</span>
-            </div>
-            <div className="dial-slider-control">
-              <div className="dial-slider-track" aria-hidden>
-                <span className="dial-slider-fill" style={{ width: `${dialIndex * 50}%` }} />
-                {DIALS.map((item, index) => (
-                  <span key={item.id} className={`dial-slider-mark${index <= dialIndex ? ' is-active' : ''}`} />
-                ))}
-              </div>
-              <input
-                className="dial-slider-input"
-                type="range"
-                min={0}
-                max={DIALS.length - 1}
-                step={1}
-                value={dialIndex}
-                aria-label="이동시간 범위"
-                aria-valuetext={`${selectedDial.label}, ${selectedDial.desc}`}
-                onChange={(event) => onDialChange(DIALS[Number(event.currentTarget.value)].id)}
-              />
-            </div>
-            <div className="dial-slider-labels" aria-hidden>
-              {DIALS.map((item) => (
-                <span key={item.id} className={item.id === dial ? 'is-active' : ''}>{item.label}</span>
-              ))}
-            </div>
-          </div>
+          <DialSlider minutes={dial} onChange={onDialChange} />
           <button className="btn btn-blue" style={{ height: 58, fontSize: 17 }} onClick={() => rose.current?.spin()}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
               <path d="M4 12 a8 8 0 1 1 2.6 5.9" />

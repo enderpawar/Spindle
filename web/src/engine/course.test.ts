@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bearingDeg, type GeoPoint } from "./geo";
 import { buildCourse, COURSE_REASON, type BuildCourseInput } from "./course";
 import { tierOf } from "./curation";
-import type { Dial, EnginePoi, ExpansionLevel, RankedCandidate } from "./recommend";
+import type { EnginePoi, ExpansionLevel, RankedCandidate } from "./recommend";
 import type { TravelEstimate } from "./zones";
 
 const ORIGIN: GeoPoint = { lat: 0, lng: 0 };
@@ -44,7 +44,7 @@ function input(partial: Partial<BuildCourseInput> & { first: RankedCandidate }):
   return {
     origin: ORIGIN,
     heading: 0,
-    dial: "half",
+    budgetMinutes: 40,
     pois: [partial.first.poi],
     expansion: "none",
     travelEstimateOf: fakeEstimate,
@@ -60,7 +60,7 @@ describe("방향 기반 여행 코스", () => {
         first,
         pois: [first.poi, poi("second", 20), poi("third", 35)],
         heading: 0,
-        dial: "half",
+        budgetMinutes: 40,
       }),
     );
 
@@ -72,21 +72,21 @@ describe("방향 기반 여행 코스", () => {
   });
 
   it.each([
-    ["light", 20, 20.01, 2],
-    ["half", 40, 40.01, 3],
-  ] satisfies Array<[Dial, number, number, number]>)(
-    "%s 다이얼은 총 이동시간 경계값 정각을 포함하고 초과는 제외한다",
-    (dial, boundary, over, expectedStops) => {
+    [20, 20.01, 2],
+    [40, 40.01, 3],
+  ] satisfies Array<[number, number, number]>)(
+    "예산 %d분은 총 이동시간 경계값 정각을 포함하고 초과는 제외한다",
+    (boundary, over, expectedStops) => {
       const first = candidate(poi("first", 5));
       const boundaryPoi = poi("boundary", boundary);
       const overPoi = poi("over", over);
-      const middlePois = dial === "half" ? [poi("mid", 25)] : [];
+      const middlePois = boundary === 40 ? [poi("mid", 25)] : [];
       const result = buildCourse(
         input({
           first,
           pois: [first.poi, ...middlePois, boundaryPoi, overPoi],
           heading: 0,
-          dial,
+          budgetMinutes: boundary,
         }),
       );
 
@@ -105,7 +105,7 @@ describe("방향 기반 여행 코스", () => {
         first,
         pois: [first.poi, poi("dup", 7), poi("next", 12)],
         heading: 0,
-        dial: "light",
+        budgetMinutes: 20,
       }),
     );
 
@@ -123,7 +123,7 @@ describe("방향 기반 여행 코스", () => {
         first,
         pois: [first.poi, nearNorth, north],
         heading: 0,
-        dial: "light",
+        budgetMinutes: 20,
         travelEstimateOf: fixedEstimate(5),
       }),
     );
@@ -143,7 +143,7 @@ describe("방향 기반 여행 코스", () => {
         first,
         pois: [first.poi, poi("only-next", 15)],
         heading: 0,
-        dial: "half",
+        budgetMinutes: 40,
       }),
     );
     const unavailable = buildCourse(
@@ -151,7 +151,7 @@ describe("방향 기반 여행 코스", () => {
         first,
         pois: [first.poi],
         heading: 0,
-        dial: "half",
+        budgetMinutes: 40,
       }),
     );
 
@@ -184,7 +184,7 @@ describe("방향 기반 여행 코스", () => {
         first: candidate(firstPoi),
         pois: [firstPoi, adjacentPoi, oppositePoi],
         heading: 0,
-        dial: "half",
+        budgetMinutes: 40,
         travelEstimateOf: fixedEstimate(5),
       }),
     );
@@ -212,7 +212,7 @@ describe("방향 기반 여행 코스", () => {
         first: candidate(firstPoi),
         pois: [firstPoi, secondPoi],
         heading: 180,
-        dial: "light",
+        budgetMinutes: 20,
         expansion: "adjacent" satisfies ExpansionLevel,
         expansionReason: "이 방향은 바다예요. 범위를 넓혔어요",
         travelEstimateOf: fixedEstimate(5),
@@ -231,7 +231,7 @@ describe("방향 기반 여행 코스", () => {
         first,
         pois: [first.poi, poi("closed", 10), poi("open", 15)],
         heading: 0,
-        dial: "light",
+        budgetMinutes: 20,
         operationScoreOf: (contentId) => (contentId === "closed" ? 0 : 1),
       }),
     );

@@ -6,19 +6,20 @@ import { directionScore, sectorCenterDeg, sectorOf, type Sector } from "./compas
 import { dispersionWeight, tierOf } from "./curation";
 import { bearingDeg, type GeoPoint } from "./geo";
 import {
-  DIAL_LIMIT_MIN,
-  type Dial,
+  type DialMinutes,
   type EnginePoi,
   type ExpansionLevel,
   type RankedCandidate,
 } from "./recommend";
 import { travelMinutes, type TravelEstimate } from "./zones";
 
-export const COURSE_TARGET_COUNT: Record<Dial, number> = {
-  light: 2,
-  half: 3,
-  day: 4,
-};
+/** 예산(분) → 코스 목표 장소 수 (docs/course.md: 2~4곳). 20분 이하 2곳 · 1시간 이하 3곳 · 그 이상/하루 4곳 */
+export function courseTargetCount(budgetMinutes: DialMinutes): number {
+  if (!Number.isFinite(budgetMinutes)) return 4;
+  if (budgetMinutes <= 20) return 2;
+  if (budgetMinutes <= 60) return 3;
+  return 4;
+}
 
 export const COURSE_REASON = {
   adjacent: "이어 갈 장소가 적어 인접 방위까지 넓혔어요",
@@ -53,7 +54,7 @@ type TravelEstimator = (from: GeoPoint, to: GeoPoint) => TravelEstimate;
 export interface BuildCourseInput {
   origin: GeoPoint;
   heading: number;
-  dial: Dial;
+  budgetMinutes: DialMinutes;
   pois: readonly EnginePoi[];
   /** 단일 추천 결과의 현재 장소. 코스의 첫 장소로 고정한다. */
   first: RankedCandidate;
@@ -76,10 +77,10 @@ const HALF_WIDTH_BY_LEVEL: Record<ExpansionLevel, number> = {
   wide: 157.5,
 };
 
-function canAppend(totalMinutes: number, leg: TravelEstimate, dial: Dial): boolean {
-  if (dial === "day") return true;
+function canAppend(totalMinutes: number, leg: TravelEstimate, budgetMinutes: DialMinutes): boolean {
+  if (!Number.isFinite(budgetMinutes)) return true; // 하루 — 권역 내 무제한
   if (!leg.connected) return false;
-  return totalMinutes + leg.minutes <= DIAL_LIMIT_MIN[dial];
+  return totalMinutes + leg.minutes <= budgetMinutes;
 }
 
 function courseCandidate(
@@ -127,7 +128,7 @@ function chooseNext(
     if (!candidate) continue;
 
     const leg = estimate(prev, candidate.poi.point);
-    if (!canAppend(total, leg, input.dial)) continue;
+    if (!canAppend(total, leg, input.budgetMinutes)) continue;
 
     const next: CourseStop = {
       candidate,
@@ -155,7 +156,7 @@ function buildWithHalfWidth(
   halfWidth: number,
   estimate: TravelEstimator,
 ): CourseStop[] {
-  const targetCount = COURSE_TARGET_COUNT[input.dial];
+  const targetCount = courseTargetCount(input.budgetMinutes);
   const stops: CourseStop[] = [
     {
       candidate: input.first,
@@ -175,7 +176,7 @@ function buildWithHalfWidth(
 
 export function buildCourse(input: BuildCourseInput): CourseResult {
   const sector = sectorOf(input.heading);
-  const targetCount = COURSE_TARGET_COUNT[input.dial];
+  const targetCount = courseTargetCount(input.budgetMinutes);
   const estimate = input.travelEstimateOf ?? travelMinutes;
   const primaryHalfWidth = HALF_WIDTH_BY_LEVEL[input.expansion];
   let stops = buildWithHalfWidth(input, primaryHalfWidth, estimate);

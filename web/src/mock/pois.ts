@@ -194,10 +194,32 @@ export const DEPARTURES: Departure[] = [
   { id: 'yeongdo', name: '영도 흰여울 입구', desc: '섬에서 시작하기', lat: 35.081, lon: 129.0463 },
 ]
 
-export type DialId = 'light' | 'half' | 'full'
+/**
+ * 이동시간 다이얼 — 3단 고정이 아니라 20분~하루를 자연스러운 눈금으로 좌우 조정한다.
+ * 값은 분 단위 예산으로 엔진에 그대로 전달되며, Infinity = 하루(권역 내 무제한).
+ */
+export const DIAL_STEPS: readonly number[] = [20, 30, 40, 60, 90, 120, 180, 240, Infinity]
 
-export const DIALS: { id: DialId; label: string; desc: string }[] = [
-  { id: 'light', label: '가볍게', desc: '걸어서 20분' },
-  { id: 'half', label: '반나절', desc: '40분까지' },
-  { id: 'full', label: '하루', desc: '멀어도 좋아요' },
-]
+export const DIAL_DEFAULT_MINUTES = 40
+
+/** 20 → "20분", 90 → "1시간 30분", Infinity → "하루" */
+export function dialTimeLabel(minutes: number): string {
+  if (!Number.isFinite(minutes)) return '하루'
+  if (minutes < 60) return `${minutes}분`
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`
+}
+
+/** 요약용 분위기 라벨 — 가볍게(≤30) / 반나절(≤90) / 느긋하게 / 하루 */
+export function dialMoodLabel(minutes: number): string {
+  if (!Number.isFinite(minutes)) return '하루'
+  if (minutes <= 30) return '가볍게'
+  if (minutes <= 90) return '반나절'
+  return '느긋하게'
+}
+
+/** 요약 설명 — "이동 40분까지" / "멀어도 좋아요" */
+export function dialDesc(minutes: number): string {
+  return Number.isFinite(minutes) ? `이동 ${dialTimeLabel(minutes)}까지` : '멀어도 좋아요'
+}
