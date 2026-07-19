@@ -266,39 +266,21 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                   {detailImageLoading ? '이미지 불러오는 중' : '대표 이미지 없음'}
                 </span>
               )}
-
-              {/* 방위 칩 — 스핀이 가리킨 방향과 거리감을 카드의 서명으로 (ui.md S4) */}
-              <div style={{ position: 'absolute', left: 12, bottom: 12, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 13px', borderRadius: 14, background: direction.color, color: '#122c4f', fontSize: 12.5, fontWeight: 900, letterSpacing: -0.2, boxShadow: '0 8px 18px -8px rgba(8,22,48,.55)' }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#122c4f" strokeWidth={2.1} strokeLinejoin="round" aria-hidden>
-                  <circle cx="12" cy="12" r="9" />
-                  <polygon points="16 8 13.4 13.4 8 16 10.6 10.6" fill="#122c4f" stroke="none" />
-                </svg>
-                {direction.label}쪽 · 걸어서 약 {poi.walkMinutes}분
-              </div>
             </div>
 
             <div style={{ padding: '18px 2px 0' }}>
               <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.6, lineHeight: 1.2, color: 'var(--l-ink)' }}>{poi.name}</h2>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-                {poi.category} · {poi.district}
+                {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분
               </div>
 
-              {/* 프리뷰 팩트 — 운영·휴무 상태 한 줄 + 주소 한 줄로 압축.
-                  이동시간은 히어로 방위 칩에, 원문 4행 표는 [자세히 보기] 시트에 유지 (ui.md S4). */}
-              <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', flex: 'none', marginTop: 6 }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
-                    {fullDetailLoading && !fullDetail ? '운영 정보 불러오는 중' : operatingSummary(useTimeText, restDateText)}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.2} strokeLinecap="round" aria-hidden style={{ flex: 'none', marginTop: 3 }}>
-                    <path d="M12 21 C8.5 17.5 5 13.6 5 9.5 a7 7 0 0 1 14 0 c0 4.1-3.5 8-7 11.5 z" />
-                    <circle cx="12" cy="9.5" r="2.4" />
-                  </svg>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
-                </div>
+              {/* 프리뷰 팩트 — 주소 한 줄만. 이동·운영·휴무 원문 표는 [자세히 보기] 시트에 유지 (ui.md S4). */}
+              <div style={{ marginTop: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.2} strokeLinecap="round" aria-hidden style={{ flex: 'none', marginTop: 3 }}>
+                  <path d="M12 21 C8.5 17.5 5 13.6 5 9.5 a7 7 0 0 1 14 0 c0 4.1-3.5 8-7 11.5 z" />
+                  <circle cx="12" cy="9.5" r="2.4" />
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
               </div>
 
               {/* 결과 카드에는 소개 앞부분 3~4줄, 전체 원문은 아래 자세히 보기에서 제공 (ui.md S4). */}
@@ -328,23 +310,23 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 자세히 보기 ›
               </button>
 
-              {/* 방향 이어가기 — 단일 추천을 같은 방위의 2~4곳 코스로 확장 (docs/course.md).
-                  주 CTA(길찾기)와 경쟁하지 않도록 방위색 제안 카드로 표현한다. */}
+              {/* 이 방향으로 코스 짜기 — 단일 추천을 2~4곳 코스로 확장 (docs/course.md).
+                  주 CTA(길찾기)와 경쟁하지 않도록 중립 톤 카드로 표현한다. */}
               <button
                 type="button"
                 onClick={buildCourse}
                 className="btn"
-                style={{ width: '100%', marginTop: 20, minHeight: 66, padding: '13px 15px', borderRadius: 18, border: `1.5px solid ${direction.color}`, background: `${direction.color}1f`, color: 'var(--l-ink)', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, textAlign: 'left' }}
+                style={{ width: '100%', marginTop: 20, minHeight: 66, padding: '13px 15px', borderRadius: 18, border: '1.5px solid var(--l-line)', background: '#fff', color: 'var(--l-ink)', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 12, textAlign: 'left', boxShadow: '0 8px 20px -16px rgba(20,40,90,.35)' }}
               >
-                <span aria-hidden style={{ width: 38, height: 38, borderRadius: 13, background: direction.color, display: 'grid', placeItems: 'center', flex: 'none' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#122c4f" strokeWidth={2.1} strokeLinejoin="round">
+                <span aria-hidden style={{ width: 38, height: 38, borderRadius: 13, background: 'var(--l-soft)', display: 'grid', placeItems: 'center', flex: 'none' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2.1} strokeLinejoin="round">
                     <circle cx="12" cy="12" r="9" />
-                    <polygon points="16 8 13.4 13.4 8 16 10.6 10.6" fill="#122c4f" stroke="none" />
+                    <polygon points="16 8 13.4 13.4 8 16 10.6 10.6" fill="var(--l-primary)" stroke="none" />
                   </svg>
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 900, letterSpacing: -0.2 }}>{direction.label}쪽으로 계속 가기</span>
-                  <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-2)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
+                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 900, letterSpacing: -0.2 }}>이 방향으로 코스 짜기</span>
+                  <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
                 </span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
                   <path d="M9 6 l6 6 -6 6" />
@@ -577,15 +559,6 @@ function InfoRow({ label, value, loading = false }: { label: string; value: stri
       <div className="result-info-value">{displayValue}</div>
     </div>
   )
-}
-
-/** 프리뷰 상태 한 줄 — 운영시간과 휴무를 합친다 ("상시 개방 · 연중무휴") */
-function operatingSummary(usetime: string, restdate: string): string {
-  const open = normalizeInfoValue(usetime).replace(/\n+/g, ' · ')
-  const rest = normalizeInfoValue(restdate).replace(/\n+/g, ' ')
-  if (!rest || rest === '별도 휴무 정보 없음') return open
-  const restLabel = /무휴|휴무|휴관|휴원/.test(rest) ? rest : `휴무 ${rest}`
-  return `${open} · ${restLabel}`
 }
 
 /** TourAPI 자유 텍스트의 단순 HTML 표기를 모바일용 일반 텍스트로 정리한다. */
