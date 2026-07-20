@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import spinningImg from '../assets/poses/별이_spin.png'
-import pointingImg from '../assets/poses/별이_pointing.png'
+import spinningImg from '../assets/poses/별이_spin.webp'
+import pointingImg from '../assets/poses/별이_pointing.webp'
 import { ScreenFrame } from '../components/ScreenFrame'
 
 const slides = [

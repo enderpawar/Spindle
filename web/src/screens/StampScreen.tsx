@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import locateImg from '../assets/poses/별이_explore.png'
+import locateImg from '../assets/poses/별이_explore.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { useVisited } from '../lib/visited'

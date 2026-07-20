@@ -1,4 +1,4 @@
-import locateImg from '../assets/poses/별이_curios.png'
+import locateImg from '../assets/poses/별이_curios.webp'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { DEPARTURES, type Departure } from '../mock/pois'
 

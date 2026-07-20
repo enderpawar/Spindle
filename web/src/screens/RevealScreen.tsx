@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import excitedImg from '../assets/poses/별이_wink.png'
+import excitedImg from '../assets/poses/별이_wink.webp'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import type { Recommendation } from '../mock/pois'

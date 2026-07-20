@@ -1,4 +1,4 @@
-import pointingImg from '../assets/poses/별이_pointing.png'
+import pointingImg from '../assets/poses/별이_pointing.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
