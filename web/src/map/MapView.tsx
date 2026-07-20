@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BRIDGES, GEO, LAND_PATH, ROADS_MAJOR, ROADS_MINOR, project } from './busanGeo'
-import { DIRECTIONS, type Departure, type Poi } from '../mock/pois'
+import { directionOf, type Departure, type Poi } from '../mock/pois'
 import { MapPoiPreview } from '../components/MapPoiPreview'
 
 /*
@@ -132,7 +132,7 @@ export function MapView({ pois, departure, selectedId, onPick, onOpen, courseOrd
     () =>
       pois.map((p) => {
         const { x, y } = project(p.lat, p.lon)
-        return { poi: p, x, y, color: DIRECTIONS.find((d) => d.id === p.direction)?.color ?? '#2f5cff' }
+        return { poi: p, x, y, color: directionOf(p.direction).color }
       }),
     [pois],
   )

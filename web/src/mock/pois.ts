@@ -32,6 +32,13 @@ export function directionFromHeading(headingDeg: number): DirectionInfo {
   return DIRECTIONS[Math.round(normalized / 45) % 8]
 }
 
+const DIRECTION_BY_ID = new Map(DIRECTIONS.map((d) => [d.id, d]))
+
+/** 방위 ID → 방위 정보. 목록 렌더의 반복 find 대신 O(1) 조회 (매핑 실패 시 북으로 폴백) */
+export function directionOf(direction: DirectionId): DirectionInfo {
+  return DIRECTION_BY_ID.get(direction) ?? DIRECTIONS[0]
+}
+
 /** 큐레이션 티어 — 1: 대표 명소, 2: 알려진 곳, 3: 숨은 명소 (docs/curation.md 확정 전 임시) */
 export type Tier = 1 | 2 | 3
 

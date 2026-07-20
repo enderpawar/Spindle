@@ -3,7 +3,7 @@ import { fetchPoiCardDetailCached } from './api/details'
 import { fetchAllOldTownPois } from './api/tourapi'
 import { recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
-import { DEPARTURES, DIAL_DEFAULT_MINUTES, DIRECTIONS, type Departure, type Poi, type Recommendation } from './mock/pois'
+import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
@@ -104,7 +104,7 @@ function App() {
 
   /** 명소 탭·홈 추천 카드·테마 덱에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
   const openPoi = (poi: Poi, from: Screen = 'home') => {
-    const direction = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
+    const direction = directionOf(poi.direction)
     setRec({ direction, candidates: [poi] })
     setCandidateIndex(0)
     setPoiReturn(from)

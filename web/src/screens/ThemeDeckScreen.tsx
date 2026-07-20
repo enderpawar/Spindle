@@ -3,7 +3,7 @@ import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { THEMES, poisByTheme, themeInfo, type ThemeId } from '../engine/themes'
-import { DIRECTIONS, type Poi } from '../mock/pois'
+import { directionOf, type Poi } from '../mock/pois'
 import { useVisited } from '../lib/visited'
 
 interface Props {
@@ -74,7 +74,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px calc(110px + env(safe-area-inset-bottom))' }}>
         <div key={themeId} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
           {pois.map((poi) => {
-            const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
+            const dir = directionOf(poi.direction)
             const done = visited.has(poi.id)
             return (
               <button

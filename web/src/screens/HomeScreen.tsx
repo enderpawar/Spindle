@@ -4,7 +4,7 @@ import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { useVisited } from '../lib/visited'
 import { THEMES, type ThemeId } from '../engine/themes'
-import { DIRECTIONS, POI_POOL, type Departure, type Poi } from '../mock/pois'
+import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 import { stampProgress } from '../mock/stamps'
 
 interface Props {
@@ -219,7 +219,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         </div>
         <div className="home-pick-grid motion-card-list">
           {todayPicks.map((poi, i) => {
-            const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
+            const dir = directionOf(poi.direction)
             return (
               <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card motion-card motion-card-enter">
                 <div className="home-pick-image" style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>

@@ -11,7 +11,7 @@ import { TIER_WEIGHT, type Tier as CurationTier } from './curation'
 import { haversineMeters, type GeoPoint } from './geo'
 import { recommend as scoreRecommend, type DialMinutes, type EnginePoi } from './recommend'
 import {
-  DIRECTIONS,
+  directionOf,
   POI_POOL,
   type Departure,
   type Poi,
@@ -78,7 +78,7 @@ export function recommendFromSpin(input: SpinRecommendInput): Recommendation {
     dialWidened = true
   }
 
-  const direction = DIRECTIONS.find((d) => d.id === result.sector) ?? DIRECTIONS[0]
+  const direction = directionOf(result.sector)
 
   const ranked = result.picked ? [result.picked, ...result.alternates] : []
   const candidates = ranked

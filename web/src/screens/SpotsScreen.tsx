@@ -3,7 +3,7 @@ import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { MapView } from '../map/MapView'
-import { DIRECTIONS, POI_POOL, type Departure, type Poi } from '../mock/pois'
+import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 
 const FILTERS = ['전체', '중구', '동구', '서구', '영도구']
 
@@ -110,7 +110,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             }}
           >
             {list.map((poi) => {
-              const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
+              const dir = directionOf(poi.direction)
               const sel = poi.id === selectedId
               return (
                 <div
@@ -156,7 +156,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
       ) : (
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {list.map((poi) => {
-            const dir = DIRECTIONS.find((d) => d.id === poi.direction) ?? DIRECTIONS[0]
+            const dir = directionOf(poi.direction)
             return (
               <button
                 key={poi.id}
