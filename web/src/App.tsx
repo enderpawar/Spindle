@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchPoiCardDetailCached } from './api/details'
+import { fetchPoiCardDetailCached, fetchPoiDetailCached } from './api/details'
 import { fetchAllOldTownPois } from './api/tourapi'
 import { recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
@@ -89,6 +89,9 @@ function App() {
     setPoiReturn('home')
     const firstContentId = nextRec.candidates[0]?.contentId
     if (firstContentId) {
+      // 리빌 연출(~700ms) 동안 결과 카드가 마운트 시 다시 호출할 상세 3종을 미리 데운다.
+      // 호출 수는 그대로(세션 캐시 디듀프) — 시작만 앞당겨 카드·방문정보 스켈레톤을 줄인다.
+      void fetchPoiDetailCached(firstContentId).catch(() => {})
       void fetchPoiCardDetailCached(firstContentId)
         .catch(() => {})
         .finally(() => {
@@ -108,6 +111,8 @@ function App() {
     setRec({ direction, candidates: [poi] })
     setCandidateIndex(0)
     setPoiReturn(from)
+    // 화면 전환과 겹쳐 상세를 미리 데운다 — 결과 카드가 즉시 이미지·방문정보를 채운다.
+    void fetchPoiDetailCached(poi.contentId).catch(() => {})
     void fetchPoiCardDetailCached(poi.contentId).catch(() => {})
     goTo('result')
   }
