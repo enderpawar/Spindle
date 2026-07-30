@@ -1,5 +1,5 @@
 // 공유 이미지 카드 — 인스타 스토리 비율(1080×1920) PNG를 Canvas로 그린다 (ui.md S5).
-// 출처 표기가 필요해도 "TourAPI"로만 — 절대 원칙 6.
+// 공공데이터 출처는 기관명을 텍스트로 표기하고 공식 CI/BI 로고 이미지는 사용하지 않는다 (절대 원칙 6).
 
 const W = 1080
 const H = 1920
@@ -174,7 +174,10 @@ export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
   // 푸터
   ctx.font = `700 36px ${FONT}`
   ctx.fillStyle = 'rgba(255,255,255,.55)'
-  ctx.fillText('Spindle이 정해준 오늘의 방향', W / 2, H - 130)
+  ctx.fillText('Spindle이 정해준 오늘의 방향', W / 2, H - 156)
+  ctx.font = `600 28px ${FONT}`
+  ctx.fillStyle = 'rgba(255,255,255,.48)'
+  ctx.fillText('출처: ⓒ한국관광공사', W / 2, H - 92)
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('공유 카드 생성 실패'))), 'image/png')

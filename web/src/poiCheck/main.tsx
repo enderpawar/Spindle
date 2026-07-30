@@ -64,7 +64,7 @@ function PoiCheckPage() {
       <h1 style={{ fontSize: 22 }}>Spindle POI 연동 점검 (Phase 1)</h1>
       <p>
         원도심·영도 4개 구의 <code>areaBasedList2</code> 목록을 프록시(<code>/api</code>) 경유로
-        실시간 조회한다. 데이터 출처: TourAPI.
+        실시간 조회한다. 출처: ⓒ한국관광공사.
       </p>
       {OLD_TOWN_REGIONS.map((region) => (
         <RegionSection key={region.code} region={region} />

@@ -13,7 +13,7 @@
 3. **TourAPI 실시간 호출만**: 응답을 로컬 DB·파일·localStorage·IndexedDB·service worker 캐시 등 영속 저장소에 적재하지 않는다. 메모리/세션 범위 캐시만 허용. (공모전 규정 — 위반 시 감점/제외)
 4. **인증키는 프록시 환경변수에만**: API 키를 클라이언트 코드·저장소·커밋에 절대 포함하지 않는다.
 5. **비로그인 유지**: 계정·개인정보 수집 기능을 추가하지 않는다.
-6. **공사 지칭 금지**: 서비스 내(UI 문구·메타태그·공유 카드·기능설명서의 서비스 소개 포함)에 "한국관광공사", "KTO" 등 공사를 지칭하는 단어·로고를 사용하지 않는다. 데이터 출처 표기가 필요하면 "TourAPI"로만 표기. (서비스 소유권은 참가자에게 있고 공사는 운영 주체가 아님 — FAQ 명시 금지 사항)
+6. **출처 표기와 운영 주체 구분**: 공공데이터를 사용한 화면·문서에는 `출처: ⓒ한국관광공사` 또는 `출처: ⓒ한국관광콘텐츠랩`을 텍스트로 반드시 표기한다. 공식 CI/BI 로고 이미지를 사용하거나 서비스명·브랜딩에 기관명을 넣어 공사가 직접 개발·운영하는 것처럼 오인시키지 않는다.
 
 ## 구현 규약 문서 (작업 전 필독)
 
@@ -48,7 +48,7 @@
 
 ## 품질 게이트 (자동 강제)
 
-- `node scripts/guard.mjs` — 금지 패턴 스캐너 (locationBasedList2, 공사 지칭, 클라이언트 내 serviceKey·mapX/mapY). **git pre-commit(`.githooks/`)과 Claude Code hook이 자동 실행**하며, 위반 시 커밋·편집이 거부된다.
+- `node scripts/guard.mjs` — 금지 패턴 스캐너 (locationBasedList2, 클라이언트 내 serviceKey·mapX/mapY). **git pre-commit(`.githooks/`)과 Claude Code hook이 자동 실행**하며, 위반 시 커밋·편집이 거부된다.
 - guard 위반을 우회하지 않는다: `guard-allow` 주석은 정말 오탐일 때만, 사유와 함께 사용.
 - Phase 1 이후에는 pre-commit이 `npm run check`(typecheck + lint + test + guard)까지 실행한다. **check가 깨진 상태로 커밋하지 않는다** (`--no-verify` 사용 금지).
 

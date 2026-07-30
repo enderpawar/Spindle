@@ -11,10 +11,9 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 
 // [패턴, 설명, 적용 범위] — 범위 "web"은 클라이언트 전용 금지(프록시에선 허용)
+// 기관명 텍스트는 공식 출처 표기에 허용·필수다. CI/BI 로고와 운영 주체 오인은 맥락 검토 대상이라 기계적으로 스캔하지 않는다.
 const RULES = [
   [/locationBasedList2?/, "좌표 기반 TourAPI 엔드포인트 금지 (절대 원칙 2)", "all"],
-  [/한국관광공사/, "공사 지칭 금지 — 출처 표기는 'TourAPI'로 (절대 원칙 6)", "all"],
-  [/\bKTO\b/, "공사 지칭 금지 — 출처 표기는 'TourAPI'로 (절대 원칙 6)", "all"],
   [/serviceKey/i, "클라이언트에 인증키 관련 코드 금지 — 키는 프록시 환경변수에만 (절대 원칙 4)", "web"],
   [/mapX|mapY/i, "사용자 좌표를 API 파라미터로 보내는 코드 금지 (절대 원칙 1)", "web"],
 ];

@@ -66,7 +66,7 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
             </svg>
             위치와 방위는 휴대폰 안에서만 계산돼요. 서버로 보내지 않아요.
           </div>
-          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>계정과 개인정보 수집 없이 쓰는 서비스예요 · 관광지 정보 출처: TourAPI 실시간 조회</div>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>계정과 개인정보 수집 없이 쓰는 서비스예요 · 출처: ⓒ한국관광공사</div>
         </div>
 
         <div style={{ textAlign: 'center', padding: '12px 0 0', fontSize: 11, fontWeight: 600, color: 'var(--l-ink-3)' }}>
