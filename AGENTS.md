@@ -80,6 +80,7 @@ Spring 백엔드(익명 토큰 기반 "도장깨기" 서버 전환 — 현재는
 - `docs/zones.md` — 존-교량 접근 가능성 모델 데이터 (존 구획, 존 간 보정거리, 우회계수)
 - `docs/curation.md` — POI 인기도 티어 큐레이션 표 (분산 가중치의 원천 데이터)
 - `docs/pitch.md` — 기획력·발전성 설득 근거 데이터 (기능설명서 배경·발전방향, 2차 발표 스크립트의 원천)
+- `docs/deploy.md` — Cloudflare Pages/Workers 프로덕션 배포 절차 (사람 체크리스트 + GitHub Actions 연동)
 - `docs/(양식1)…제안서_Spindule(이진우).pdf` — 최초 제안서 원문 (전국형)
 
 ## 작업 시 유의

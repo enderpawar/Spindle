@@ -1,0 +1,94 @@
+# Spindle 프로덕션 배포 워크플로
+#
+# master push 시:
+#   1) check — guard(금지 패턴) + web(typecheck/lint/test) + proxy(typecheck/test)
+#   2) deploy-web — web/ 빌드 후 Cloudflare Pages 배포
+#   3) deploy-proxy — proxy/ 를 Cloudflare Workers 배포
+#
+# 필요한 GitHub repo secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN   — Cloudflare API 토큰 (Pages:Edit, Workers Scripts:Edit 권한)
+#   CLOUDFLARE_ACCOUNT_ID  — Cloudflare 계정 ID
+#
+# 사람이 먼저 해야 하는 일(docs/deploy.md 참고): Cloudflare Pages/Workers 프로젝트를
+# 미리 생성(또는 최초 1회 `wrangler pages deploy`/`wrangler deploy`를 로컬에서 실행)해
+# 두어야 이 워크플로가 배포할 대상이 존재한다. TOURAPI_SERVICE_KEY는 이 워크플로가
+# 다루지 않는다 — `wrangler secret put`으로 로컬에서 1회 등록하면 Cloudflare 쪽에
+# 영구히 남는다 (재배포해도 유지됨).
+#
+# CLOUDFLARE_PAGES_PROJECT 값은 실제로 생성한 Pages 프로젝트명과 반드시 일치해야 한다.
+
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+
+env:
+  NODE_VERSION: "22"
+  # 사람이 생성한 Cloudflare Pages 프로젝트명과 일치해야 함 (docs/deploy.md 1단계)
+  CLOUDFLARE_PAGES_PROJECT: spindle
+
+jobs:
+  check:
+    name: Quality gate (guard + typecheck + lint + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+      - name: Install proxy dependencies
+        run: npm ci
+        working-directory: proxy
+      - name: Run quality gate
+        run: npm run check
+
+  deploy-web:
+    name: Deploy web/ to Cloudflare Pages
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+      - name: Build web
+        run: npm run build
+        working-directory: web
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          command: >-
+            pages deploy dist
+            --project-name=${{ env.CLOUDFLARE_PAGES_PROJECT }}
+            --branch=master
+            --commit-dirty=true
+
+  deploy-proxy:
+    name: Deploy proxy/ to Cloudflare Workers
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install proxy dependencies
+        run: npm ci
+        working-directory: proxy
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: proxy
+          command: deploy
