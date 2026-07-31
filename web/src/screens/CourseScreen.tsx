@@ -71,8 +71,8 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
 
   const legLabel = (stop: CourseStopView) =>
     stop.order === 1
-      ? `${departure.name}에서 ${METHOD_LABEL[stop.method]} 약 ${stop.legMinutes}분`
-      : `직전 장소에서 ${METHOD_LABEL[stop.method]} 약 ${stop.legMinutes}분`
+      ? `${departure.name}에서 ${METHOD_LABEL[stop.method]} 약 ${stop.legMinutes}분 · 근사치`
+      : `직전 장소에서 ${METHOD_LABEL[stop.method]} 약 ${stop.legMinutes}분 · 근사치`
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
@@ -92,7 +92,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
         <div style={{ position: 'absolute', left: 16, top: 14, display: 'inline-flex', alignItems: 'center', gap: 9, padding: '9px 14px', borderRadius: 14, background: 'rgba(255,255,255,.94)', boxShadow: '0 6px 16px -8px rgba(20,40,90,.35)' }}>
           <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--l-ink)' }}>{stops.length}곳 코스</span>
           <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--l-ink-3)' }} />
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>총 약 {totalMinutes}분</span>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>총 약 {totalMinutes}분 · 근사치</span>
         </div>
       </div>
 
@@ -174,6 +174,9 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
         })}
       </div>
 
+      <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 600 }}>
+        예상 이동시간이며 실제 경로와 다를 수 있어요.
+      </p>
       <SourceLine style={{ flex: 'none', margin: '0 20px 4px' }} />
 
       {/* 하단 액션 바 */}

@@ -5,7 +5,9 @@ import { pickFestivalForDirection, type Festival } from '../engine/festival'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
+import { CuratedCopy } from '../components/CuratedCopy'
 import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
+import { copyOf } from '../engine/curation'
 import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
 import type { Poi, Recommendation } from '../mock/pois'
@@ -154,6 +156,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const addressText = infoDetail?.addr1 ?? `부산 ${poi.district}`
   const primaryVisitFacts = selectPrimaryVisitFacts(fullDetail?.visitFacts ?? [])
   const activeGalleryImage = galleryImages[galleryIndex] ?? detailImageUrl
+  const curatedCopy = copyOf(poi.contentId)
 
   const mapQuery = encodeURIComponent(`부산 ${poi.name}`)
 
@@ -245,12 +248,18 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                       <rect x="290" y="120" width="20" height="76" />
                     </g>
                   </svg>
-                  <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                  <div className={`result-image-fallback${curatedCopy ? ' result-image-fallback--curated' : ''}`}>
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth={1.6} aria-hidden>
                       <rect x="3" y="5" width="18" height="14" rx="2" />
                       <circle cx="9" cy="11" r="2" />
                       <path d="M3 17 l5-4 4 3 3-3 6 5" />
                     </svg>
+                    {curatedCopy && (
+                      <div className="result-image-fallback-copy">
+                        <strong>{poi.name}</strong>
+                        <span>{curatedCopy}</span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -290,8 +299,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             <div style={{ padding: '18px 2px 0' }}>
               <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.6, lineHeight: 1.2, color: 'var(--l-ink)' }}>{poi.name}</h2>
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-                {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분
+                {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분 · 근사치
               </div>
+              <CuratedCopy contentId={poi.contentId} className="result-curation-copy" />
 
               {/* 주소와 운영·휴무 원문 표는 [자세히 보기] 시트에 유지한다. */}
               <div style={{ marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -464,7 +474,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
             <div className="result-info-facts">
               <InfoRow label="주소" value={addressText} />
-              <InfoRow label="이동" value={`걸어서 약 ${poi.walkMinutes}분`} />
+              <InfoRow label="이동" value={`걸어서 약 ${poi.walkMinutes}분 · 근사치`} />
               {fullDetail?.visitFacts.map((fact) => (
                 <InfoRow key={fact.key} label={fact.label} value={fact.value} />
               ))}
