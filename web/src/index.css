@@ -1971,24 +1971,22 @@ button:disabled,
   overflow: visible;
   opacity: 0.96;
   pointer-events: none;
-  transform: translate3d(0, calc(100% - 96px - env(safe-area-inset-bottom)), 0);
+  transform: translate3d(0, calc(100% - 148px - env(safe-area-inset-bottom)), 0);
   transition:
     transform 760ms cubic-bezier(0.16, 0.82, 0.18, 1.05),
     opacity 520ms ease;
   will-change: transform, opacity;
 }
 .intro--surging .intro-tide {
-  opacity: 0.86;
-  transform: translate3d(0, -10%, 0);
+  opacity: 0.82;
+  transform: translate3d(0, -24%, 0);
 }
 
 .intro-tide-depth {
   position: absolute;
   z-index: 0;
-  inset: 142px -8% -35%;
-  background:
-    radial-gradient(75% 34% at 48% 0%, rgb(106 165 255 / 0.45), transparent 72%),
-    linear-gradient(155deg, #2f7df4 0%, #1461dd 54%, #0d4fc5 100%);
+  inset: 140px -8% -35%;
+  background: #2876e8;
 }
 
 .intro-tide-surface {
@@ -2011,7 +2009,7 @@ button:disabled,
   top: 18px;
   left: -36%;
   width: 172%;
-  filter: drop-shadow(0 -10px 24px rgb(37 110 232 / 0.12));
+  fill: #2876e8;
   animation: introWaveFront 3.7s ease-in-out infinite alternate;
 }
 
@@ -2047,10 +2045,10 @@ button:disabled,
     animation: introOutReduced 0.22s ease both !important;
   }
   .intro-tide {
-    transform: translate3d(0, calc(100% - 72px - env(safe-area-inset-bottom)), 0);
+    transform: translate3d(0, calc(100% - 148px - env(safe-area-inset-bottom)), 0);
   }
   .intro--surging .intro-tide {
-    transform: translate3d(0, calc(100% - 72px - env(safe-area-inset-bottom)), 0);
+    transform: translate3d(0, calc(100% - 148px - env(safe-area-inset-bottom)), 0);
   }
   .intro--surging .intro-hero {
     opacity: 1;
