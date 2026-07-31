@@ -3,12 +3,10 @@
 # 프로덕션: wrangler secret put TOURAPI_SERVICE_KEY (docs/deploy.md 참고, GitHub Actions 아님 — 로컬 1회)
 name = "spindle-proxy"
 main = "src/index.ts"
-compatibility_date = "2026-06-01"
+compatibility_date = "2026-07-31"
 
-# 프로덕션 CORS 허용 오리진 — Pages 배포 도메인으로 좁힌다.
-# 아래 값은 플레이스홀더다. 최초 Pages 배포로 실제 도메인이 확정되면
-# (예: https://spindle.pages.dev 또는 커스텀 도메인) 이 값을 그 도메인으로 바꾸고
-# `npm --prefix proxy run deploy`(또는 deploy.yml 재실행)로 프록시를 다시 배포할 것.
+# 프로덕션 CORS 허용 오리진 — Pages 프로덕션 도메인만 허용한다.
+# 커스텀 도메인으로 전환하면 이 값도 함께 바꾸고 프록시를 다시 배포할 것.
 # docs/deploy.md "5. ALLOWED_ORIGIN 갱신" 절 참고.
 [vars]
-ALLOWED_ORIGIN = "https://REPLACE_WITH_PAGES_DOMAIN.pages.dev"
+ALLOWED_ORIGIN = "https://spindle-6vp.pages.dev"

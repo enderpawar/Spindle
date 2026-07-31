@@ -36,7 +36,7 @@ Phase N을 실행할 때 순서대로:
 |---|---|
 | [x] TourAPI **운영계정** 신청·인증키 발급 (2026-07-08 실호출 확인) | ~~Phase 1 차단~~ — 해소 |
 | [ ] 사무국 질의 3건 발송 (docs/competition.md) | 개발 비차단, 조기 발송 권장 |
-| [ ] Cloudflare 계정 준비 | Phase 6 차단 (로컬 개발은 무관) |
+| [x] Cloudflare 계정 준비 (2026-07-31 Wrangler OAuth 로그인·Pages 쓰기 권한 확인) | ~~Phase 6 차단~~ — 해소 |
 | [ ] `docs/zones.md` 존 다각형·보정거리 확정 | Phase 2는 임시값 허용, **Phase 5 전 확정 필수** |
 | [ ] `docs/curation.md` POI 20곳 이상 티어 지정 | 동일 |
 | [ ] 프로젝트 OneDrive 밖 이동 + `git init` 여부 결정 | Phase 1 시작 시 확인 |
@@ -157,7 +157,7 @@ Phase N을 실행할 때 순서대로:
 - [ ] Chrome DevTools Offline: 셸 표시 + 추천 버튼 비활성 + 네트워크 필요 안내
 - [ ] Android Chrome: 설치 배너 → 홈 화면 설치
 - [ ] iPhone Safari: 공유 시트 "홈 화면에 추가" 안내 확인
-- [ ] Cloudflare Pages + Workers 프로덕션 배포, 운영계정 키 환경변수 설정
+- [x] Cloudflare Pages + Workers 프로덕션 배포, 운영계정 키 환경변수 설정 — `https://spindle-6vp.pages.dev` + `https://spindle-proxy.enderpawar.workers.dev`, TourAPI `resultCode=0000`·CORS·`no-store` 확인 (2026-07-31)
 - [ ] 시크릿 창 + 프로덕션 URL에서 여행 모드 완주
 
 ## Phase 7 — 방향 기반 여행 코스 + 2순위 기능 (Phase 1–6 DoD 전부 체크 후에만, 시간 부족 시 스킵)

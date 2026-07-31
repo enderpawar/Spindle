@@ -40,7 +40,7 @@ npx wrangler pages deploy web/dist --project-name=spindle
 처음 실행 시 wrangler가 프로젝트가 없으면 생성할지 물어본다.
 
 - 프로젝트명은 `spindle`로 통일한다 (`.github/workflows/deploy.yml`의 `CLOUDFLARE_PAGES_PROJECT`와 반드시 일치). 다른 이름을 쓰려면 워크플로 파일의 값도 함께 바꿀 것.
-- 배포 후 발급되는 기본 도메인은 `https://spindle.pages.dev` 형태. 커스텀 도메인을 붙이려면 Pages 프로젝트 → Custom domains에서 연결(선택 사항, DNS가 Cloudflare에 있어야 간편).
+- 배포 후 발급된 기본 도메인은 `https://spindle-6vp.pages.dev`다. (`spindle.pages.dev`가 이미 사용 중이어서 Cloudflare가 접미사를 부여함.) 커스텀 도메인을 붙이려면 Pages 프로젝트 → Custom domains에서 연결(선택 사항, DNS가 Cloudflare에 있어야 간편).
 
 ## 3. Cloudflare Workers 배포 + 시크릿 등록 (proxy/)
 
@@ -54,7 +54,7 @@ npx wrangler pages deploy web/dist --project-name=spindle
    ```
    npx wrangler deploy
    ```
-3. 배포된 Workers URL 확인 (예: `https://spindle-proxy.<subdomain>.workers.dev`). web 쪽에서 `/api` 요청을 이 도메인으로 프록시하도록 하려면 Pages 쪽 라우팅/환경 설정을 확인할 것 (로컬 개발은 `web/vite.config.ts`의 `server.proxy['/api']`가 `127.0.0.1:8787`을 가리키는 것과 별개로, 프로덕션 Pages 빌드는 절대경로 `/api`를 같은 도메인 하위 경로로 기대하므로 Pages 프로젝트에 Worker를 라우트로 연결하거나, 클라이언트 fetch base를 Workers 도메인으로 지정하는 방식 중 하나를 선택해 배포 전 확정한다).
+3. 배포된 Workers URL은 `https://spindle-proxy.enderpawar.workers.dev`다. 프로덕션 프론트는 `web/.env.production`의 `VITE_API_BASE`로 이 Worker의 `/api`를 직접 호출한다. 로컬 개발은 계속 `web/vite.config.ts`의 `server.proxy['/api']`를 통해 `127.0.0.1:8787`을 사용한다.
 
 ## 4. GitHub repo secrets 등록 (CI가 동작하려면 필수)
 
@@ -74,9 +74,9 @@ GitHub 저장소 → Settings → Secrets and variables → Actions → New repo
 
 ## 5. ALLOWED_ORIGIN 갱신 (Pages 도메인 확정 후, 사람)
 
-`proxy/wrangler.toml`의 `[vars] ALLOWED_ORIGIN`은 플레이스홀더(`https://REPLACE_WITH_PAGES_DOMAIN.pages.dev`)로 커밋되어 있다. 2단계에서 실제 Pages 도메인이 확정되면:
+`proxy/wrangler.toml`의 `[vars] ALLOWED_ORIGIN`은 실제 Pages 도메인 `https://spindle-6vp.pages.dev`로 고정한다. 도메인을 변경하면:
 
-1. `proxy/wrangler.toml`의 `ALLOWED_ORIGIN` 값을 실제 도메인으로 수정 (예: `https://spindle.pages.dev`, 커스텀 도메인을 쓴다면 그 값).
+1. `proxy/wrangler.toml`의 `ALLOWED_ORIGIN` 값을 실제 도메인으로 수정 (현재 `https://spindle-6vp.pages.dev`, 커스텀 도메인을 쓴다면 그 값).
 2. 커밋 후 `master`에 push → CI가 프록시를 재배포하며 새 CORS 설정이 반영된다. (급하면 로컬에서 `npm --prefix proxy run deploy`로 즉시 반영 가능.)
 3. 반영 후 시크릿 창에서 프로덕션 Pages URL을 열어 여행 모드가 완주되는지 확인 (CORS가 막히면 브라우저 콘솔에 `Access-Control-Allow-Origin` 에러가 뜬다).
 
