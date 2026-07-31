@@ -3,6 +3,7 @@ import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { isFestivalOngoing, type Festival } from '../engine/festival'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
 
 interface Props {
   onNavigate: (tab: NavTab) => void
@@ -127,6 +128,7 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
             ))}
           </div>
         )}
+        <SourceLine />
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />

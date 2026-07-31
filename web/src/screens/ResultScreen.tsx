@@ -3,6 +3,7 @@ import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCa
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { pickFestivalForDirection, type Festival } from '../engine/festival'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
 import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
 import { markVisited } from '../lib/visited'
@@ -352,6 +353,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             </div>
           </div>
         )}
+        <SourceLine />
       </div>
 
       {/* 하단 액션 바 */}

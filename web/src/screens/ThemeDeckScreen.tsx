@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
 import { THEMES, poisByTheme, themeInfo, type ThemeId } from '../engine/themes'
 import { directionOf, type Poi } from '../mock/pois'
 import { useVisited } from '../lib/visited'
@@ -106,6 +107,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
             )
           })}
         </div>
+        <SourceLine />
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />

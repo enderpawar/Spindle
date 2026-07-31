@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
 import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
 import { MapView } from '../map/MapView'
@@ -172,6 +173,8 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
           )
         })}
       </div>
+
+      <SourceLine style={{ flex: 'none', margin: '0 20px 4px' }} />
 
       {/* 하단 액션 바 */}
       <div style={{ flex: 'none', padding: '4px 20px calc(16px + env(safe-area-inset-bottom))', display: 'flex', gap: 12 }}>

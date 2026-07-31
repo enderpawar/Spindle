@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
 import { MapView } from '../map/MapView'
 import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 
@@ -89,7 +90,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
       </div>
 
       {mode === 'map' ? (
-        <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.6)' }}>
+        <>
+          <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.6)' }}>
           <MapView pois={list} departure={departure} selectedId={selectedId} onPick={pick} onOpen={onSelect} />
 
           {/* 하단 카드 스트립 — 브라우즈 전용. 스크롤해도 지도는 움직이지 않는다(핀 탭으로만 이동). */}
@@ -152,7 +154,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               )
             })}
           </div>
-        </div>
+          </div>
+          <SourceLine style={{ flex: 'none', margin: '8px 20px calc(100px + env(safe-area-inset-bottom))' }} />
+        </>
       ) : (
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {list.map((poi) => {
@@ -185,6 +189,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               </button>
             )
           })}
+          <SourceLine />
         </div>
       )}
 
