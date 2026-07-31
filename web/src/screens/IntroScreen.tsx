@@ -56,9 +56,23 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="intro-tide" aria-hidden="true">
-        <span className="intro-tide-surface intro-tide-surface--back" />
-        <span className="intro-tide-surface intro-tide-surface--front" />
         <span className="intro-tide-depth" />
+        <svg className="intro-tide-surface intro-tide-surface--back" viewBox="0 0 1440 220" preserveAspectRatio="none">
+          <path d="M0 108C116 28 242 22 360 88C482 156 590 148 714 76C832 8 966 24 1082 96C1196 166 1322 148 1440 70V220H0Z" />
+        </svg>
+        <svg className="intro-tide-surface intro-tide-surface--front" viewBox="0 0 1440 220" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="intro-wave-front" x1="0" y1="0" x2="0.9" y2="1">
+              <stop offset="0" stopColor="#438ff8" />
+              <stop offset="0.58" stopColor="#1c6be4" />
+              <stop offset="1" stopColor="#1055c9" />
+            </linearGradient>
+          </defs>
+          <path
+            fill="url(#intro-wave-front)"
+            d="M0 126C102 74 206 52 318 90C436 130 526 164 648 122C772 80 872 52 998 100C1122 148 1280 146 1440 92V220H0Z"
+          />
+        </svg>
       </div>
     </div>
   )

@@ -1968,19 +1968,24 @@ button:disabled,
   position: absolute;
   inset: 0;
   z-index: 1;
-  overflow: hidden;
+  overflow: visible;
+  opacity: 0.96;
   pointer-events: none;
   transform: translate3d(0, calc(100% - 96px - env(safe-area-inset-bottom)), 0);
-  transition: transform 760ms cubic-bezier(0.16, 0.82, 0.18, 1.05);
-  will-change: transform;
+  transition:
+    transform 760ms cubic-bezier(0.16, 0.82, 0.18, 1.05),
+    opacity 520ms ease;
+  will-change: transform, opacity;
 }
 .intro--surging .intro-tide {
-  transform: translate3d(0, -12%, 0);
+  opacity: 0.86;
+  transform: translate3d(0, -10%, 0);
 }
 
 .intro-tide-depth {
   position: absolute;
-  inset: 58px -10% -15%;
+  z-index: 0;
+  inset: 142px -8% -35%;
   background:
     radial-gradient(75% 34% at 48% 0%, rgb(106 165 255 / 0.45), transparent 72%),
     linear-gradient(155deg, #2f7df4 0%, #1461dd 54%, #0d4fc5 100%);
@@ -1988,44 +1993,42 @@ button:disabled,
 
 .intro-tide-surface {
   position: absolute;
-  top: 4px;
-  left: -32%;
-  width: 164%;
-  height: 118px;
-  border-radius: 46% 52% 0 0 / 82% 88% 0 0;
-  transform-origin: 50% 100%;
+  left: -30%;
+  width: 160%;
+  height: 176px;
+  overflow: visible;
   will-change: transform;
 }
 .intro-tide-surface--back {
+  top: 0;
   z-index: 1;
-  background: #72acff;
-  opacity: 0.72;
+  fill: #78b2ff;
+  opacity: 0.68;
   animation: introWaveBack 4.8s ease-in-out infinite alternate;
 }
 .intro-tide-surface--front {
   z-index: 2;
-  top: 24px;
-  left: -38%;
-  width: 176%;
-  background: linear-gradient(160deg, #3987f7 8%, #1767e3 62%, #0f55cc 100%);
-  box-shadow: 0 -12px 38px rgb(37 110 232 / 0.14);
+  top: 18px;
+  left: -36%;
+  width: 172%;
+  filter: drop-shadow(0 -10px 24px rgb(37 110 232 / 0.12));
   animation: introWaveFront 3.7s ease-in-out infinite alternate;
 }
 
 @keyframes introWaveBack {
   from {
-    transform: translate3d(-4%, 5px, 0) rotate(-1.8deg) scaleX(1.04);
+    transform: translate3d(-3%, 5px, 0) scaleX(1.02);
   }
   to {
-    transform: translate3d(4%, -5px, 0) rotate(1.4deg) scaleX(0.98);
+    transform: translate3d(3%, -5px, 0) scaleX(0.99);
   }
 }
 @keyframes introWaveFront {
   from {
-    transform: translate3d(5%, -3px, 0) rotate(1.2deg) scaleX(0.98);
+    transform: translate3d(4%, -3px, 0) scaleX(0.99);
   }
   to {
-    transform: translate3d(-5%, 5px, 0) rotate(-1.6deg) scaleX(1.04);
+    transform: translate3d(-4%, 5px, 0) scaleX(1.02);
   }
 }
 
