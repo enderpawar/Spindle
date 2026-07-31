@@ -30,6 +30,10 @@ export function DepartureScreen({ selected, onSelect, onBack }: Props) {
           <img src={locateImg} alt="" style={{ position: 'absolute', right: -6, top: -18, width: 86, filter: 'drop-shadow(0 10px 18px rgba(20,40,90,.22))', animation: 'bobsm 3.2s ease-in-out infinite' }} />
         </div>
 
+        <p style={{ margin: '-6px 0 18px', fontSize: 12.5, lineHeight: 1.6, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+          Spindle은 지금 원도심과 영도에 집중해요. 붐비는 곳 너머의 골목으로 안내하기 위한 선택이에요.
+        </p>
+
         <div className="motion-card-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {DEPARTURES.map((d) => {
             const on = d.id === selected.id
