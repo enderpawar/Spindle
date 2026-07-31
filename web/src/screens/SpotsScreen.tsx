@@ -48,10 +48,10 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
-      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '18px 20px 0', zIndex: 5 }}>
+      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px 16px 0', zIndex: 5 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--l-ink)' }}>명소 둘러보기</div>
-          <div style={{ marginTop: 4, fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>원도심과 영도, {POI_POOL.length}곳의 이야기</div>
+          <div style={{ marginTop: 2, fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>원도심과 영도, {POI_POOL.length}곳의 이야기</div>
         </div>
         <div style={{ display: 'flex', padding: 3, gap: 2, borderRadius: 14, background: '#fff', boxShadow: '0 6px 14px -8px rgba(20,40,90,.25)' }}>
           {(
@@ -81,7 +81,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         </div>
       </header>
 
-      <div className="no-scrollbar" style={{ display: 'flex', gap: 8, padding: '14px 20px 10px', overflowX: 'auto', zIndex: 5 }}>
+      <div className="no-scrollbar" style={{ display: 'flex', gap: 8, padding: '9px 16px 8px', overflowX: 'auto', zIndex: 5 }}>
         {FILTERS.map((f) => (
           <button key={f} className={`l-zone-chip ${f === filter ? 'on' : ''}`} onClick={() => setFilter(f)}>
             {f}
@@ -102,12 +102,12 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               position: 'absolute',
               left: 0,
               right: 0,
-              bottom: 'calc(96px + env(safe-area-inset-bottom))',
+              bottom: 'calc(82px + env(safe-area-inset-bottom))',
               display: 'flex',
               gap: 12,
               overflowX: 'auto',
               scrollSnapType: 'x mandatory',
-              padding: '8px 40px 14px',
+              padding: '4px 32px 8px',
               zIndex: 10,
             }}
           >
@@ -124,11 +124,11 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   }}
                   style={{
                     flex: 'none',
-                    width: 'calc(100% - 80px)',
+                    width: 'calc(100% - 64px)',
                     scrollSnapAlign: 'center',
                     background: '#fff',
                     borderRadius: 20,
-                    padding: '14px 16px',
+                    padding: '12px 14px',
                     boxShadow: sel ? '0 14px 30px -12px rgba(20,50,140,.4)' : '0 8px 20px -14px rgba(20,40,90,.3)',
                     border: sel ? `1.5px solid ${dir.color}` : '1.5px solid transparent',
                     transition: 'box-shadow .2s ease, border-color .2s ease',
@@ -140,13 +140,13 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                     {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
                   </div>
-                  <div style={{ marginTop: 7, fontSize: 12.5, lineHeight: 1.55, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {poi.story}
                   </div>
                   <button
                     className="btn btn-blue"
                     onClick={() => onSelect(poi)}
-                    style={{ marginTop: 11, width: '100%', minHeight: 42, borderRadius: 13, fontSize: 13.5 }}
+                    style={{ marginTop: 9, width: '100%', minHeight: 44, borderRadius: 13, fontSize: 13.5 }}
                   >
                     자세히 보기
                   </button>
@@ -155,10 +155,10 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             })}
           </div>
           </div>
-          <SourceLine style={{ flex: 'none', margin: '8px 20px calc(100px + env(safe-area-inset-bottom))' }} />
+          <SourceLine style={{ flex: 'none', margin: '4px 16px calc(82px + env(safe-area-inset-bottom))' }} />
         </>
       ) : (
-        <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '6px 20px calc(110px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(92px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {list.map((poi) => {
             const dir = directionOf(poi.direction)
             return (
