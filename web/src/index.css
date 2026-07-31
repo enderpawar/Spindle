@@ -1886,7 +1886,7 @@ button:disabled,
   cursor: pointer;
 }
 .intro--exit {
-  animation: introOut 0.52s cubic-bezier(0.4, 0, 0.9, 0.35) both;
+  animation: introOut 0.48s cubic-bezier(0.4, 0, 0.9, 0.35) both;
   pointer-events: none;
 }
 @keyframes introIn {
@@ -1910,10 +1910,19 @@ button:disabled,
 
 /* 히어로 — 앱 아이콘 + 워드마크 (세로 정렬) */
 .intro-hero {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 22px;
+  transition:
+    transform 720ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 420ms ease;
+}
+.intro--surging .intro-hero {
+  opacity: 0;
+  transform: translateY(-22px) scale(0.96);
 }
 
 /* 앱 아이콘 — 중앙에서 페이드인 + 위로 떠오름 */
@@ -1954,28 +1963,69 @@ button:disabled,
   }
 }
 
-/* 하단 로딩 인디케이터 — 은은히 명멸 (미니멀) */
-.intro-dots {
+/* 하단 물결: 대기 중에는 낮게 찰랑이고, 완료 순간 화면을 한 번에 채운다. */
+.intro-tide {
   position: absolute;
-  bottom: calc(46px + env(safe-area-inset-bottom));
-  display: flex;
-  gap: 8px;
-  animation: introRise 0.6s ease 0.9s both;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translate3d(0, calc(100% - 96px - env(safe-area-inset-bottom)), 0);
+  transition: transform 760ms cubic-bezier(0.16, 0.82, 0.18, 1.05);
+  will-change: transform;
 }
-.intro-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #a6bce4;
-  animation: introDot 1.5s ease-in-out infinite;
+.intro--surging .intro-tide {
+  transform: translate3d(0, -12%, 0);
 }
-@keyframes introDot {
-  0%,
-  100% {
-    opacity: 0.25;
+
+.intro-tide-depth {
+  position: absolute;
+  inset: 58px -10% -15%;
+  background:
+    radial-gradient(75% 34% at 48% 0%, rgb(106 165 255 / 0.45), transparent 72%),
+    linear-gradient(155deg, #2f7df4 0%, #1461dd 54%, #0d4fc5 100%);
+}
+
+.intro-tide-surface {
+  position: absolute;
+  top: 4px;
+  left: -32%;
+  width: 164%;
+  height: 118px;
+  border-radius: 46% 52% 0 0 / 82% 88% 0 0;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.intro-tide-surface--back {
+  z-index: 1;
+  background: #72acff;
+  opacity: 0.72;
+  animation: introWaveBack 4.8s ease-in-out infinite alternate;
+}
+.intro-tide-surface--front {
+  z-index: 2;
+  top: 24px;
+  left: -38%;
+  width: 176%;
+  background: linear-gradient(160deg, #3987f7 8%, #1767e3 62%, #0f55cc 100%);
+  box-shadow: 0 -12px 38px rgb(37 110 232 / 0.14);
+  animation: introWaveFront 3.7s ease-in-out infinite alternate;
+}
+
+@keyframes introWaveBack {
+  from {
+    transform: translate3d(-4%, 5px, 0) rotate(-1.8deg) scaleX(1.04);
   }
-  50% {
-    opacity: 0.95;
+  to {
+    transform: translate3d(4%, -5px, 0) rotate(1.4deg) scaleX(0.98);
+  }
+}
+@keyframes introWaveFront {
+  from {
+    transform: translate3d(5%, -3px, 0) rotate(1.2deg) scaleX(0.98);
+  }
+  to {
+    transform: translate3d(-5%, 5px, 0) rotate(-1.6deg) scaleX(1.04);
   }
 }
 
@@ -1989,6 +2039,27 @@ button:disabled,
   }
   .intro {
     animation: introIn 0.3s ease both;
+  }
+  .intro.intro--exit {
+    animation: introOutReduced 0.22s ease both !important;
+  }
+  .intro-tide {
+    transform: translate3d(0, calc(100% - 72px - env(safe-area-inset-bottom)), 0);
+  }
+  .intro--surging .intro-tide {
+    transform: translate3d(0, calc(100% - 72px - env(safe-area-inset-bottom)), 0);
+  }
+  .intro--surging .intro-hero {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes introOutReduced {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
