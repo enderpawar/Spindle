@@ -102,7 +102,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               position: 'absolute',
               left: 0,
               right: 0,
-              bottom: 'calc(82px + env(safe-area-inset-bottom))',
+              bottom: 'calc(24px + env(safe-area-inset-bottom))',
               display: 'flex',
               gap: 12,
               overflowX: 'auto',
