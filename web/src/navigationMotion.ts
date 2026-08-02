@@ -1,4 +1,4 @@
-export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'course' | 'course-guide' | 'share' | 'theme' | 'festival'
+export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'reveal' | 'result' | 'course' | 'share' | 'theme' | 'festival'
 export type TransitionIntent = 'tab' | 'forward' | 'back' | 'ritual'
 
 const TABS = new Set<Screen>(['home', 'spots', 'spin', 'stamp', 'settings'])
@@ -13,8 +13,6 @@ const BACK_EDGES = new Set([
   'result>theme',
   'course>result',
   'course>spin',
-  'course-guide>course',
-  'course-guide>spin',
   'share>result',
   'theme>spin',
   'theme>home',

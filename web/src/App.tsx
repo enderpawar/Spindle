@@ -16,7 +16,6 @@ import { DepartureScreen } from './screens/DepartureScreen'
 import { RevealScreen } from './screens/RevealScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { CourseScreen } from './screens/CourseScreen'
-import { CourseGuideScreen } from './screens/CourseGuideScreen'
 import { ShareScreen } from './screens/ShareScreen'
 import { ThemeDeckScreen } from './screens/ThemeDeckScreen'
 import { FestivalScreen } from './screens/FestivalScreen'
@@ -31,7 +30,6 @@ import { HomeGuide } from './components/HomeGuide'
 import { transitionFor, type Screen, type TransitionIntent } from './navigationMotion'
 import { runViewTransition } from './viewTransition'
 import { usePressFeedback } from './usePressFeedback'
-import { requestOrientationPermission, type OrientationPermission } from './sensors/orientation'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
 
@@ -58,7 +56,6 @@ function App() {
   const [spinPurpose, setSpinPurpose] = useState<SpinPurpose>('single')
   const [spinPurposeNotice, setSpinPurposeNotice] = useState<string | null>(null)
   const [courseFailureNotice, setCourseFailureNotice] = useState<string | null>(null)
-  const [orientationPermission, setOrientationPermission] = useState<OrientationPermission>('unsupported')
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
 
@@ -228,17 +225,6 @@ function App() {
     }
   }
 
-  const startCourseGuidance = async () => {
-    if (new URLSearchParams(window.location.search).get('demo') === '1') {
-      setOrientationPermission('unsupported')
-      goTo('course-guide')
-      return
-    }
-    const permission = await requestOrientationPermission()
-    setOrientationPermission(permission)
-    goTo('course-guide')
-  }
-
   const openDeparture = (from: Screen) => {
     setDepartureReturn(from)
     goTo('departure')
@@ -327,19 +313,6 @@ function App() {
           onBack={() => goTo(courseReturn)}
           onRespin={() => {
             setSpinPurpose(courseReturn === 'spin' ? 'course' : 'single')
-            goTo('spin')
-          }}
-          onStartGuidance={startCourseGuidance}
-        />
-      ) : null
-    case 'course-guide':
-      return course ? (
-        <CourseGuideScreen
-          course={course}
-          orientationPermission={orientationPermission}
-          demo={new URLSearchParams(window.location.search).get('demo') === '1'}
-          onExit={() => {
-            setSpinPurpose('course')
             goTo('spin')
           }}
         />

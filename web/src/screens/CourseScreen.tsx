@@ -15,8 +15,13 @@ interface Props {
   departure: Departure
   onBack: () => void
   onRespin: () => void
-  onStartGuidance: () => void
 }
+
+/**
+ * 코스 안내 단계 — Spindle은 경로를 계산하지 않고 "지금 어디로 갈 차례인지"만 단계로 끊는다.
+ * idle: 코스 미리보기 / first: 1번 장소로 이동 중 / course: 1번 도착 후 전체 코스 이동 중
+ */
+type GuideStage = 'idle' | 'first' | 'course'
 
 /** 이동수단별 라벨 (zones.ts TravelEstimate.method) */
 const METHOD_LABEL: Record<CourseStopView['method'], string> = {
@@ -32,11 +37,13 @@ const METHOD_LABEL: Record<CourseStopView['method'], string> = {
  * 하단 카드 스트립과 지도 핀은 서로 선택을 동기화하며, 각 장소 길찾기 딥링크를 제공한다.
  * 코스는 engine/spinCourse에서 단말 내 계산으로 만들어지며, 여기서는 표시와 길찾기만 담당한다.
  */
-export function CourseScreen({ course, departure, onBack, onRespin, onStartGuidance }: Props) {
+export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
   const { direction, stops, totalMinutes, reasons } = course
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stampToast, setStampToast] = useState<string | null>(null)
+  const [stage, setStage] = useState<GuideStage>('idle')
   const visited = useVisited()
+  const firstStop = stops[0]
 
   const stripRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef(new Map<string, HTMLDivElement>())
@@ -75,6 +82,13 @@ export function CourseScreen({ course, departure, onBack, onRespin, onStartGuida
     if (markVisited(stop.poi.id)) {
       setStampToast(stop.poi.district)
     }
+  }
+
+  // 1번 장소 도착은 센서가 아니라 사용자가 직접 확인한다 — GPS를 읽지 않으므로 좌표 무전송 구조를 유지한다.
+  const confirmFirstArrival = () => {
+    if (firstStop) recordNavigation(firstStop)
+    setSelectedId(stops[1]?.poi.id ?? null)
+    setStage('course')
   }
 
   const legLabel = (stop: CourseStopView) =>
@@ -184,37 +198,87 @@ export function CourseScreen({ course, departure, onBack, onRespin, onStartGuida
         })}
       </div>
 
-      {/* 현재 위치→1번 장소는 목적지 전용 링크로 먼저 안내한다. 현재 위치는 카카오맵이 자체 처리한다. */}
-      {firstStopDirectionsHref && stops[0] && (
-        <a
-          href={firstStopDirectionsHref}
-          target="_blank"
-          rel="noreferrer"
-          className="btn"
-          onClick={() => recordNavigation(stops[0])}
-          style={{ flex: 'none', margin: '0 20px 8px', height: 48, background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
+      {/*
+        코스 안내는 두 단계로만 끊는다 (docs/course.md §7).
+        1단계 = 1번 장소로 이동, 2단계 = 1번부터 전체 코스 이동.
+        단계 전환은 사용자 확인으로만 일어나고, 실제 경로 계산·재탐색·도착 판정은 카카오맵이 맡는다.
+      */}
+      {stage !== 'idle' && (
+        <section
+          aria-live="polite"
+          style={{ flex: 'none', margin: '0 20px 8px', padding: '13px 15px 15px', borderRadius: 18, background: '#fff', border: '1.5px solid var(--l-line)', boxShadow: '0 10px 24px -18px rgba(20,40,90,.4)' }}
         >
-          먼저 1번 장소로 길찾기
-        </a>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <span style={{ fontSize: 11.5, fontWeight: 900, color: 'var(--l-primary)' }}>{stage === 'first' ? '1단계' : '2단계'}</span>
+            <strong style={{ fontSize: 14.5, fontWeight: 900, color: 'var(--l-ink)' }}>
+              {stage === 'first' ? `${firstStop?.poi.name ?? '1번 장소'}로 이동` : '코스 순서대로 이동'}
+            </strong>
+          </div>
+
+          {stage === 'first' ? (
+            <>
+              <p style={{ margin: '6px 0 11px', fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-3)' }}>
+                {firstStopDirectionsHref
+                  ? '카카오맵에서 1번 장소까지 안내받으세요. 출발지는 카카오맵이 직접 잡습니다.'
+                  : '1번 장소의 좌표가 없어 길찾기 링크를 만들지 못했어요. 아래 카드의 장소명으로 검색해 주세요.'}
+              </p>
+              {firstStopDirectionsHref && firstStop && (
+                <a
+                  href={firstStopDirectionsHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn"
+                  onClick={() => recordNavigation(firstStop)}
+                  style={{ height: 48, width: '100%', background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
+                >
+                  카카오맵으로 길찾기
+                </a>
+              )}
+              <button
+                type="button"
+                className="btn"
+                onClick={confirmFirstArrival}
+                style={{ marginTop: 8, height: 46, width: '100%', background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 13.5 }}
+              >
+                도착했어요 · 다음 단계로
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ margin: '6px 0 11px', fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-3)' }}>
+                {courseWalkHref
+                  ? `이제 ${stops.length}곳을 순서대로 둘러보세요. 카카오맵이 1번부터의 방문 순서를 이어서 안내합니다.`
+                  : '좌표가 있는 장소가 부족해 전체 코스 링크를 만들지 못했어요. 아래 카드에서 장소별로 길찾기를 이용해 주세요.'}
+              </p>
+              {courseWalkHref && (
+                <a
+                  href={courseWalkHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn"
+                  style={{ height: 48, width: '100%', background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
+                >
+                  카카오맵에서 전체 코스 보기
+                </a>
+              )}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setStage('first')}
+                style={{ marginTop: 8, height: 46, width: '100%', background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-ink-3)', fontSize: 13.5 }}
+              >
+                1단계로 돌아가기
+              </button>
+            </>
+          )}
+        </section>
       )}
 
-      {/* 전체 코스 보기는 1→2→3→4 순서만 넘기고 실제 경로 계산은 카카오맵이 맡는다 */}
-      {courseWalkHref && (
-        <a
-          href={courseWalkHref}
-          target="_blank"
-          rel="noreferrer"
-          className="btn"
-          style={{ flex: 'none', margin: '0 20px 8px', height: 46, background: '#fff', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 14, textDecoration: 'none' }}
-        >
-          1번부터 전체 코스 보기
-        </a>
+      {stage === 'idle' && (
+        <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 600 }}>
+          안내를 시작하면 1번 장소까지 먼저 이동한 뒤, 도착을 확인하고 전체 코스로 넘어가요.
+        </p>
       )}
-
-      <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 600 }}>
-        먼저 1번 장소까지 카카오맵에서 안내받은 뒤 코스를 시작해 주세요.
-        {courseWalkHref && ' 전체 코스 보기는 1번 장소부터의 방문 순서를 표시합니다.'}
-      </p>
       <SourceLine style={{ flex: 'none', margin: '0 20px 4px' }} />
 
       {stampToast && (
@@ -227,11 +291,13 @@ export function CourseScreen({ course, departure, onBack, onRespin, onStartGuida
       <div style={{ flex: 'none', padding: '4px 20px calc(16px + env(safe-area-inset-bottom))', display: 'flex', gap: 12 }}>
         <button
           type="button"
-          className="btn btn-blue"
-          style={{ flex: 1, height: 54, fontSize: 16, textDecoration: 'none' }}
-          onClick={onStartGuidance}
+          className={stage === 'idle' ? 'btn btn-blue' : 'btn'}
+          style={stage === 'idle'
+            ? { flex: 1, height: 54, fontSize: 16, textDecoration: 'none' }
+            : { flex: 1, height: 54, fontSize: 15, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-ink-3)' }}
+          onClick={() => setStage(stage === 'idle' ? 'first' : 'idle')}
         >
-          코스 안내 시작
+          {stage === 'idle' ? '코스 안내 시작' : '안내 종료'}
         </button>
         <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 54, height: 54, borderRadius: 18, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>

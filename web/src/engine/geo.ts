@@ -39,21 +39,6 @@ export function bearingDeg(from: GeoPoint, to: GeoPoint): number {
   return (θ + 360) % 360;
 }
 
-/** 짧은 이동을 동·북 방향 미터로 적용한다. demo GPS와 로컬 지도에서만 사용한다. */
-export function movePointMeters(point: GeoPoint, eastMeters: number, northMeters: number): GeoPoint {
-  const latRad = toRad(point.lat)
-  return {
-    lat: point.lat + toDeg(northMeters / EARTH_RADIUS_M),
-    lng: point.lng + toDeg(eastMeters / (EARTH_RADIUS_M * Math.max(Math.cos(latRad), 1e-6))),
-  }
-}
-
-/** 목표에서 distanceMeters 떨어진 demo 시작점을 만든다. bearing은 시작점→목표 방향이다. */
-export function pointBeforeTarget(target: GeoPoint, bearingToTargetDeg: number, distanceMeters: number): GeoPoint {
-  const awayRad = toRad(bearingToTargetDeg + 180)
-  return movePointMeters(target, Math.sin(awayRad) * distanceMeters, Math.cos(awayRad) * distanceMeters)
-}
-
 /** 다각형 내부 판정 (ray casting) — 존 판정용, 단말 내 전용 */
 export function pointInPolygon(p: GeoPoint, polygon: readonly GeoPoint[]): boolean {
   let inside = false;
