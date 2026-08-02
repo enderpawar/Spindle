@@ -51,7 +51,7 @@ npx wrangler pages deploy web/dist --project-name=spindle
    - 사용할 Preview 도메인(예: `https://<hash>.spindle.pages.dev`)
    도메인이 등록되지 않으면 해당 환경에서 지도가 로드되지 않는다.
 2. 앱 설정에서 **카카오맵 사용 활성화**가 켜져 있는지 확인한다.
-3. Cloudflare Pages 프로젝트 → Settings → Variables and Secrets의 빌드 환경변수에 `VITE_KAKAO_JS_KEY`를 추가한다. **Production과 Preview에 각각** 같은 JavaScript 키를 등록한다.
+3. GitHub repo → Settings → Secrets and variables → Actions에 secret `VITE_KAKAO_JS_KEY`를 추가한다. **빌드는 Cloudflare Pages가 아니라 GitHub Actions에서 실행**되므로(`.github/workflows/deploy.yml`의 Build web 단계) Cloudflare Pages 쪽 환경변수 설정은 이 배포 경로에 적용되지 않는다. secret 없이 빌드되면 프로덕션은 자체 벡터 지도 폴백으로 동작한다.
 4. 로컬 개발은 `web/.env.local`에 아래 값을 넣는다.
    ```
    VITE_KAKAO_JS_KEY=<JavaScript 키>
