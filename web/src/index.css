@@ -2597,10 +2597,10 @@ button.is-pressing:not(:disabled) {
   position: absolute;
   z-index: 2;
   display: grid;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   place-items: center;
-  border: 2px solid #fff;
+  border: 1.5px solid #fff;
   border-radius: 50%;
   background: var(--l-orange);
   color: #fff;
@@ -2746,7 +2746,7 @@ button.is-pressing:not(:disabled) {
 .spin-purpose-notice {
   margin: 7px 22px 0;
   color: var(--l-ink-3);
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 650;
   text-align: center;
   z-index: 2;

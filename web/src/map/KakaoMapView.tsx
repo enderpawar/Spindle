@@ -39,7 +39,7 @@ interface PoiPinProps {
 function PoiPin({ poi, selected, busy, order, showLabel, onPick, onOpen }: PoiPinProps) {
   const color = directionOf(poi.direction).color
   const inCourse = order !== undefined
-  const sizePx = selected ? 40 : inCourse ? 34 : poi.tier === 1 ? 31 : 26
+  const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 22 : 16
 
   return (
     <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>

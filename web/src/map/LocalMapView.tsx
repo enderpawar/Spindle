@@ -576,7 +576,7 @@ export function LocalMapView({
           const busy = busyPoiIds?.has(poi.id) ?? false
           const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
-          const sizePx = sel ? 40 : inCourse ? 34 : poi.tier === 1 ? 31 : 26
+          const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 22 : 16
           return (
             <div
               key={poi.id}
