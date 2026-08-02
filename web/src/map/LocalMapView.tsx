@@ -25,7 +25,7 @@ export interface MapViewProps {
   selectedId: string | null
   /** 당일 혼잡 예상 기준을 넘은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
   busyPoiIds?: ReadonlySet<string>
-  /** 큐레이션 외 전체 명소(areaBasedList2) — 작은 점 핀으로만 표시 */
+  /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로만 표시 */
   extraSpots?: ReadonlyArray<{ id: string; name: string; lat: number; lon: number }>
   /** 핀 탭(id) 또는 빈 바다 탭(null) */
   onPick: (id: string | null) => void
@@ -532,7 +532,7 @@ export function LocalMapView({
           </span>
         </div>
 
-        {/* 전체 명소 점 — 큐레이션 핀보다 낮은 위계로 조용히 표시한다. */}
+        {/* 전체 명소 축소형 핀 — 큐레이션 핀보다 낮은 위계로 조용히 표시한다. */}
         {extraPins.map(({ spot, x, y }) => {
           const s = toScreen(x, y)
           const selected = spot.id === selectedId
@@ -559,7 +559,11 @@ export function LocalMapView({
                   onPick(spot.id)
                 }}
               >
-                {showPoiLabels && <span className="map-extra-spot__label">{spot.name}</span>}
+                <svg className="map-extra-spot__pin" viewBox="0 0 18 23" aria-hidden="true">
+                  <path d="M9 1.25a7.75 7.75 0 0 0-7.75 7.75c0 5.15 5.45 10.35 7.75 12.55 2.3-2.2 7.75-7.4 7.75-12.55A7.75 7.75 0 0 0 9 1.25Z" />
+                  <circle cx="9" cy="9" r="2.65" />
+                </svg>
+                {(selected || showPoiLabels) && <span className="map-extra-spot__label">{spot.name}</span>}
               </button>
             </div>
           )

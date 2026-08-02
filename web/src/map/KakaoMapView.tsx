@@ -134,7 +134,11 @@ function ExtraSpotPin({ spot, selected, showLabel, onPick }: {
           onPick(spot.id)
         }}
       >
-        {showLabel && <span className="map-extra-spot__label">{spot.name}</span>}
+        <svg className="map-extra-spot__pin" viewBox="0 0 18 23" aria-hidden="true">
+          <path d="M9 1.25a7.75 7.75 0 0 0-7.75 7.75c0 5.15 5.45 10.35 7.75 12.55 2.3-2.2 7.75-7.4 7.75-12.55A7.75 7.75 0 0 0 9 1.25Z" />
+          <circle cx="9" cy="9" r="2.65" />
+        </svg>
+        {(selected || showLabel) && <span className="map-extra-spot__label">{spot.name}</span>}
       </button>
     </div>
   )

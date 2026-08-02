@@ -2494,46 +2494,64 @@ button.is-pressing:not(:disabled) {
   transition-timing-function: var(--ease-touch-down);
 }
 
-/* 큐레이션 외 전체 명소는 두 지도에서 같은 작은 점으로 표시한다. */
+/* 큐레이션 외 전체 명소는 큰 물방울 핀의 형태를 잇는 축소형 핀으로 표시한다. */
 .map-extra-spot {
   position: absolute;
   left: 0;
   top: 0;
   box-sizing: border-box;
-  width: 9px;
-  height: 9px;
+  width: 16px;
+  height: 21px;
   padding: 0;
-  border: 1.5px solid #fff;
-  border-radius: 50%;
-  background: #7f9cc7;
-  box-shadow: 0 2px 5px rgba(40, 65, 105, 0.28);
+  border: 0;
+  background: transparent;
+  color: #7895bf;
+  filter: drop-shadow(0 2px 3px rgba(40, 65, 105, 0.3));
   cursor: pointer;
   pointer-events: auto;
-  transform: translate(-50%, -50%);
-  transition: width 180ms ease, height 180ms ease, box-shadow 180ms ease;
+  transform: translate(-50%, -100%);
+  transition: width 180ms ease, height 180ms ease, color 180ms ease, filter 180ms ease;
 }
 
 .map-extra-spot::after {
   position: absolute;
-  inset: -15px;
+  inset: -12px -14px -11px;
   content: '';
 }
 
+.map-extra-spot__pin {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.map-extra-spot__pin path {
+  fill: currentColor;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.map-extra-spot__pin circle {
+  fill: #fff;
+}
+
 .map-extra-spot--selected {
-  width: 13px;
-  height: 13px;
-  box-shadow: 0 3px 8px rgba(40, 65, 105, 0.38);
+  width: 22px;
+  height: 28px;
+  color: var(--l-primary);
+  filter: drop-shadow(0 4px 7px rgba(47, 92, 255, 0.42));
 }
 
 .map-extra-spot:active:not(:disabled),
 .map-extra-spot.is-pressing:not(:disabled) {
-  transform: translate(-50%, -50%) scale(0.94);
+  transform: translate(-50%, -100%) scale(0.94);
 }
 
 .map-extra-spot__label {
   position: absolute;
   left: 50%;
-  top: calc(100% + 4px);
+  top: calc(100% + 3px);
   padding: 2px 5px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.82);
