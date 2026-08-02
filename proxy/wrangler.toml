@@ -3,7 +3,10 @@
 # 프로덕션: wrangler secret put TOURAPI_SERVICE_KEY (docs/deploy.md 참고, GitHub Actions 아님 — 로컬 1회)
 name = "spindle-proxy"
 main = "src/index.ts"
-compatibility_date = "2026-07-31"
+# 로컬 개발용 wrangler(package-lock 고정 버전)의 workerd가 지원하는 최신 날짜에 맞춘다.
+# 이보다 미래 날짜를 쓰면 `wrangler dev`가 기동에 실패한다(배포는 되지만 로컬이 깨짐).
+# wrangler를 올릴 때 이 날짜도 함께 올릴 것.
+compatibility_date = "2026-07-08"
 
 # 프로덕션 CORS 허용 오리진 — Pages 프로덕션 도메인만 허용한다.
 # 커스텀 도메인으로 전환하면 이 값도 함께 바꾸고 프록시를 다시 배포할 것.
