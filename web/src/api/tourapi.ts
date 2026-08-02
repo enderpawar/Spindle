@@ -89,19 +89,29 @@ export function extractItems<T>(body: ListBody<T>): T[] {
   return Array.isArray(item) ? item : [item];
 }
 
-// contentId → contentTypeId 인덱스. 세션 시작 목록 호출(areaBasedList2)의 응답에서
-// 부수적으로 채워지는 메모리 전용 맵으로, 탭이 닫히면 사라진다 (절대 원칙 3 — 영속화·
-// 정적 파일화 금지). 상세 조회가 detailIntro2를 detailCommon2와 병렬로 띄우는 데만 쓰고,
-// 값이 없으면 호출부가 기존 직렬 경로로 폴백하므로 표시 내용에는 영향을 주지 않는다.
+// 세션 시작 목록 호출(areaBasedList2)이 이미 실어 오는 필드를 contentId로 색인해 둔다.
+// 메모리 전용 맵이라 탭이 닫히면 사라진다 (절대 원칙 3 — 영속화·정적 파일화 금지).
+// 용도는 중복 호출 제거뿐이고, 값이 없으면 호출부가 기존 경로로 폴백하므로 표시 내용은
+// 어느 쪽이든 동일하다.
+//   - contentTypeId: detailIntro2를 detailCommon2와 병렬로 띄우는 데 사용
+//   - firstimage: 썸네일이 detailCommon2(실측 4~5초)를 건너뛰고 바로 이미지를 띄우는 데 사용
 const contentTypeIndex = new Map<string, string>();
+const firstImageIndex = new Map<string, string>();
 
 function rememberContentTypeId(poi: AreaPoi): void {
-  if (poi.contentid && poi.contenttypeid) contentTypeIndex.set(poi.contentid, poi.contenttypeid);
+  if (!poi.contentid) return;
+  if (poi.contenttypeid) contentTypeIndex.set(poi.contentid, poi.contenttypeid);
+  if (poi.firstimage) firstImageIndex.set(poi.contentid, poi.firstimage);
 }
 
 /** 세션 목록 호출로 이미 알고 있는 contentTypeId (모르면 undefined) */
 export function getKnownContentTypeId(contentId: string): string | undefined {
   return contentTypeIndex.get(contentId);
+}
+
+/** 세션 목록 호출로 이미 알고 있는 대표 이미지 URL (모르면 undefined — 호출부가 상세로 폴백) */
+export function getKnownFirstImage(contentId: string): string | undefined {
+  return firstImageIndex.get(contentId);
 }
 
 /** 한 구의 POI 전체를 페이징으로 수집 */
@@ -153,6 +163,7 @@ export function fetchAreaPoisCached(
 export function clearSessionCache(): void {
   sessionCache.clear();
   contentTypeIndex.clear();
+  firstImageIndex.clear();
 }
 
 /**

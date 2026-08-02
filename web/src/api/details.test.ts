@@ -7,6 +7,7 @@ import {
   fetchPoiGalleryImagesCached,
   fetchPoiImageCached,
   firstSentence,
+  knownPoiImageUrl,
   normalizeIntroValue,
   poiImageProxyUrl,
   selectPrimaryVisitFacts,
@@ -382,6 +383,46 @@ describe("fetchPoiImageCached — 썸네일 경량 이미지", () => {
 
   it("poiImageProxyUrl은 contentId로 프록시 이미지 경로를 만든다", () => {
     expect(poiImageProxyUrl("126122")).toBe("/api/img?contentId=126122");
+  });
+});
+
+describe("썸네일 이미지 — 세션 목록 firstimage 재사용", () => {
+  /** 목록 응답으로 firstimage 인덱스를 채운다 */
+  async function warmImageIndex(contentid: string, firstimage: string): Promise<void> {
+    const listFetch = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(envelope([{ contentid, contenttypeid: "12", title: "T", firstimage }])),
+      ),
+    );
+    await fetchAreaPois("15", listFetch as unknown as typeof fetch);
+  }
+
+  it("목록이 알려준 이미지가 있으면 detailCommon2를 호출하지 않는다", async () => {
+    await warmImageIndex("401", "http://tong.visitkorea.or.kr/a.jpg");
+    const fetchMock = makeFetch({ common: { contentid: "401", contenttypeid: "12", title: "T" } });
+
+    const url = await fetchPoiImageCached("401", fetchMock as typeof fetch);
+
+    expect(url).toBe("https://tong.visitkorea.or.kr/a.jpg"); // http→https 정규화 유지
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("목록 firstimage가 비어 있으면 상세 경로로 폴백한다", async () => {
+    await warmImageIndex("402", ""); // 이미지 없는 POI — 인덱스에 남지 않는다
+    const fetchMock = makeFetch({
+      common: { contentid: "402", contenttypeid: "12", title: "T" },
+      image: { originimgurl: "https://img/from-detail.jpg" },
+    });
+
+    const url = await fetchPoiImageCached("402", fetchMock as typeof fetch);
+
+    expect(url).toBe("https://img/from-detail.jpg");
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
+  });
+
+  it("knownPoiImageUrl은 시설 사진뿐인 POI를 계속 제외한다", async () => {
+    await warmImageIndex("3083767", "http://tong.visitkorea.or.kr/restroom.jpg");
+    expect(knownPoiImageUrl("3083767")).toBeNull();
   });
 });
 

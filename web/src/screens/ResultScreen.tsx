@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, selectPrimaryVisitFacts, type PoiDetail, type PoiVisitFact } from '../api/details'
+import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, knownPoiImageUrl, selectPrimaryVisitFacts, type PoiDetail, type PoiVisitFact } from '../api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { pickFestivalForDirection, type Festival } from '../engine/festival'
 import { ScreenFrame } from '../components/ScreenFrame'
@@ -147,7 +147,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   }, [stampToast])
 
   // TourAPI 상세에서 온 값이 있으면 우선 사용, 없으면 큐레이션 폴백.
-  const detailImageUrl = detail?.imageUrl ?? null
+  // 상세(detailCommon2)는 실측 4~5초라 그때까지 히어로가 비어 있었다. 세션 목록이 이미
+  // 알려준 URL이 있으면 먼저 띄우고, 상세가 오면 그 값으로 대체한다(대개 같은 URL).
+  const detailImageUrl = detail?.imageUrl ?? knownPoiImageUrl(poi.contentId)
   const detailImageLoading = detailLoading
   const storyText = overviewExcerpt(detail?.overview ?? poi.story)
   const infoDetail = fullDetail ?? detail

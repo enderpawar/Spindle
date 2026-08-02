@@ -9,6 +9,7 @@ import {
   callTourApi,
   extractItems,
   getKnownContentTypeId,
+  getKnownFirstImage,
   type ListBody,
 } from "./tourapi";
 
@@ -461,11 +462,28 @@ export function clearDetailCache(): void {
   galleryImageCache.clear();
 }
 
+/**
+ * 세션 목록(areaBasedList2)이 이미 알려준 대표 이미지 URL — 없으면 null.
+ * 네트워크를 타지 않으므로 상세 응답을 기다리는 동안 즉시 표시하는 데 쓴다.
+ */
+export function knownPoiImageUrl(contentId: string): string | null {
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+  return normalizeImageUrl(getKnownFirstImage(contentId)) ?? null;
+}
+
 // ── 목록·덱 썸네일용 경량 이미지 조회 ──
 // 결과 카드는 상세 3종(fetchPoiDetailCached)이 필요하지만, 리스트 썸네일은 대표 이미지만
 // 있으면 되므로 detailCommon2 한 번만 호출한다. 상세 캐시와 분리된 세션 메모리 캐시.
 
 async function fetchPoiImage(contentId: string, fetchImpl: FetchLike): Promise<string | null> {
+  // 세션 목록이 이미 대표 이미지 URL을 실어 왔다면 detailCommon2를 건너뛴다.
+  // 이 호출은 실측 3.9~5.1초로 썸네일 대기의 대부분을 차지했고, 이미지 자체는 0.2~0.35초다.
+  // 목록에 값이 없을 때만(빈 firstimage·목록 미로드) 아래 상세 경로로 폴백한다 —
+  // detailImage2까지 뒤져야 이미지가 나오는 POI가 있기 때문.
+  const known = knownPoiImageUrl(contentId);
+  if (known) return known;
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+
   const common = await fetchCommonCached(contentId, fetchImpl);
   return fetchRepresentativeImageCached(contentId, common, fetchImpl);
 }
