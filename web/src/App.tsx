@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached } from './api/details'
-import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
+import { fetchOldTownFestivalsCached, peekOldTownFestivalsCache, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
-import { recommendFromSpin } from './engine/spinRecommend'
+import { isFestivalOngoing } from './engine/festival'
+import { countAccessibleCuratedPois, recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
@@ -46,6 +47,7 @@ function App() {
   const [poiReturn, setPoiReturn] = useState<Screen>('home')
   const [course, setCourse] = useState<ReadyCourse | null>(null)
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
+  const [poiWarmReady, setPoiWarmReady] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
 
   const goTo = (next: Screen) => {
@@ -64,6 +66,7 @@ function App() {
       fetchAllOldTownPois()
         .then((regions) => {
           const total = regions.reduce((sum, r) => sum + r.pois.length, 0)
+          setPoiWarmReady(true)
           console.info(`[Spindle] 세션 시작 POI 실시간 로드: ${total}곳 (${regions.length}개 구)`)
         })
         .catch(() => {
@@ -108,6 +111,12 @@ function App() {
         })
     }
     goTo('reveal')
+  }
+
+  /** 홈의 조건 CTA는 다이얼만 준비하고 기존 스핀 화면으로 이동한다. 스핀은 사용자 제스처 뒤에만 시작된다. */
+  const startSpin = (minutes?: 20 | 40) => {
+    if (minutes !== undefined) setDial(minutes)
+    goTo('spin')
   }
 
   /** 명소 탭·홈 추천 카드·테마 덱에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
@@ -218,13 +227,31 @@ function App() {
       return <ThemeDeckScreen initialTheme={themeSeed} onSelect={(poi) => openPoi(poi, 'theme')} onNavigate={navigate} onBack={() => goTo('home')} />
     case 'festival':
       return <FestivalScreen onNavigate={navigate} onBack={() => goTo('home')} />
-    default:
+    default: {
+      const today = todayYyyymmdd()
+      const cachedFestivals = peekOldTownFestivalsCache(today)
+      const festivalOngoingCount = cachedFestivals
+        ? cachedFestivals.filter((festival) => isFestivalOngoing(festival, today)).length
+        : null
+      const candidateCount = poiWarmReady ? countAccessibleCuratedPois(departure, dial) : null
+
       return (
         <>
-          <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onOpenFestival={() => goTo('festival')} onNavigate={navigate} />
+          <HomeScreen
+            departure={departure}
+            dial={dial}
+            candidateCount={candidateCount}
+            festivalOngoingCount={festivalOngoingCount}
+            onOpenDeparture={() => openDeparture('home')}
+            onStartSpin={startSpin}
+            onOpenTheme={openTheme}
+            onOpenFestival={() => goTo('festival')}
+            onNavigate={navigate}
+          />
           {homeGuideOpen && <HomeGuide onClose={() => setHomeGuideOpen(false)} />}
         </>
       )
+    }
     }
   })()
 

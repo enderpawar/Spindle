@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearFestivalCache, fetchOldTownFestivalsCached, todayYyyymmdd } from './festivals'
+import {
+  clearFestivalCache,
+  fetchOldTownFestivalsCached,
+  peekOldTownFestivalsCache,
+  todayYyyymmdd,
+} from './festivals'
 
 function okList(items: unknown[]) {
   return {
@@ -54,5 +59,71 @@ describe('fetchOldTownFestivalsCached — searchFestival2', () => {
   it('todayYyyymmdd는 8자리 YYYYMMDD를 만든다', () => {
     expect(todayYyyymmdd(new Date(2026, 6, 8))).toBe('20260708')
     expect(todayYyyymmdd(new Date(2026, 0, 1))).toBe('20260101')
+  })
+})
+
+describe('peekOldTownFestivalsCache — 성공 완료 스냅샷', () => {
+  it('cold 상태에서는 undefined를 반환하고 요청을 만들지 않는다', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+
+    expect(peekOldTownFestivalsCache('20260708')).toBeUndefined()
+    expect(fetchSpy).not.toHaveBeenCalled()
+
+    fetchSpy.mockRestore()
+  })
+
+  it('요청 진행 중에는 undefined이고 추가 요청을 만들지 않는다', async () => {
+    let resolveFetch!: () => void
+    const gate = new Promise<void>((resolve) => { resolveFetch = resolve })
+    const fetchMock = vi.fn().mockImplementation(
+      () => gate.then(() => jsonResponse(okList([]))),
+    )
+    const pending = fetchOldTownFestivalsCached('20260708', fetchMock as typeof fetch)
+
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(peekOldTownFestivalsCache('20260708')).toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+
+    resolveFetch()
+    await pending
+  })
+
+  it('성공하면 빈 배열도 완료 스냅샷으로 반환하며 peek은 추가 요청을 만들지 않는다', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(okList([]))))
+
+    await fetchOldTownFestivalsCached('20260708', fetchMock as typeof fetch)
+    const snapshot = peekOldTownFestivalsCache('20260708')
+
+    expect(snapshot).toEqual([])
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(peekOldTownFestivalsCache('20260708')).toBe(snapshot)
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('실패하면 완료 스냅샷이 없고 다음 호출에서 재시도한다', async () => {
+    const fetchMock = vi.fn()
+      .mockImplementationOnce(() => Promise.reject(new Error('network down')))
+      .mockImplementation(() => Promise.resolve(jsonResponse(okList([]))))
+
+    await expect(fetchOldTownFestivalsCached('20260708', fetchMock as typeof fetch)).rejects.toThrow(
+      '네트워크 요청 실패',
+    )
+    expect(peekOldTownFestivalsCache('20260708')).toBeUndefined()
+
+    await fetchOldTownFestivalsCached('20260708', fetchMock as typeof fetch)
+    expect(fetchMock).toHaveBeenCalledTimes(8)
+    expect(peekOldTownFestivalsCache('20260708')).toEqual([])
+  })
+
+  it('clear는 Promise 캐시와 완료 스냅샷을 모두 비운다', async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(okList([]))))
+    await fetchOldTownFestivalsCached('20260708', fetchMock as typeof fetch)
+    expect(peekOldTownFestivalsCache('20260708')).toEqual([])
+
+    clearFestivalCache()
+
+    expect(peekOldTownFestivalsCache('20260708')).toBeUndefined()
+    await fetchOldTownFestivalsCached('20260708', fetchMock as typeof fetch)
+    expect(fetchMock).toHaveBeenCalledTimes(8)
   })
 })
