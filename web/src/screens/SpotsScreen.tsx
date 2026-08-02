@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   fetchOldTownCongestionCached,
   localYyyymmdd,
@@ -6,6 +6,7 @@ import {
   matchComfortablePois,
   type CongestionForecast,
 } from '../api/congestion'
+import { fetchPoiCardDetailCached, firstSentence } from '../api/details'
 import { fetchExtraSpots, toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
@@ -37,7 +38,7 @@ function CongestionBadge() {
   )
 }
 
-function PoiCardBody({ poi, busy, good }: { poi: Poi; busy: boolean; good: boolean }) {
+function PoiCardBody({ poi, busy, good, summary }: { poi: Poi; busy: boolean; good: boolean; summary?: string }) {
   const dir = directionOf(poi.direction)
   return (
     <>
@@ -51,7 +52,7 @@ function PoiCardBody({ poi, busy, good }: { poi: Poi; busy: boolean; good: boole
       {busy && <CongestionBadge />}
       {!busy && good && <GoodToGoBadge />}
       <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-        {poi.story}
+        {summary ?? poi.story}
       </div>
     </>
   )
@@ -180,21 +181,41 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     }
   }, [filteredExtraSpots, list, selectedId])
 
-  // ── 핀 → 카드 단방향 동기화 ──
-  // 카드 스트립 스크롤은 지도를 움직이지 않는다(브라우즈 전용). 선택·지도 이동은
-  // 핀 탭으로만 일어나며, 핀을 탭하면 해당 카드로 스트립을 스크롤해 준다.
-  const stripRef = useRef<HTMLDivElement>(null)
-  const cardRefs = useRef(new Map<string, HTMLDivElement>())
+  // ── 핀 탭 → 하단 시트 ──
+  // 가로 카드 스트립을 두지 않는다. 지도는 어느 방향으로도 자유롭게 끌 수 있어야 하고,
+  // 장소 정보는 핀을 탭했을 때만 하단 시트로 올라온다. 빈 바다를 탭하면 닫힌다.
+  const pick = (id: string | null) => setSelectedId(id)
 
-  const pick = (id: string | null) => {
-    setSelectedId(id)
-    if (!id) return
-    const el = cardRefs.current.get(id)
-    const strip = stripRef.current
-    if (el && strip) {
-      strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.clientWidth) / 2, behavior: 'smooth' })
+  const selectedPoi = useMemo(
+    () => list.find((poi) => poi.id === selectedId) ?? selectedExtraPoi,
+    [list, selectedExtraPoi, selectedId],
+  )
+
+  // 큐레이션 35곳은 손으로 쓴 한 줄 소개가 있지만, 관광공사 등록 명소는 소개가 없어
+  // `toDisplayPoi`가 주소로 대체해 둔다. 시트를 열 때만 detailCommon2 개요를 실시간
+  // 조회해 첫 문장으로 채운다 (세션 캐시 디듀프, 영속 저장 없음).
+  const [spotSummary, setSpotSummary] = useState<{ id: string; text: string } | null>(null)
+  const isExtraSelected = !!selectedPoi && !list.some((poi) => poi.id === selectedPoi.id)
+
+  useEffect(() => {
+    if (!selectedPoi || !isExtraSelected || !selectedPoi.contentId) {
+      setSpotSummary(null)
+      return
     }
-  }
+    let active = true
+    const { id, contentId } = selectedPoi
+    fetchPoiCardDetailCached(contentId)
+      .then((detail) => {
+        const text = detail.overview ? firstSentence(detail.overview, 90) : ''
+        if (active && text) setSpotSummary({ id, text })
+      })
+      .catch(() => {
+        /* 개요 조회 실패는 주소 표시로 폴백한다 */
+      })
+    return () => {
+      active = false
+    }
+  }, [isExtraSelected, selectedPoi])
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
@@ -252,6 +273,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             extraSpots={filteredExtraSpots}
             onPick={pick}
             onOpen={onSelect}
+            showSelectedPreview={false}
+            selectionOffsetRatio={0.24}
           />
           <div className="map-status-stack">
             <CongestionStatus
@@ -267,91 +290,33 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             )}
           </div>
 
-          {/* 하단 카드 스트립 — 브라우즈 전용. 스크롤해도 지도는 움직이지 않는다(핀 탭으로만 이동). */}
-          {selectedExtraPoi ? (() => {
-            const busy = busyByPoi.has(selectedExtraPoi.id)
-            const good = goodByPoi.has(selectedExtraPoi.id)
-            return (
-              <div
-                className="extra-spot-card motion-card-enter"
-                style={{
-                  position: 'absolute',
-                  left: 32,
-                  right: 32,
-                  bottom: 'calc(24px + env(safe-area-inset-bottom))',
-                  zIndex: 10,
-                  background: '#fff',
-                  borderRadius: 20,
-                  padding: '12px 14px',
-                  boxShadow: '0 14px 30px -12px rgba(20,50,140,.4)',
-                  border: `1.5px solid ${directionOf(selectedExtraPoi.direction).color}`,
-                }}
-              >
-                <PoiCardBody poi={selectedExtraPoi} busy={busy} good={good} />
-                <button
-                  className="btn btn-blue"
-                  type="button"
-                  onClick={() => onSelect(selectedExtraPoi)}
-                  style={{ marginTop: 9, width: '100%', minHeight: 44, borderRadius: 13, fontSize: 13.5 }}
-                >
+          {/*
+            핀을 탭하면 하단 시트로 사진·요약이 올라온다. 가로 카드 스트립은 두지 않는다 —
+            지도를 어느 방향으로도 자유롭게 끌 수 있어야 하고, 선택은 핀 탭으로만 일어난다.
+            지도는 선택 핀을 시트 위쪽 가운데로 부드럽게 정렬한다(selectionOffsetRatio).
+          */}
+          {selectedPoi && (
+            <section key={selectedPoi.id} className="spot-sheet" aria-live="polite">
+              <button type="button" className="spot-sheet__close" onClick={() => pick(null)} aria-label="닫기">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" aria-hidden>
+                  <path d="M6 6 L18 18 M18 6 L6 18" />
+                </svg>
+              </button>
+              <div className="spot-sheet__photo">
+                <PoiPhoto contentId={selectedPoi.contentId} alt={selectedPoi.name} scrim />
+              </div>
+              <div className="spot-sheet__body">
+                <PoiCardBody
+                  poi={selectedPoi}
+                  busy={busyByPoi.has(selectedPoi.id)}
+                  good={goodByPoi.has(selectedPoi.id)}
+                  summary={spotSummary?.id === selectedPoi.id ? spotSummary.text : undefined}
+                />
+                <button className="btn btn-blue spot-sheet__cta" onClick={() => onSelect(selectedPoi)}>
                   자세히 보기
                 </button>
               </div>
-            )
-          })() : (
-            <div
-              ref={stripRef}
-              className="no-scrollbar motion-card-list"
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: 'calc(24px + env(safe-area-inset-bottom))',
-                display: 'flex',
-                gap: 12,
-                overflowX: 'auto',
-                scrollSnapType: 'x mandatory',
-                padding: '4px 32px 8px',
-                zIndex: 10,
-              }}
-            >
-              {list.map((poi) => {
-                const dir = directionOf(poi.direction)
-                const sel = poi.id === selectedId
-                const busy = busyByPoi.has(poi.id)
-                const good = goodByPoi.has(poi.id)
-                return (
-                  <div
-                    key={poi.id}
-                    className="motion-card-enter"
-                    ref={(el) => {
-                      if (el) cardRefs.current.set(poi.id, el)
-                      else cardRefs.current.delete(poi.id)
-                    }}
-                    style={{
-                      flex: 'none',
-                      width: 'calc(100% - 64px)',
-                      scrollSnapAlign: 'center',
-                      background: '#fff',
-                      borderRadius: 20,
-                      padding: '12px 14px',
-                      boxShadow: sel ? '0 14px 30px -12px rgba(20,50,140,.4)' : '0 8px 20px -14px rgba(20,40,90,.3)',
-                      border: sel ? `1.5px solid ${dir.color}` : '1.5px solid transparent',
-                      transition: 'box-shadow .2s ease, border-color .2s ease',
-                    }}
-                  >
-                    <PoiCardBody poi={poi} busy={busy} good={good} />
-                    <button
-                      className="btn btn-blue"
-                      onClick={() => onSelect(poi)}
-                      style={{ marginTop: 9, width: '100%', minHeight: 44, borderRadius: 13, fontSize: 13.5 }}
-                    >
-                      자세히 보기
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+            </section>
           )}
           </div>
           <SourceLine style={{ flex: 'none', margin: '4px 16px calc(82px + env(safe-area-inset-bottom))' }} />

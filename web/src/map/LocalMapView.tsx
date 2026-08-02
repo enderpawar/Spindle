@@ -34,6 +34,13 @@ export interface MapViewProps {
   onPick: (id: string | null) => void
   /** 선택 핀의 사진 프리뷰를 탭했을 때 상세 카드 열기 */
   onOpen?: (poi: Poi) => void
+  /** 지도 위 말풍선 프리뷰를 띄울지. 하단 시트를 쓰는 화면은 false로 꺼서 중복을 없앤다. */
+  showSelectedPreview?: boolean
+  /**
+   * 선택 핀을 지도 높이의 이 비율만큼 위로 올려 배치한다 (0.25 = 시트가 아래 절반을 덮을 때
+   * 보이는 윗절반의 한가운데). 기본값은 말풍선 프리뷰가 들어갈 만큼만 띄우는 0.12.
+   */
+  selectionOffsetRatio?: number
   /** 코스 미리보기 — 방문 순서대로 정렬된 poi id. 주어지면 출발→순서대로 경로선과 순번 핀을 그린다. */
   courseOrder?: string[]
   /** 활성 안내의 현재 위치. 안내 계산과 현재 위치 표시에만 사용한다. */
@@ -94,6 +101,7 @@ export function LocalMapView({
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
   onOpen,
+  showSelectedPreview = true,
   courseOrder,
   currentPosition,
   currentHeadingDeg = 0,
@@ -730,7 +738,7 @@ export function LocalMapView({
               </button>
 
               {/* 사진·핀·라벨이 같은 앵커 transform을 공유해 팬 애니메이션 중 어긋나지 않는다. */}
-              {sel && <MapPoiPreview poi={poi} color={color} onOpen={onOpen} />}
+              {sel && showSelectedPreview && <MapPoiPreview poi={poi} color={color} onOpen={onOpen} />}
             </div>
           )
         })}

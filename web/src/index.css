@@ -2565,6 +2565,60 @@ button.is-pressing:not(:disabled) {
 }
 
 /* 명소 지도 혼잡 예측. 현재 인원수가 아닌 당일 예측임을 텍스트로 함께 전달한다. */
+/* 명소 지도 하단 시트 — 핀을 탭하면 사진+요약이 지도 아래 절반으로 올라온다 */
+.spot-sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  height: 50%;
+  min-height: 260px;
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
+  background: #fff;
+  box-shadow: 0 -14px 34px -18px rgba(20, 50, 140, .5);
+  animation: spot-sheet-in 320ms var(--ease-smooth-spring) both;
+}
+
+@keyframes spot-sheet-in {
+  from { transform: translateY(100%); }
+}
+
+.spot-sheet__photo {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #dbe7f8;
+}
+
+.spot-sheet__body { flex: none; padding-top: 11px; }
+.spot-sheet__cta { width: 100%; min-height: 46px; margin-top: 11px; border-radius: 13px; font-size: 13.5px; }
+
+.spot-sheet__close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 2;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 37, 64, .55);
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spot-sheet { animation: none; }
+}
+
 .map-status-stack {
   position: absolute;
   top: 12px;

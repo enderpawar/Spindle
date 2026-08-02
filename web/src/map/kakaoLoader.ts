@@ -4,7 +4,19 @@ export interface KakaoLatLngBounds {
   extend(position: KakaoLatLng): void
 }
 
+export interface KakaoPoint {
+  x: number
+  y: number
+}
+
+/** 좌표↔컨테이너 픽셀 변환 — 선택 핀을 시트 위쪽에 맞출 때만 쓴다. */
+export interface KakaoProjection {
+  containerPointFromCoords(position: KakaoLatLng): KakaoPoint
+  coordsFromContainerPoint(point: KakaoPoint): KakaoLatLng
+}
+
 export interface KakaoMap {
+  getProjection(): KakaoProjection
   setBounds(
     bounds: KakaoLatLngBounds,
     paddingTop?: number,
@@ -39,6 +51,7 @@ export interface KakaoMapsNs {
   Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
   LatLng: new (lat: number, lng: number) => KakaoLatLng
   LatLngBounds: new () => KakaoLatLngBounds
+  Point: new (x: number, y: number) => KakaoPoint
   CustomOverlay: new (options: {
     position: KakaoLatLng
     content: HTMLElement

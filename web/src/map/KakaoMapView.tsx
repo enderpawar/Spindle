@@ -35,9 +35,10 @@ interface PoiPinProps {
   showLabel: boolean
   onPick: (id: string | null) => void
   onOpen?: (poi: Poi) => void
+  showPreview: boolean
 }
 
-function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen }: PoiPinProps) {
+function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
   const color = directionOf(poi.direction).color
   const inCourse = order !== undefined
   const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 22 : 16
@@ -117,7 +118,7 @@ function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen }:
         )}
       </button>
 
-      {selected && <MapPoiPreview poi={poi} color={color} onOpen={onOpen} />}
+      {selected && showPreview && <MapPoiPreview poi={poi} color={color} onOpen={onOpen} />}
     </div>
   )
 }
@@ -186,6 +187,8 @@ export function KakaoMapView({
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
   onOpen,
+  showSelectedPreview = true,
+  selectionOffsetRatio = 0.12,
   courseOrder,
   currentPosition,
   currentHeadingDeg = 0,
@@ -511,10 +514,27 @@ export function KakaoMapView({
     const point = poiById.get(selectedId) ?? extraById.get(selectedId)
     if (!maps || !map || !point) return
 
-    map.panTo(new maps.LatLng(point.lat, point.lon))
+    const target = new maps.LatLng(point.lat, point.lon)
+    const offsetPx = Math.round((wrapRef.current?.clientHeight ?? 0) * selectionOffsetRatio)
+
+    // 핀을 화면 정중앙이 아니라 하단 시트 위쪽의 가운데에 놓는다.
+    // 좌표↔컨테이너 픽셀 변환으로 목표 중심을 미리 구해 panTo 한 번으로 부드럽게 이동한다
+    // (예전의 panTo → 300ms 뒤 panBy 2단계는 큰 오프셋에서 두 번 움직이는 것처럼 보였다).
+    if (offsetPx > 0) {
+      try {
+        const projection = map.getProjection()
+        const pin = projection.containerPointFromCoords(target)
+        map.panTo(projection.coordsFromContainerPoint(new maps.Point(pin.x, pin.y + offsetPx)))
+        return
+      } catch {
+        /* 프로젝션 API를 쓸 수 없는 환경은 아래 2단계 방식으로 내려간다 */
+      }
+    }
+
+    map.panTo(target)
+    if (offsetPx <= 0) return
     const timeoutId = window.setTimeout(() => {
-      const height = wrapRef.current?.clientHeight ?? 0
-      if (mapRef.current === map) map.panBy(0, Math.round(height * 0.12))
+      if (mapRef.current === map) map.panBy(0, offsetPx)
       selectionPanTimerRef.current = null
     }, 300)
     selectionPanTimerRef.current = timeoutId
@@ -522,7 +542,7 @@ export function KakaoMapView({
       window.clearTimeout(timeoutId)
       if (selectionPanTimerRef.current === timeoutId) selectionPanTimerRef.current = null
     }
-  }, [extraById, poiById, ready, selectedId])
+  }, [extraById, poiById, ready, selectedId, selectionOffsetRatio])
 
   const zoomIn = () => {
     const map = mapRef.current
@@ -548,6 +568,7 @@ export function KakaoMapView({
           <PoiPin
             key={poiId}
             poi={poi}
+            showPreview={showSelectedPreview}
             selected={poiId === selectedId}
             busy={busyPoiIds?.has(poiId) ?? false}
             good={goodPoiIds?.has(poiId) ?? false}
