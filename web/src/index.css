@@ -353,8 +353,11 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   z-index: 1;
   width: min(146px, 42%);
   max-width: none;
-  animation: bobsm 3.4s ease-in-out infinite;
+  animation: bobsm-flip 3.4s ease-in-out infinite;
   filter: drop-shadow(0 10px 14px rgba(0, 10, 40, 0.35));
+  /* 별이 원본은 오른쪽을 가리킨다 — 좌우 반전해 카피·CTA 쪽(왼쪽)을 가리키게 한다.
+     애니메이션이 transform을 덮어쓰므로 반전은 keyframes 안에도 함께 넣어야 한다.
+     (이 선언은 애니메이션이 꺼진 상태 — prefers-reduced-motion — 용 폴백) */
   transform: scaleX(-1);
 }
 
@@ -1708,6 +1711,17 @@ button:disabled,
   }
   50% {
     transform: translateY(-7px);
+  }
+}
+/* bobsm과 동일한 부유 모션 + 좌우 반전 유지 (홈 히어로 별이 전용).
+   bobsm은 출발점·도장 화면에서도 쓰므로 그쪽엔 반전이 섞이지 않게 분리했다. */
+@keyframes bobsm-flip {
+  0%,
+  100% {
+    transform: translateY(0) scaleX(-1);
+  }
+  50% {
+    transform: translateY(-7px) scaleX(-1);
   }
 }
 @keyframes wobble {
