@@ -7,6 +7,7 @@ import { callTourApi, extractItems, toNumber, type ListBody } from './tourapi'
 type FetchLike = typeof fetch
 
 export const CONGESTION_THRESHOLD = 70
+export const COMFORTABLE_THRESHOLD = 40
 const BUSAN_LEGAL_AREA_CODE = '26'
 const NUM_OF_ROWS = 100
 
@@ -128,21 +129,45 @@ function uniquePoiMatch(pois: readonly NamedPoi[], attractionName: string): Name
   return contained.length === 1 ? contained[0] : undefined
 }
 
-/** 당일 기준 이상 예측만 POI id로 색인한다. 중복 예측은 가장 높은 값을 사용한다. */
-export function matchBusyPois(
+/** 당일 예측을 POI id로 색인한다. 중복 예측은 보수적으로 가장 높은 값을 사용한다. */
+function matchForecastsToPois(
   pois: readonly NamedPoi[],
   forecasts: readonly CongestionForecast[],
   targetDate: string,
 ): ReadonlyMap<string, CongestionForecast> {
   const matched = new Map<string, CongestionForecast>()
   for (const forecast of forecasts) {
-    if (forecast.forecastDate !== targetDate || forecast.rate < CONGESTION_THRESHOLD) continue
+    if (forecast.forecastDate !== targetDate) continue
     const poi = uniquePoiMatch(pois, forecast.attractionName)
     if (!poi) continue
     const previous = matched.get(poi.id)
     if (!previous || forecast.rate > previous.rate) matched.set(poi.id, forecast)
   }
   return matched
+}
+
+/** 당일 기준 이상 예측만 POI id로 색인한다. */
+export function matchBusyPois(
+  pois: readonly NamedPoi[],
+  forecasts: readonly CongestionForecast[],
+  targetDate: string,
+): ReadonlyMap<string, CongestionForecast> {
+  return new Map(
+    [...matchForecastsToPois(pois, forecasts, targetDate)]
+      .filter(([, forecast]) => forecast.rate >= CONGESTION_THRESHOLD),
+  )
+}
+
+/** 당일 최고 예측값까지 기준 이하인 장소만 '가기 좋음'으로 보수적으로 색인한다. */
+export function matchComfortablePois(
+  pois: readonly NamedPoi[],
+  forecasts: readonly CongestionForecast[],
+  targetDate: string,
+): ReadonlyMap<string, CongestionForecast> {
+  return new Map(
+    [...matchForecastsToPois(pois, forecasts, targetDate)]
+      .filter(([, forecast]) => forecast.rate <= COMFORTABLE_THRESHOLD),
+  )
 }
 
 /** 테스트용 */

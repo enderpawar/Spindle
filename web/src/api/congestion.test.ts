@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  COMFORTABLE_THRESHOLD,
   CONGESTION_THRESHOLD,
   OLD_TOWN_LEGAL_DISTRICTS,
   clearCongestionCache,
   fetchOldTownCongestionCached,
   localYyyymmdd,
   matchBusyPois,
+  matchComfortablePois,
   normalizeAttractionName,
   type CongestionForecast,
 } from './congestion'
@@ -90,6 +92,22 @@ describe('혼잡 예측 POI 매칭', () => {
     )
     expect(matched.size).toBe(1)
     expect(matched.get('tower')?.rate).toBe(84)
+  })
+
+  it('당일 최고 예측값이 40 이하인 장소만 가기 좋음으로 표시한다', () => {
+    const comfortable = matchComfortablePois(
+      pois,
+      [
+        forecast({ rate: COMFORTABLE_THRESHOLD }),
+        forecast({ attractionName: '부산 송도해수욕장', rate: 25 }),
+        forecast({ attractionName: '부산 송도해수욕장', rate: 41 }),
+        forecast({ forecastDate: '20260803', rate: 10 }),
+      ],
+      '20260802',
+    )
+
+    expect(comfortable.has('tower')).toBe(true)
+    expect(comfortable.has('songdo')).toBe(false)
   })
 
   it('공백·괄호·지역명 차이는 유일할 때만 보수적으로 매칭한다', () => {

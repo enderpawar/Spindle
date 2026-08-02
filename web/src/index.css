@@ -2593,7 +2593,8 @@ button.is-pressing:not(:disabled) {
   text-shadow: 0 1px 3px #fff, 0 0 8px #fff;
 }
 
-.map-congestion-pin {
+.map-congestion-pin,
+.map-good-pin {
   position: absolute;
   z-index: 2;
   display: grid;
@@ -2602,13 +2603,27 @@ button.is-pressing:not(:disabled) {
   place-items: center;
   border: 1.5px solid #fff;
   border-radius: 50%;
-  background: var(--l-orange);
   color: #fff;
-  box-shadow: 0 3px 8px rgba(126, 47, 26, 0.3);
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 900;
   line-height: 1;
   pointer-events: none;
+}
+
+.map-congestion-pin {
+  background: var(--l-orange);
+  box-shadow: 0 3px 8px rgba(126, 47, 26, 0.3);
+}
+
+.map-good-pin {
+  background: #23ad78;
+  box-shadow: 0 3px 8px rgba(19, 112, 78, 0.28);
+  font-size: 8px;
+}
+
+.map-extra-spot__status {
+  top: -4px;
+  left: 10px;
 }
 
 .congestion-status {
@@ -2662,9 +2677,36 @@ button.is-pressing:not(:disabled) {
   line-height: 1.2;
 }
 
-.congestion-status .congestion-badge {
+.good-to-go-badge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  color: #167a58;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.congestion-status .congestion-badge,
+.congestion-status .good-to-go-badge {
   min-height: 20px;
   margin-top: 0;
+}
+
+.good-to-go-badge__mark {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: #23ad78;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .congestion-badge__mark {

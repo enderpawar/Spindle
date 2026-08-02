@@ -25,6 +25,8 @@ export interface MapViewProps {
   selectedId: string | null
   /** 당일 혼잡 예상 기준을 넘은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
   busyPoiIds?: ReadonlySet<string>
+  /** 당일 혼잡 예측이 낮아 가기 좋은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
+  goodPoiIds?: ReadonlySet<string>
   /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로만 표시 */
   extraSpots?: ReadonlyArray<{ id: string; name: string; lat: number; lon: number }>
   /** 핀 탭(id) 또는 빈 바다 탭(null) */
@@ -77,6 +79,7 @@ export function LocalMapView({
   departure,
   selectedId,
   busyPoiIds,
+  goodPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
   onOpen,
@@ -536,6 +539,8 @@ export function LocalMapView({
         {extraPins.map(({ spot, x, y }) => {
           const s = toScreen(x, y)
           const selected = spot.id === selectedId
+          const busy = busyPoiIds?.has(spot.id) ?? false
+          const good = goodPoiIds?.has(spot.id) ?? false
           return (
             <div
               key={spot.id}
@@ -552,7 +557,7 @@ export function LocalMapView({
               <button
                 className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
                 type="button"
-                aria-label={spot.name}
+                aria-label={busy ? `${spot.name}, 오늘 혼잡 예상` : good ? `${spot.name}, 오늘 가기 좋아요` : spot.name}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation()
@@ -563,6 +568,8 @@ export function LocalMapView({
                   <path d="M9 1.25a7.75 7.75 0 0 0-7.75 7.75c0 5.15 5.45 10.35 7.75 12.55 2.3-2.2 7.75-7.4 7.75-12.55A7.75 7.75 0 0 0 9 1.25Z" />
                   <circle cx="9" cy="9" r="2.65" />
                 </svg>
+                {busy && <span className="map-congestion-pin map-extra-spot__status" aria-hidden="true">!</span>}
+                {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
                 {(selected || showPoiLabels) && <span className="map-extra-spot__label">{spot.name}</span>}
               </button>
             </div>
@@ -575,6 +582,7 @@ export function LocalMapView({
           const sel = poi.id === selectedId
           const busy = busyPoiIds?.has(poi.id) ?? false
           const n = orderNum.get(poi.id)
+          const good = goodPoiIds?.has(poi.id) ?? false
           const inCourse = n !== undefined
           const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 22 : 16
           return (
@@ -596,7 +604,7 @@ export function LocalMapView({
                   e.stopPropagation()
                   onPick(poi.id)
                 }}
-                aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : poi.name}
+                aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : good ? `${poi.name}, 오늘 가기 좋아요` : poi.name}
                 style={{
                   position: 'absolute',
                   left: 0,
@@ -631,6 +639,15 @@ export function LocalMapView({
                     aria-hidden="true"
                   >
                     !
+                  </span>
+                )}
+                {!busy && good && (
+                  <span
+                    className="map-good-pin"
+                    style={{ left: sizePx * 0.18, top: sizePx * -1.35 }}
+                    aria-hidden="true"
+                  >
+                    ✓
                   </span>
                 )}
                 {(sel || showPoiLabels || inCourse) && (

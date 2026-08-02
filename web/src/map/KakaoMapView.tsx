@@ -30,13 +30,14 @@ interface PoiPinProps {
   poi: Poi
   selected: boolean
   busy: boolean
+  good: boolean
   order?: number
   showLabel: boolean
   onPick: (id: string | null) => void
   onOpen?: (poi: Poi) => void
 }
 
-function PoiPin({ poi, selected, busy, order, showLabel, onPick, onOpen }: PoiPinProps) {
+function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen }: PoiPinProps) {
   const color = directionOf(poi.direction).color
   const inCourse = order !== undefined
   const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 22 : 16
@@ -49,7 +50,7 @@ function PoiPin({ poi, selected, busy, order, showLabel, onPick, onOpen }: PoiPi
           event.stopPropagation()
           onPick(poi.id)
         }}
-        aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : poi.name}
+        aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : good ? `${poi.name}, 오늘 가기 좋아요` : poi.name}
         style={{
           position: 'absolute',
           left: 0,
@@ -89,6 +90,11 @@ function PoiPin({ poi, selected, busy, order, showLabel, onPick, onOpen }: PoiPi
             !
           </span>
         )}
+        {!busy && good && (
+          <span className="map-good-pin" style={{ left: sizePx * 0.18, top: sizePx * -1.35 }} aria-hidden="true">
+            ✓
+          </span>
+        )}
         {(selected || showLabel || inCourse) && (
           <span
             style={{
@@ -116,9 +122,11 @@ function PoiPin({ poi, selected, busy, order, showLabel, onPick, onOpen }: PoiPi
   )
 }
 
-function ExtraSpotPin({ spot, selected, showLabel, onPick }: {
+function ExtraSpotPin({ spot, selected, busy, good, showLabel, onPick }: {
   spot: ExtraSpot
   selected: boolean
+  busy: boolean
+  good: boolean
   showLabel: boolean
   onPick: (id: string | null) => void
 }) {
@@ -127,7 +135,7 @@ function ExtraSpotPin({ spot, selected, showLabel, onPick }: {
       <button
         className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
         type="button"
-        aria-label={spot.name}
+        aria-label={busy ? `${spot.name}, 오늘 혼잡 예상` : good ? `${spot.name}, 오늘 가기 좋아요` : spot.name}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation()
@@ -138,6 +146,8 @@ function ExtraSpotPin({ spot, selected, showLabel, onPick }: {
           <path d="M9 1.25a7.75 7.75 0 0 0-7.75 7.75c0 5.15 5.45 10.35 7.75 12.55 2.3-2.2 7.75-7.4 7.75-12.55A7.75 7.75 0 0 0 9 1.25Z" />
           <circle cx="9" cy="9" r="2.65" />
         </svg>
+        {busy && <span className="map-congestion-pin map-extra-spot__status" aria-hidden="true">!</span>}
+        {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
         {(selected || showLabel) && <span className="map-extra-spot__label">{spot.name}</span>}
       </button>
     </div>
@@ -162,6 +172,7 @@ export function KakaoMapView({
   departure,
   selectedId,
   busyPoiIds,
+  goodPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
   onOpen,
@@ -288,10 +299,10 @@ export function KakaoMapView({
   useEffect(() => {
     for (const record of poiOverlaysRef.current) {
       const poi = poiById.get(record.poiId)
-      const zIndex = record.poiId === selectedId ? 100 : busyPoiIds?.has(record.poiId) ? 40 : poi?.tier === 1 ? 30 : 20
+      const zIndex = record.poiId === selectedId ? 100 : busyPoiIds?.has(record.poiId) ? 40 : goodPoiIds?.has(record.poiId) ? 35 : poi?.tier === 1 ? 30 : 20
       record.overlay.setZIndex(zIndex)
     }
-  }, [busyPoiIds, poiById, poiHosts, selectedId])
+  }, [busyPoiIds, goodPoiIds, poiById, poiHosts, selectedId])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -436,6 +447,7 @@ export function KakaoMapView({
             poi={poi}
             selected={poiId === selectedId}
             busy={busyPoiIds?.has(poiId) ?? false}
+            good={goodPoiIds?.has(poiId) ?? false}
             order={orderNum.get(poiId)}
             showLabel={level <= 5}
             onPick={onPick}
@@ -453,6 +465,8 @@ export function KakaoMapView({
             key={spotId}
             spot={spot}
             selected={spotId === selectedId}
+            busy={busyPoiIds?.has(spotId) ?? false}
+            good={goodPoiIds?.has(spotId) ?? false}
             showLabel={level <= 4}
             onPick={onPick}
           />,

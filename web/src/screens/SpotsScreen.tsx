@@ -3,6 +3,7 @@ import {
   fetchOldTownCongestionCached,
   localYyyymmdd,
   matchBusyPois,
+  matchComfortablePois,
   type CongestionForecast,
 } from '../api/congestion'
 import { fetchExtraSpots, toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
@@ -36,9 +37,19 @@ function CongestionBadge() {
   )
 }
 
-function CongestionStatus({ state, count, onRetry }: {
+function GoodToGoBadge() {
+  return (
+    <span className="good-to-go-badge">
+      <span className="good-to-go-badge__mark" aria-hidden="true">✓</span>
+      오늘 가기 좋아요
+    </span>
+  )
+}
+
+function CongestionStatus({ state, busyCount, goodCount, onRetry }: {
   state: CongestionLoadState
-  count: number
+  busyCount: number
+  goodCount: number
   onRetry: () => void
 }) {
   if (state.status === 'error') {
@@ -54,7 +65,9 @@ function CongestionStatus({ state, count, onRetry }: {
   }
   return (
     <div className="congestion-status" role="status">
-      {count > 0 ? <CongestionBadge /> : '오늘 혼잡 예상 명소 없음'}
+      {goodCount > 0 && <GoodToGoBadge />}
+      {busyCount > 0 && <CongestionBadge />}
+      {goodCount === 0 && busyCount === 0 && '오늘 표시할 혼잡 예측 없음'}
     </div>
   )
 }
@@ -98,14 +111,6 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     }
   }, [])
 
-  const busyByPoi = useMemo(
-    () => congestion.status === 'loaded'
-      ? matchBusyPois(POI_POOL, congestion.forecasts, congestionDate)
-      : new Map<string, CongestionForecast>(),
-    [congestion, congestionDate],
-  )
-  const busyPoiIds = useMemo(() => new Set(busyByPoi.keys()), [busyByPoi])
-
   const list = useMemo(() => {
     const pool = filter === '전체' ? POI_POOL : POI_POOL.filter((p) => p.district === filter)
     return [...pool].sort((a, b) => a.walkMinutes - b.walkMinutes)
@@ -118,6 +123,27 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     () => filteredExtraSpots.map((spot) => toDisplayPoi(spot, departure)),
     [departure, filteredExtraSpots],
   )
+  const congestionCandidates = useMemo(
+    () => [
+      ...POI_POOL,
+      ...(extraSpots ?? []).map((spot) => toDisplayPoi(spot, departure)),
+    ],
+    [departure, extraSpots],
+  )
+  const busyByPoi = useMemo(
+    () => congestion.status === 'loaded'
+      ? matchBusyPois(congestionCandidates, congestion.forecasts, congestionDate)
+      : new Map<string, CongestionForecast>(),
+    [congestion, congestionCandidates, congestionDate],
+  )
+  const goodByPoi = useMemo(
+    () => congestion.status === 'loaded'
+      ? matchComfortablePois(congestionCandidates, congestion.forecasts, congestionDate)
+      : new Map<string, CongestionForecast>(),
+    [congestion, congestionCandidates, congestionDate],
+  )
+  const busyPoiIds = useMemo(() => new Set(busyByPoi.keys()), [busyByPoi])
+  const goodPoiIds = useMemo(() => new Set(goodByPoi.keys()), [goodByPoi])
   const selectedExtraPoi = useMemo(
     () => extraDisplayPois.find((poi) => poi.id === selectedId) ?? null,
     [extraDisplayPois, selectedId],
@@ -202,6 +228,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             departure={departure}
             selectedId={selectedId}
             busyPoiIds={busyPoiIds}
+            goodPoiIds={goodPoiIds}
             extraSpots={filteredExtraSpots}
             onPick={pick}
             onOpen={onSelect}
@@ -209,7 +236,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
           <div className="map-status-stack">
             <CongestionStatus
               state={congestion}
-              count={busyPoiIds.size}
+              busyCount={busyPoiIds.size}
+              goodCount={goodPoiIds.size}
               onRetry={() => setCongestionRetry((value) => value + 1)}
             />
             {extraSpots && (
@@ -240,6 +268,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               const dir = directionOf(poi.direction)
               const sel = poi.id === selectedId
               const busy = busyByPoi.has(poi.id)
+              const good = goodByPoi.has(poi.id)
               return (
                 <div
                   key={poi.id}
@@ -267,6 +296,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                     {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
                   </div>
                   {busy && <CongestionBadge />}
+                  {!busy && good && <GoodToGoBadge />}
                   <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {poi.story}
                   </div>
@@ -283,6 +313,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
           </div>
           {selectedExtraPoi && (() => {
             const dir = directionOf(selectedExtraPoi.direction)
+            const busy = busyByPoi.has(selectedExtraPoi.id)
+            const good = goodByPoi.has(selectedExtraPoi.id)
             return (
               <div
                 className="extra-spot-card motion-card-enter"
@@ -305,6 +337,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                 <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                   {selectedExtraPoi.category} · {selectedExtraPoi.district} · {dir.label}쪽 도보 {selectedExtraPoi.walkMinutes}분
                 </div>
+                {busy && <CongestionBadge />}
+                {!busy && good && <GoodToGoBadge />}
                 <button
                   className="btn btn-blue"
                   type="button"
@@ -323,12 +357,14 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(92px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <CongestionStatus
             state={congestion}
-            count={busyPoiIds.size}
+            busyCount={busyPoiIds.size}
+            goodCount={goodPoiIds.size}
             onRetry={() => setCongestionRetry((value) => value + 1)}
           />
           {list.map((poi) => {
             const dir = directionOf(poi.direction)
             const busy = busyByPoi.has(poi.id)
+            const good = goodByPoi.has(poi.id)
             return (
               <button
                 key={poi.id}
@@ -350,6 +386,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                     {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
                   </div>
                   {busy && <CongestionBadge />}
+                  {!busy && good && <GoodToGoBadge />}
                   <div style={{ marginTop: 4, fontSize: 11.5, lineHeight: 1.45, fontWeight: 500, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{poi.story}</div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
