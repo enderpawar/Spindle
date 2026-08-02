@@ -1,7 +1,10 @@
 import pointingImg from '../assets/poses/별이_pointing.webp'
+import winkImg from '../assets/poses/별이_wink.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
+import { dailyMissionFor } from '../content/dailyMissions'
 import { useVisited } from '../lib/visited'
 import { THEMES, type ThemeId } from '../engine/themes'
 import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
@@ -47,6 +50,7 @@ function SketchArt({ variant }: { variant: number }) {
 export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenTheme, onOpenFestival, onNavigate }: Props) {
   const visited = useVisited()
   const progress = stampProgress(visited)
+  const mission = dailyMissionFor()
 
   const quickMenu = [
     {
@@ -236,6 +240,25 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             )
           })}
         </div>
+
+        {/* 오늘의 한 칸 미션 */}
+        <button
+          type="button"
+          onClick={() => onNavigate('spin')}
+          className="home-mission-card motion-card motion-card-enter"
+        >
+          <span className="home-mission-copy">
+            <span className="home-mission-label">오늘의 한 칸 미션</span>
+            <strong className="home-mission-title">{mission.title}</strong>
+            <span className="home-mission-description">{mission.description}</span>
+            <span className="home-mission-cta">
+              스핀하러 가기 <span aria-hidden>›</span>
+            </span>
+          </span>
+          <img src={winkImg} alt="" className="home-mission-mascot" />
+        </button>
+
+        <SourceLine style={{ margin: '18px 20px 8px' }} />
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />
