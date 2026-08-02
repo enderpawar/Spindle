@@ -6,6 +6,8 @@ import { DialSlider } from '../components/DialSlider'
 import { DIRECTIONS, directionFromHeading, type Departure } from '../mock/pois'
 import type { ThemeInfo } from '../engine/themes'
 
+export type SpinPurpose = 'single' | 'course'
+
 interface Props {
   departure: Departure
   /** 이동시간 예산(분) — Infinity = 하루 */
@@ -19,10 +21,13 @@ interface Props {
   themeTarget?: number
   onOpenTheme: () => void
   onClearTheme: () => void
+  purpose: SpinPurpose
+  onPurposeChange: (purpose: SpinPurpose) => void
+  purposeNotice?: string | null
 }
 
 /** 스핀 탭 — 밤바다 몰입 화면. 원판 드래그 또는 돌리기 버튼으로 방위를 정한다 */
-export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate, theme, themeStep, themeTarget, onOpenTheme, onClearTheme }: Props) {
+export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate, theme, themeStep, themeTarget, onOpenTheme, onClearTheme, purpose, onPurposeChange, purposeNotice }: Props) {
   const rose = useRef<CompassRoseHandle>(null)
   const [spinning, setSpinning] = useState(false)
   const [settled, setSettled] = useState(false)
@@ -65,6 +70,12 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
         </button>
       </header>
 
+      <div className="spin-purpose" aria-label="스핀 목적">
+        <button type="button" className={purpose === 'single' ? 'is-active' : ''} onClick={() => onPurposeChange('single')}>한 곳</button>
+        <button type="button" className={purpose === 'course' ? 'is-active' : ''} onClick={() => onPurposeChange('course')}>코스</button>
+      </div>
+      {purposeNotice && <p className="spin-purpose-notice" role="status">{purposeNotice}</p>}
+
       <div style={{ textAlign: 'center', padding: '18px 24px 0', zIndex: 2, minHeight: 84 }}>
         {busy ? (
           <>
@@ -75,8 +86,8 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           </>
         ) : (
           <>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{theme ? `${theme.label} 테마, 어느 쪽으로 갈까요?` : '오늘, 어느 쪽으로 갈까요?'}</h1>
-            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{theme ? '선택한 테마 안에서 방향이 장소를 골라줘요' : '원판을 휙 돌리고, 방향에 맡겨보세요'}</p>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{purpose === 'course' ? '한 번 돌려 오늘의 코스를 만들어요' : theme ? `${theme.label} 테마, 어느 쪽으로 갈까요?` : '오늘, 어느 쪽으로 갈까요?'}</h1>
+            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{purpose === 'course' ? '같은 방향의 장소 2~4곳을 이어드려요' : theme ? '선택한 테마 안에서 방향이 장소를 골라줘요' : '원판을 휙 돌리고, 방향에 맡겨보세요'}</p>
           </>
         )}
       </div>
@@ -114,7 +125,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
               <path d="M50 41 L52.6 47.4 L59.5 48 L54.2 52.4 L55.8 59 L50 55.4 L44.2 59 L45.8 52.4 L40.5 48 L47.4 47.4 Z" fill="#2f5cff" />
             </svg>
           </div>
-          {theme && !busy && (
+          {theme && purpose === 'single' && !busy && (
             <div className="spin-theme-disc-mark" style={{ '--theme-color': theme.color } as React.CSSProperties}>
               {theme.label} 디스크
             </div>
@@ -125,7 +136,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
       {/* 하단 컨트롤 — 내브 높이만큼 여백 (스핀 중에는 페이드아웃) */}
       <div style={{ position: 'relative', minHeight: 150, padding: '0 24px calc(104px + env(safe-area-inset-bottom))', zIndex: 2 }}>
         <div style={{ opacity: busy ? 0 : 1, pointerEvents: busy ? 'none' : 'auto', transition: 'opacity .25s ease', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {theme && (
+          {theme && purpose === 'single' && (
             <div className="spin-theme-control">
               <div>
                 <strong style={{ color: theme.color }}>{theme.label}</strong>
@@ -141,7 +152,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
               <path d="M4 12 a8 8 0 1 1 2.6 5.9" />
               <path d="M4 19 v-4 h4" />
             </svg>
-            돌리기
+            {purpose === 'course' ? '코스 돌리기' : '돌리기'}
           </button>
         </div>
       </div>

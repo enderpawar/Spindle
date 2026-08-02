@@ -27,7 +27,7 @@ description: 나침반(DeviceOrientation)·GPS(Geolocation) 관련 코드를 작
 
 ## GPS (Geolocation)
 
-- `getCurrentPosition` 1회 취득이 기본, `watchPosition` 상시 구독 금지 (배터리·권한 피로).
+- `getCurrentPosition` 1회 취득이 기본이며 `watchPosition` 상시 구독은 금지한다. 단, 사용자가 명시적으로 시작한 **활성 코스 안내 화면**에서는 도착 판정에 필요한 동안만 허용한다. 화면 숨김·일시정지·오류·완주·언마운트 때 즉시 `clearWatch`하고 복귀 시 사용자 버튼으로 재개한다.
 - `enableHighAccuracy: true`, timeout 10초, 실패 시 여행 모드 폴백.
 - 취득한 좌표는 존(zone) 판정과 거리 계산에만 단말 내에서 사용하고, 어떤 상태 저장소에도 영속화하지 않는다.
 

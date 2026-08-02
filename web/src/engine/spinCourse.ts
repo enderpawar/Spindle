@@ -37,6 +37,8 @@ export interface CourseStopView {
 
 export type ReadyCourse = {
   status: 'ready'
+  /** 코스 모드에서 확정된 실제 스핀 방위각. 단말 세션 메모리에만 유지한다. */
+  headingDeg: number
   direction: DirectionInfo
   stops: CourseStopView[]
   totalMinutes: number
@@ -57,6 +59,12 @@ export interface BuildCourseFromAnchorInput {
   noteReason?: string
   /** 운영 상태 점수 훅 (Phase 3 detailIntro2 연동 시). 미지정이면 전부 통과(1). */
   operationScoreOf?: (contentId: string) => number
+  /** 코스 모드는 출발점→장소 방위로 다시 계산하지 않고 스핀 확정각을 유지한다. */
+  headingDeg?: number
+}
+
+export interface BuildCourseFromSpinInput extends Omit<BuildCourseFromAnchorInput, 'headingDeg'> {
+  headingDeg: number
 }
 
 /**
@@ -66,14 +74,15 @@ export interface BuildCourseFromAnchorInput {
 export function buildCourseFromAnchor(input: BuildCourseFromAnchorInput): AppCourse {
   const origin = toGeo(input.departure)
   const anchorPoint = { lat: input.anchor.lat, lng: input.anchor.lon }
-  // 코스 기준 방위 = 출발점에서 첫 장소를 본 실제 방위각 (첫 장소 = 방향 앵커)
-  const heading = bearingDeg(origin, anchorPoint)
+  const anchorBearing = bearingDeg(origin, anchorPoint)
+  // 결과 카드 진입은 첫 장소 방위, 코스 모드는 한 번의 스핀 확정각을 그대로 기준으로 쓴다.
+  const heading = input.headingDeg ?? anchorBearing
   const sectorCenter = sectorCenterDeg(sectorOf(heading))
 
   const first: RankedCandidate = {
     poi: { contentId: input.anchor.contentId, title: input.anchor.name, point: anchorPoint },
-    score: directionScore(heading, sectorCenter) * dispersionWeightOf(input.anchor.contentId),
-    bearing: heading,
+    score: directionScore(anchorBearing, sectorCenter) * dispersionWeightOf(input.anchor.contentId),
+    bearing: anchorBearing,
     travel: travelMinutes(origin, anchorPoint),
     tier: tierOf(input.anchor.contentId),
   }
@@ -115,10 +124,16 @@ export function buildCourseFromAnchor(input: BuildCourseFromAnchorInput): AppCou
 
   return {
     status: 'ready',
+    headingDeg: heading,
     direction: directionFromHeading(heading),
     stops,
     totalMinutes: stops[stops.length - 1].totalMinutes,
     reasons: [...new Set(reasons)],
     targetCount: result.targetCount,
   }
+}
+
+/** 스핀 코스 모드: 추천에 사용한 확정 방위각과 첫 후보를 그대로 코스에 연결한다. */
+export function buildCourseFromSpin(input: BuildCourseFromSpinInput): AppCourse {
+  return buildCourseFromAnchor(input)
 }

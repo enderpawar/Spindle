@@ -3,19 +3,20 @@ import { fetchPoiCardDetailCached, fetchPoiDetailCached } from './api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
 import { recommendFromSpin } from './engine/spinRecommend'
-import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
+import { buildCourseFromAnchor, buildCourseFromSpin, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { SpotsScreen } from './screens/SpotsScreen'
-import { SpinScreen } from './screens/SpinScreen'
+import { SpinScreen, type SpinPurpose } from './screens/SpinScreen'
 import { StampScreen } from './screens/StampScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { DepartureScreen } from './screens/DepartureScreen'
 import { RevealScreen } from './screens/RevealScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { CourseScreen } from './screens/CourseScreen'
+import { CourseGuideScreen } from './screens/CourseGuideScreen'
 import { ShareScreen } from './screens/ShareScreen'
 import { ThemeDeckScreen } from './screens/ThemeDeckScreen'
 import { FestivalScreen } from './screens/FestivalScreen'
@@ -30,6 +31,7 @@ import { HomeGuide } from './components/HomeGuide'
 import { transitionFor, type Screen, type TransitionIntent } from './navigationMotion'
 import { runViewTransition } from './viewTransition'
 import { usePressFeedback } from './usePressFeedback'
+import { requestOrientationPermission, type OrientationPermission } from './sensors/orientation'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
 
@@ -52,6 +54,11 @@ function App() {
   const [themeReturn, setThemeReturn] = useState<Screen>('home')
   const [poiReturn, setPoiReturn] = useState<Screen>('home')
   const [course, setCourse] = useState<ReadyCourse | null>(null)
+  const [courseReturn, setCourseReturn] = useState<Screen>('result')
+  const [spinPurpose, setSpinPurpose] = useState<SpinPurpose>('single')
+  const [spinPurposeNotice, setSpinPurposeNotice] = useState<string | null>(null)
+  const [courseFailureNotice, setCourseFailureNotice] = useState<string | null>(null)
+  const [orientationPermission, setOrientationPermission] = useState<OrientationPermission>('unsupported')
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
 
@@ -91,7 +98,7 @@ function App() {
       departure,
       budgetMinutes: dial,
       prevContentId: rec?.candidates[0]?.contentId,
-      themeJourney: themeJourney ?? undefined,
+      themeJourney: spinPurpose === 'single' ? themeJourney ?? undefined : undefined,
     })
     setRec(nextRec)
     setCandidateIndex(0)
@@ -115,6 +122,28 @@ function App() {
           }, 500)
         })
     }
+    if (spinPurpose === 'course') {
+      const anchor = nextRec.candidates[0]
+      const result = anchor ? buildCourseFromSpin({
+        departure,
+        budgetMinutes: dial,
+        anchor,
+        headingDeg,
+        noteReason: nextRec.expandReason,
+      }) : null
+      if (result?.status === 'ready') {
+        setCourse(result)
+        setCourseReturn('spin')
+        setCourseFailureNotice(null)
+        goTo('course')
+      } else {
+        setPoiReturn('spin')
+        setCourseFailureNotice(`이 방향은 코스로 잇기 어려워요. ${result?.reason ?? '코스 다시 돌리기를 눌러 주세요.'}`)
+        goTo('result')
+      }
+      return
+    }
+    setCourseFailureNotice(null)
     goTo('reveal')
   }
 
@@ -124,6 +153,7 @@ function App() {
     setRec({ direction, candidates: [poi] })
     setCandidateIndex(0)
     setPoiReturn(from)
+    setCourseFailureNotice(null)
     // 화면 전환과 겹쳐 상세를 미리 데운다 — 결과 카드가 즉시 이미지·방문정보를 채운다.
     void fetchPoiDetailCached(poi.contentId).catch(() => {})
     void fetchPoiCardDetailCached(poi.contentId).catch(() => {})
@@ -141,6 +171,8 @@ function App() {
     setThemeSeed(themeId)
     setThemeJourney({ themeId, step: 1, target: themeJourneyTarget(dial) })
     setCandidateIndex(0)
+    setSpinPurpose('single')
+    setSpinPurposeNotice(null)
     goTo('spin')
   }
 
@@ -178,10 +210,33 @@ function App() {
     const result = buildCourseFromAnchor({ departure, budgetMinutes: dial, anchor, noteReason: rec?.expandReason })
     if (result.status === 'ready') {
       setCourse(result)
+      setCourseReturn('result')
       goTo('course')
       return null
     }
     return result.reason
+  }
+
+  const changeSpinPurpose = (purpose: SpinPurpose) => {
+    setSpinPurpose(purpose)
+    setCourseFailureNotice(null)
+    if (purpose === 'course' && themeJourney) {
+      setThemeJourney(null)
+      setSpinPurposeNotice('코스 모드에서는 테마 여정을 잠시 마쳐요.')
+    } else {
+      setSpinPurposeNotice(null)
+    }
+  }
+
+  const startCourseGuidance = async () => {
+    if (new URLSearchParams(window.location.search).get('demo') === '1') {
+      setOrientationPermission('unsupported')
+      goTo('course-guide')
+      return
+    }
+    const permission = await requestOrientationPermission()
+    setOrientationPermission(permission)
+    goTo('course-guide')
   }
 
   const openDeparture = (from: Screen) => {
@@ -215,6 +270,9 @@ function App() {
           themeTarget={themeJourney?.target}
           onOpenTheme={() => openTheme(themeJourney?.themeId ?? themeSeed, 'spin')}
           onClearTheme={() => setThemeJourney(null)}
+          purpose={spinPurpose}
+          onPurposeChange={changeSpinPurpose}
+          purposeNotice={spinPurposeNotice}
         />
       )
     case 'stamp':
@@ -258,6 +316,7 @@ function App() {
           onBuildCourse={openCourse}
           onContinueTheme={continueThemeJourney}
           onFinishTheme={finishThemeJourney}
+          initialCourseNotice={courseFailureNotice}
         />
       ) : null
     case 'course':
@@ -265,8 +324,24 @@ function App() {
         <CourseScreen
           course={course}
           departure={departure}
-          onBack={() => goTo('result')}
-          onRespin={() => goTo('spin')}
+          onBack={() => goTo(courseReturn)}
+          onRespin={() => {
+            setSpinPurpose(courseReturn === 'spin' ? 'course' : 'single')
+            goTo('spin')
+          }}
+          onStartGuidance={startCourseGuidance}
+        />
+      ) : null
+    case 'course-guide':
+      return course ? (
+        <CourseGuideScreen
+          course={course}
+          orientationPermission={orientationPermission}
+          demo={new URLSearchParams(window.location.search).get('demo') === '1'}
+          onExit={() => {
+            setSpinPurpose('course')
+            goTo('spin')
+          }}
         />
       ) : null
     case 'share':

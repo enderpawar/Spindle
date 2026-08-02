@@ -21,6 +21,7 @@ interface Props {
   onShare: () => void
   onContinueTheme: () => void
   onFinishTheme: () => void
+  initialCourseNotice?: string | null
   /**
    * 이 방향으로 코스 짜기 — 현재 보고 있는 장소를 첫 장소로 코스를 만든다.
    * 코스가 만들어지면 App이 코스 화면으로 이동(반환값 null), 장소가 부족하면 사유 문자열을 반환한다.
@@ -29,11 +30,11 @@ interface Props {
 }
 
 /** S4 결과 카드 · 의미 레이어 (디자인 3a-4) — 이야기 · 왜 여기? · 도장 힌트 */
-export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse }: Props) {
+export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse, initialCourseNotice = null }: Props) {
   const { direction } = rec
   const poi = rec.candidates[candidateIndex]
   const [loading, setLoading] = useState(true)
-  const [courseNotice, setCourseNotice] = useState<string | null>(null)
+  const [courseNotice, setCourseNotice] = useState<string | null>(initialCourseNotice)
   const [detail, setDetail] = useState<PoiDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
@@ -64,8 +65,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     setFullDetail(null)
     setFullDetailLoading(false)
     setFullDetailError(false)
-    setCourseNotice(null)
-  }, [poi.contentId])
+    setCourseNotice(initialCourseNotice)
+  }, [initialCourseNotice, poi.contentId])
 
   // 프리뷰 카드의 주소·운영·휴무 표를 위해 결과 시점에 상세 소개도 실시간 조회한다.
   // 기존 details.ts 세션 메모리 캐시만 사용하며 영속 저장은 하지 않는다.

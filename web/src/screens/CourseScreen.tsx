@@ -4,7 +4,7 @@ import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
 import { MapView } from '../map/MapView'
-import { kakaoMapSearchUrl } from '../lib/mapLinks'
+import { kakaoMapDirectionsUrl } from '../lib/mapLinks'
 import { markVisited, useVisited } from '../lib/visited'
 import type { Departure } from '../mock/pois'
 import type { CourseStopView, ReadyCourse } from '../engine/spinCourse'
@@ -15,6 +15,7 @@ interface Props {
   departure: Departure
   onBack: () => void
   onRespin: () => void
+  onStartGuidance: () => void
 }
 
 /** 이동수단별 라벨 (zones.ts TravelEstimate.method) */
@@ -31,7 +32,7 @@ const METHOD_LABEL: Record<CourseStopView['method'], string> = {
  * 하단 카드 스트립과 지도 핀은 서로 선택을 동기화하며, 각 장소 길찾기 딥링크를 제공한다.
  * 코스는 engine/spinCourse에서 단말 내 계산으로 만들어지며, 여기서는 표시와 길찾기만 담당한다.
  */
-export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
+export function CourseScreen({ course, departure, onBack, onRespin, onStartGuidance }: Props) {
   const { direction, stops, totalMinutes, reasons } = course
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stampToast, setStampToast] = useState<string | null>(null)
@@ -156,7 +157,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                 </div>
                 <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>{legLabel(stop)}</div>
                 <a
-                  href={kakaoMapSearchUrl(stop.poi.name)}
+                  href={kakaoMapDirectionsUrl(stop.poi.name, stop.poi.lat, stop.poi.lon)}
                   target="_blank"
                   rel="noreferrer"
                   onClick={(e) => {
@@ -166,7 +167,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                   className="btn"
                   style={{ marginTop: 11, height: 42, width: '100%', background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 13.5, textDecoration: 'none' }}
                 >
-                  이 장소 길찾기
+                  카카오맵 길찾기
                 </a>
               </div>
             </div>
@@ -175,7 +176,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
       </div>
 
       <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 600 }}>
-        예상 이동시간이며 실제 경로와 다를 수 있어요.
+        예상 이동시간이며 실제 도보 경로는 카카오맵에서 확인해 주세요.
       </p>
       <SourceLine style={{ flex: 'none', margin: '0 20px 4px' }} />
 
@@ -187,16 +188,14 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
 
       {/* 하단 액션 바 */}
       <div style={{ flex: 'none', padding: '4px 20px calc(16px + env(safe-area-inset-bottom))', display: 'flex', gap: 12 }}>
-        <a
-          href={kakaoMapSearchUrl(stops[0].poi.name)}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          type="button"
           className="btn btn-blue"
           style={{ flex: 1, height: 54, fontSize: 16, textDecoration: 'none' }}
-          onClick={() => recordNavigation(stops[0])}
+          onClick={onStartGuidance}
         >
-          첫 장소부터 출발
-        </a>
+          코스 안내 시작
+        </button>
         <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 54, height: 54, borderRadius: 18, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
             <path d="M3 12 a9 9 0 1 1 3 6.7" />

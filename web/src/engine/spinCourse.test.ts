@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCourseFromAnchor } from './spinCourse'
+import { buildCourseFromAnchor, buildCourseFromSpin } from './spinCourse'
 import { DEPARTURES, POI_POOL, type Poi } from '../mock/pois'
 
 const nampo = DEPARTURES.find((d) => d.id === 'nampo')!
@@ -43,6 +43,20 @@ describe('스핀 단일 추천 → 여행 코스 브리지', () => {
     expect(course.status).toBe('ready')
     if (course.status !== 'ready') return
     expect(course.reasons).toContain(note)
+  })
+
+  it('코스 모드는 한 번의 스핀 확정 방위와 첫 추천 장소를 그대로 유지한다', () => {
+    const anchor = poiOf('132190')
+    const course = buildCourseFromSpin({
+      departure: nampo,
+      budgetMinutes: Infinity,
+      anchor,
+      headingDeg: 271.25,
+    })
+    expect(course.status).toBe('ready')
+    if (course.status !== 'ready') return
+    expect(course.headingDeg).toBe(271.25)
+    expect(course.stops[0].poi.contentId).toBe(anchor.contentId)
   })
 
   it('이어 갈 장소가 부족하면 unavailable을 반환한다(단일 추천 유지)', () => {
