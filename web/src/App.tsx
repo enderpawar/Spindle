@@ -20,7 +20,12 @@ import { ShareScreen } from './screens/ShareScreen'
 import { ThemeDeckScreen } from './screens/ThemeDeckScreen'
 import { FestivalScreen } from './screens/FestivalScreen'
 import type { NavTab } from './components/BottomNav'
-import type { ThemeId } from './engine/themes'
+import {
+  themeInfo,
+  themeJourneyTarget,
+  type ThemeId,
+  type ThemeJourney,
+} from './engine/themes'
 import { HomeGuide } from './components/HomeGuide'
 import { transitionFor, type Screen, type TransitionIntent } from './navigationMotion'
 import { runViewTransition } from './viewTransition'
@@ -43,6 +48,8 @@ function App() {
   const [candidateIndex, setCandidateIndex] = useState(0)
   const [departureReturn, setDepartureReturn] = useState<Screen>('home')
   const [themeSeed, setThemeSeed] = useState<ThemeId>('sea')
+  const [themeJourney, setThemeJourney] = useState<ThemeJourney | null>(null)
+  const [themeReturn, setThemeReturn] = useState<Screen>('home')
   const [poiReturn, setPoiReturn] = useState<Screen>('home')
   const [course, setCourse] = useState<ReadyCourse | null>(null)
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
@@ -84,6 +91,7 @@ function App() {
       departure,
       budgetMinutes: dial,
       prevContentId: rec?.candidates[0]?.contentId,
+      themeJourney: themeJourney ?? undefined,
     })
     setRec(nextRec)
     setCandidateIndex(0)
@@ -123,8 +131,41 @@ function App() {
     goTo('result')
   }
 
-  const openTheme = (themeId: ThemeId) => {
+  const openTheme = (themeId: ThemeId, from: Screen = 'home') => {
     setThemeSeed(themeId)
+    setThemeReturn(from)
+    goTo('theme')
+  }
+
+  const startThemeJourney = (themeId: ThemeId) => {
+    setThemeSeed(themeId)
+    setThemeJourney({ themeId, step: 1, target: themeJourneyTarget(dial) })
+    setCandidateIndex(0)
+    goTo('spin')
+  }
+
+  const changeDial = (nextDial: number) => {
+    setDial(nextDial)
+    setThemeJourney((journey) => {
+      if (!journey) return journey
+      const target = themeJourneyTarget(nextDial)
+      return { ...journey, step: Math.min(journey.step, target), target }
+    })
+  }
+
+  const continueThemeJourney = () => {
+    setThemeJourney((journey) => journey
+      ? { ...journey, step: Math.min(journey.target, journey.step + 1) }
+      : journey)
+    setCandidateIndex(0)
+    goTo('spin')
+  }
+
+  const finishThemeJourney = () => {
+    const completedTheme = themeJourney?.themeId ?? rec?.theme?.id ?? themeSeed
+    setThemeSeed(completedTheme)
+    setThemeJourney(null)
+    setThemeReturn('home')
     goTo('theme')
   }
 
@@ -161,7 +202,21 @@ function App() {
     case 'spots':
       return <SpotsScreen departure={departure} onNavigate={navigate} onSelect={openPoi} />
     case 'spin':
-      return <SpinScreen departure={departure} dial={dial} onDialChange={setDial} onOpenDeparture={() => openDeparture('spin')} onSpun={handleSpun} onNavigate={navigate} />
+      return (
+        <SpinScreen
+          departure={departure}
+          dial={dial}
+          onDialChange={changeDial}
+          onOpenDeparture={() => openDeparture('spin')}
+          onSpun={handleSpun}
+          onNavigate={navigate}
+          theme={themeJourney ? themeInfo(themeJourney.themeId) : undefined}
+          themeStep={themeJourney?.step}
+          themeTarget={themeJourney?.target}
+          onOpenTheme={() => openTheme(themeJourney?.themeId ?? themeSeed, 'spin')}
+          onClearTheme={() => setThemeJourney(null)}
+        />
+      )
     case 'stamp':
       return <StampScreen onNavigate={navigate} />
     case 'settings':
@@ -169,7 +224,7 @@ function App() {
         <SettingsScreen
           departure={departure}
           dial={dial}
-          onDialChange={setDial}
+          onDialChange={changeDial}
           onOpenDeparture={() => openDeparture('settings')}
           onReplayGuide={() => {
             setHomeGuideOpen(true)
@@ -201,6 +256,8 @@ function App() {
           onRespin={() => goTo('spin')}
           onShare={() => goTo('share')}
           onBuildCourse={openCourse}
+          onContinueTheme={continueThemeJourney}
+          onFinishTheme={finishThemeJourney}
         />
       ) : null
     case 'course':
@@ -215,7 +272,19 @@ function App() {
     case 'share':
       return rec ? <ShareScreen rec={rec} poi={rec.candidates[candidateIndex]} onBack={() => goTo('result')} /> : null
     case 'theme':
-      return <ThemeDeckScreen initialTheme={themeSeed} onSelect={(poi) => openPoi(poi, 'theme')} onNavigate={navigate} onBack={() => goTo('home')} />
+      return (
+        <ThemeDeckScreen
+          initialTheme={themeSeed}
+          journeyTarget={themeJourneyTarget(dial)}
+          onStart={startThemeJourney}
+          onSelect={(poi) => {
+            setThemeJourney(null)
+            openPoi(poi, 'theme')
+          }}
+          onNavigate={navigate}
+          onBack={() => goTo(themeReturn)}
+        />
+      )
     case 'festival':
       return <FestivalScreen onNavigate={navigate} onBack={() => goTo('home')} />
     default:

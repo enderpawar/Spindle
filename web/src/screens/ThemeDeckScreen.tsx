@@ -4,18 +4,20 @@ import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { THEMES, poisByTheme, themeInfo, type ThemeId } from '../engine/themes'
-import { directionOf, type Poi } from '../mock/pois'
+import { DIRECTIONS, directionOf, type Poi } from '../mock/pois'
 import { useVisited } from '../lib/visited'
 
 interface Props {
   initialTheme: ThemeId
+  journeyTarget: number
+  onStart: (themeId: ThemeId) => void
   onSelect: (poi: Poi) => void
   onNavigate: (tab: NavTab) => void
   onBack: () => void
 }
 
 /** 테마 덱 (Phase 7) — 바다/골목·시장/근현대·역사/야간/먹거리로 POI를 둘러본다. */
-export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: Props) {
+export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect, onNavigate, onBack }: Props) {
   const [themeId, setThemeId] = useState<ThemeId>(initialTheme)
   const visited = useVisited()
   const theme = themeInfo(themeId)
@@ -24,7 +26,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 16px 4px', zIndex: 2 }}>
-        <button onClick={onBack} aria-label="뒤로" className="l-icon-btn">
+        <button onClick={onBack} aria-label="뒤로" className="l-icon-btn" style={{ width: 44, height: 44 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
             <path d="M15 5 L8 12 L15 19" />
           </svg>
@@ -46,6 +48,7 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
+                minHeight: 44,
                 padding: '9px 15px',
                 borderRadius: 999,
                 border: on ? 'none' : '1.5px solid var(--l-line)',
@@ -71,8 +74,42 @@ export function ThemeDeckScreen({ initialTheme, onSelect, onNavigate, onBack }: 
         </div>
       </div>
 
+      <section className="theme-disc-intro" aria-labelledby="theme-disc-title">
+        <div className="theme-disc-preview" style={{ '--theme-color': theme.color } as React.CSSProperties} aria-hidden="true">
+          {DIRECTIONS.map((direction, index) => (
+            <span
+              key={direction.id}
+              className="theme-disc-direction"
+              style={{
+                '--disc-angle': `${index * 45}deg`,
+                '--disc-counter-angle': `${-index * 45}deg`,
+              } as React.CSSProperties}
+            >
+              {direction.label.slice(0, 1)}
+            </span>
+          ))}
+          <div className="theme-disc-center">
+            <strong>{theme.label}</strong>
+            <span>{pois.length}곳</span>
+          </div>
+        </div>
+        <div className="theme-disc-copy">
+          <h1 id="theme-disc-title">{theme.label} 테마로 방향을 맡겨보세요</h1>
+          <p>{journeyTarget}개의 장면과 매번 다른 여행 미션을 만나요.</p>
+          <button
+            type="button"
+            className="btn btn-blue"
+            onClick={() => onStart(themeId)}
+            disabled={pois.length === 0}
+          >
+            이 테마로 돌리기
+          </button>
+        </div>
+      </section>
+
       {/* POI 덱 그리드 */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px calc(110px + env(safe-area-inset-bottom))' }}>
+        <h2 className="theme-poi-heading">이 테마에 들어 있는 장소</h2>
         <div key={themeId} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
           {pois.map((poi) => {
             const dir = directionOf(poi.direction)

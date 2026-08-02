@@ -31,7 +31,7 @@ export function RevealScreen({ rec, onOpen }: { rec: Recommendation; onOpen: () 
           <article className="reveal-card motion-reveal-card" style={{ background: `linear-gradient(155deg, #ffffff 0%, #f8fbff 58%, ${direction.color}2e 100%)`, borderColor: `${direction.color}66` }}>
             <div className="reveal-card-orbit" aria-hidden style={{ borderColor: `${direction.color}38` }} />
             <div className="reveal-card-head">
-              <span>SPINDLE PICK</span>
+              <span>{rec.theme ? `${rec.theme.label} 테마 · ${rec.theme.step}/${rec.theme.target}` : 'SPINDLE PICK'}</span>
             </div>
 
             <div className="reveal-card-visual">
@@ -44,7 +44,7 @@ export function RevealScreen({ rec, onOpen }: { rec: Recommendation; onOpen: () 
             </div>
 
             <div className="reveal-card-copy">
-              <div className="reveal-card-kicker">숨은 장소를 찾았어요</div>
+              <div className="reveal-card-kicker">{rec.theme ? `${rec.theme.label} 안에서 찾았어요` : '숨은 장소를 찾았어요'}</div>
               <div className="reveal-card-title">오늘의 방향에서 만날 곳</div>
               <div className="reveal-card-cta">
                 <span>탭해서 먼저 보기</span>

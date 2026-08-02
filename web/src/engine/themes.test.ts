@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { POI_POOL } from '../mock/pois'
-import { THEMES, poisByTheme, themesOf, type ThemeId } from './themes'
+import {
+  THEMES,
+  pickThemeMission,
+  poisByTheme,
+  themeJourneyTarget,
+  themeSpinResult,
+  themesOf,
+  type ThemeId,
+} from './themes'
 
 describe('themes', () => {
   it('모든 POI는 최소 1개 테마에 속한다 (빈 덱 방지)', () => {
@@ -38,5 +46,22 @@ describe('themes', () => {
         expect(THEMES.map((t) => t.id as ThemeId)).toContain(id)
       }
     }
+  })
+
+  it('이동시간별 테마 여정 장면 수 경계를 지킨다', () => {
+    expect(themeJourneyTarget(20)).toBe(1)
+    expect(themeJourneyTarget(21)).toBe(2)
+    expect(themeJourneyTarget(60)).toBe(2)
+    expect(themeJourneyTarget(61)).toBe(3)
+    expect(themeJourneyTarget(Infinity)).toBe(4)
+  })
+
+  it('미션과 장면 메타는 RNG 고정 시 재현되고 범위를 벗어나지 않는다', () => {
+    expect(pickThemeMission('sea', () => 0)).toBe(pickThemeMission('sea', () => 0))
+    const result = themeSpinResult({ themeId: 'history', step: 9, target: 3 }, () => 0.99)
+    expect(result.label).toBe('근현대·역사')
+    expect(result.step).toBe(3)
+    expect(result.target).toBe(3)
+    expect(result.mission.length).toBeGreaterThan(0)
   })
 })

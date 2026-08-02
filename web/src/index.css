@@ -807,6 +807,257 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   animation: hubBreathe 0.72s ease-in-out infinite alternate;
 }
 
+.spin-theme-disc-mark {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  z-index: 3;
+  min-height: 30px;
+  padding: 7px 12px;
+  transform: translateX(-50%);
+  border: 1px solid color-mix(in srgb, var(--theme-color) 45%, white);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 20px -13px color-mix(in srgb, var(--theme-color) 60%, transparent);
+  color: var(--theme-color);
+  font-size: 11.5px;
+  font-weight: 900;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.spin-theme-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 4px 5px 4px 12px;
+  border: 1px solid var(--l-line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.spin-theme-control > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.spin-theme-control > div span {
+  color: var(--l-ink-3);
+  font-size: 10.5px;
+}
+
+.spin-theme-control button {
+  min-width: 48px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--l-soft);
+  color: var(--l-primary);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.theme-disc-intro {
+  display: grid;
+  grid-template-columns: 164px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin: 12px 16px 4px;
+  padding: 16px;
+  border: 1px solid var(--l-line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 28px -22px rgba(31, 70, 150, 0.45);
+}
+
+.theme-disc-preview {
+  position: relative;
+  width: 150px;
+  aspect-ratio: 1;
+  border: 2px solid color-mix(in srgb, var(--theme-color) 62%, white);
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(from -22.5deg, color-mix(in srgb, var(--theme-color) 15%, white) 0 44deg, #fff 44deg 45deg);
+  box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.64);
+}
+
+.theme-disc-preview::after {
+  content: '';
+  position: absolute;
+  inset: 26px;
+  border: 1px solid color-mix(in srgb, var(--theme-color) 35%, white);
+  border-radius: 50%;
+}
+
+.theme-disc-direction {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 24px;
+  margin: -10px 0 0 -12px;
+  color: color-mix(in srgb, var(--theme-color) 75%, var(--l-ink));
+  font-size: 9.5px;
+  font-weight: 900;
+  text-align: center;
+  transform: rotate(var(--disc-angle)) translateY(calc(-1 * var(--disc-radius, 66px))) rotate(var(--disc-counter-angle));
+}
+
+.theme-disc-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-content: center;
+  gap: 2px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 8px 18px -12px color-mix(in srgb, var(--theme-color) 75%, transparent);
+  color: var(--theme-color);
+  text-align: center;
+}
+
+.theme-disc-center strong {
+  max-width: 66px;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.theme-disc-center span {
+  color: var(--l-ink-3);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.theme-disc-copy h1 {
+  margin: 0;
+  color: var(--l-ink);
+  font-size: 18px;
+  line-height: 1.25;
+  letter-spacing: -0.35px;
+}
+
+.theme-disc-copy p {
+  margin: 7px 0 12px;
+  color: var(--l-ink-3);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.theme-disc-copy .btn {
+  width: 100%;
+  min-height: 48px;
+  padding-inline: 12px;
+  white-space: nowrap;
+}
+
+.theme-poi-heading {
+  margin: 0 0 10px 2px;
+  color: var(--l-ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.result-theme-journey {
+  margin-top: 18px;
+  padding: 16px;
+  border-left: 3px solid var(--theme-color);
+  border-radius: 0 16px 16px 0;
+  background: color-mix(in srgb, var(--theme-color) 8%, white);
+}
+
+.result-theme-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--theme-color);
+  font-size: 11.5px;
+  font-weight: 850;
+}
+
+.result-theme-journey h3 {
+  margin: 12px 0 0;
+  color: var(--l-ink);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.result-theme-journey p {
+  margin: 6px 0 13px;
+  color: var(--l-ink-2);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.result-theme-journey .btn {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  background: var(--theme-color);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 900;
+}
+
+@media (max-width: 360px) {
+  .theme-disc-intro {
+    grid-template-columns: 126px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .theme-disc-preview {
+    width: 118px;
+  }
+
+  .theme-disc-direction {
+    --disc-radius: 50px;
+  }
+
+  .theme-disc-center {
+    width: 66px;
+    height: 66px;
+  }
+
+  .theme-disc-copy h1 {
+    font-size: 15px;
+  }
+
+  .theme-disc-copy p {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 320px) {
+  .theme-disc-intro {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-disc-preview {
+    margin-inline: auto;
+  }
+
+  .theme-disc-copy {
+    text-align: center;
+  }
+}
+
 /* ─── 스핀 리빌: 관광 패스처럼 보이는 목적지 공개 카드 ─── */
 .reveal-layout {
   z-index: 2;

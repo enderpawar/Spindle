@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { sectorOf } from './compass'
 import { seededRng } from './rng'
 import { recommendFromSpin } from './spinRecommend'
+import { THEMES, themesOf } from './themes'
 import { DEPARTURES, DIAL_STEPS } from '../mock/pois'
 
 const busanStation = DEPARTURES[0] // 부산역 (북)
@@ -62,5 +63,39 @@ describe('recommendFromSpin — 스핀 배선', () => {
         }
       }
     }
+  })
+
+  it('테마 스핀의 모든 후보와 폴백은 선택 테마를 끝까지 유지한다', () => {
+    for (const theme of THEMES) {
+      for (const departure of DEPARTURES) {
+        for (let heading = 0; heading < 360; heading += 45) {
+          const rec = recommendFromSpin({
+            heading,
+            departure,
+            budgetMinutes: 20,
+            themeJourney: { themeId: theme.id, step: 1, target: 2 },
+            rng: seededRng(heading + theme.label.length),
+          })
+          expect(rec.candidates.length, `${theme.id}/${departure.id}/${heading}`).toBeGreaterThan(0)
+          expect(rec.theme?.id).toBe(theme.id)
+          for (const candidate of rec.candidates) {
+            expect(themesOf(candidate), candidate.name).toContain(theme.id)
+          }
+        }
+      }
+    }
+  })
+
+  it('테마 확장 사유를 노출하고 다른 테마를 섞지 않는다', () => {
+    const rec = recommendFromSpin({
+      heading: 180,
+      departure: yeongdo,
+      budgetMinutes: 20,
+      themeJourney: { themeId: 'food', step: 2, target: 3 },
+      rng: seededRng(4),
+    })
+    expect(rec.theme).toMatchObject({ id: 'food', step: 2, target: 3 })
+    expect(rec.expandReason).toContain('먹거리')
+    expect(rec.candidates.every((candidate) => themesOf(candidate).includes('food'))).toBe(true)
   })
 })
