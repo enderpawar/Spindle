@@ -98,6 +98,11 @@ Phase N을 실행할 때 순서대로:
 
 **목표**: 실기기에서 GPS + 나침반으로 동작. `sensors` 스킬 규약 준수.
 
+> ⚠ **2026-08-02 배선 유실·복구**: Phase 4 구현(`e2d5f01`) 이후 앱 셸 개편 과정에서 현장 모드 UI가 사라지고
+> 센서 모듈만 남아 있었다(`isFieldModeAvailable`·`selectMode('field')` 소실, 스핀은 드래그 전용).
+> `sensors/useFieldMode.ts` + `CompassRose.followHeading`으로 재배선했다.
+> **아래 사람 검증 항목은 유실 이전 구현 기준이므로 실기기 재검증이 필요하다.**
+
 - iOS 권한 요청 플로우(버튼 제스처 내), `webkitCompassHeading`/`deviceorientationabsolute` 분기, 원형 평균 스무딩
 - GPS 1회 취득 → 존 판정 (전부 단말 내)
 - 권한 거부·미지원·타임아웃 → 여행 모드 폴백 UI

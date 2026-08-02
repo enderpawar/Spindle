@@ -42,6 +42,8 @@ function App() {
   const [booting, setBooting] = useState(true)
   const [screen, setScreen] = useState<Screen>(() => (localStorage.getItem(ONBOARD_KEY) ? 'home' : 'onboarding'))
   const [departure, setDeparture] = useState<Departure>(DEPARTURES[0])
+  // 현장 모드에서 스핀 화면이 올려준 현재 위치 출발점 — 메모리에만 두고 네트워크로 보내지 않는다.
+  const [fieldOrigin, setFieldOrigin] = useState<Departure | null>(null)
   // 이동시간 예산(분) — 20분~하루(Infinity)를 눈금으로 조정 (mock/pois DIAL_STEPS)
   const [dial, setDial] = useState<number>(DIAL_DEFAULT_MINUTES)
   const [rec, setRec] = useState<Recommendation | null>(null)
@@ -89,10 +91,13 @@ function App() {
     goTo('home')
   }
 
+  // 현장 모드면 실제 현재 위치가, 여행 모드면 선택한 프리셋이 추천·코스의 출발점이다.
+  const origin = fieldOrigin ?? departure
+
   const handleSpun = (headingDeg: number) => {
     const nextRec = recommendFromSpin({
       heading: headingDeg,
-      departure,
+      departure: origin,
       budgetMinutes: dial,
       prevContentId: rec?.candidates[0]?.contentId,
       themeJourney: spinPurpose === 'single' ? themeJourney ?? undefined : undefined,
@@ -122,7 +127,7 @@ function App() {
     if (spinPurpose === 'course') {
       const anchor = nextRec.candidates[0]
       const result = anchor ? buildCourseFromSpin({
-        departure,
+        departure: origin,
         budgetMinutes: dial,
         anchor,
         headingDeg,
@@ -204,7 +209,7 @@ function App() {
    * 결과 카드가 단일 추천을 유지한 채 사유만 표시하게 한다 (docs/course.md §4).
    */
   const openCourse = (anchor: Poi): string | null => {
-    const result = buildCourseFromAnchor({ departure, budgetMinutes: dial, anchor, noteReason: rec?.expandReason })
+    const result = buildCourseFromAnchor({ departure: origin, budgetMinutes: dial, anchor, noteReason: rec?.expandReason })
     if (result.status === 'ready') {
       setCourse(result)
       setCourseReturn('result')
@@ -259,6 +264,7 @@ function App() {
           purpose={spinPurpose}
           onPurposeChange={changeSpinPurpose}
           purposeNotice={spinPurposeNotice}
+          onFieldOriginChange={setFieldOrigin}
         />
       )
     case 'stamp':
@@ -309,7 +315,7 @@ function App() {
       return course ? (
         <CourseScreen
           course={course}
-          departure={departure}
+          departure={origin}
           onBack={() => goTo(courseReturn)}
           onRespin={() => {
             setSpinPurpose(courseReturn === 'spin' ? 'course' : 'single')

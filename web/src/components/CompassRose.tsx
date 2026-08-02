@@ -14,6 +14,11 @@ interface Props {
   onHeading?: (headingDeg: number) => void
   /** 관성 감속이 끝난 최종 방위각. 연출 각도 = 알고리즘 입력 각도 (PLAN Phase 2 원칙) */
   onSettle: (headingDeg: number) => void
+  /**
+   * 현장 모드 — 실제 기기 방위각을 주면 원판이 그 방위를 추종한다.
+   * null이면 기존 드래그·플릭 스핀으로 동작한다 (여행 모드).
+   */
+  followHeading?: number | null
 }
 
 const FLING_THRESHOLD = 0.25 // deg/ms — 이 미만의 릴리즈는 스핀으로 치지 않음
@@ -32,7 +37,10 @@ const arcPath = (r: number, a1: number, a2: number) => {
   return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
 }
 
-export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSettle }: Props) {
+export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
+  const following = followHeading !== null
+  // 현장 모드에서는 드래그·플릭·버튼 스핀을 모두 막는다 — 방위의 출처는 기기뿐이다.
+  const locked = disabled || following
   const wrapRef = useRef<HTMLDivElement>(null)
   const discRef = useRef<HTMLDivElement>(null)
   const rotation = useRef(0)
@@ -96,7 +104,7 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
 
   useImperativeHandle(ref, () => ({
     spin: () => {
-      if (disabled || spinning.current || dragging.current) return
+      if (locked || spinning.current || dragging.current) return
       cancelAnimationFrame(raf.current)
       clearTimeout(fallback.current)
       startInertia(1.6 + Math.random() * 1.2)
@@ -111,6 +119,20 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
     [],
   )
 
+  // 현장 모드: 기기 방위를 원판에 반영한다. 바늘은 화면 12시에 고정돼 있으므로
+  // 원판을 -heading 만큼 돌리면 바늘이 실제 기기가 가리키는 방위를 짚는다.
+  // 359°→0° 같은 경계에서 한 바퀴 되감기지 않도록 항상 최단 경로로 이동한다.
+  useEffect(() => {
+    if (followHeading === null) return
+    cancelAnimationFrame(raf.current)
+    clearTimeout(fallback.current)
+    const delta = ((-followHeading - rotation.current + 540) % 360) - 180
+    rotation.current += delta
+    velocity.current = 0
+    apply()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply는 ref만 만지는 안정 함수다
+  }, [followHeading])
+
   const pointerAngle = (e: PointerEvent) => {
     const rect = wrapRef.current!.getBoundingClientRect()
     const cx = rect.left + rect.width / 2
@@ -119,7 +141,7 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
   }
 
   const handleDown = (e: PointerEvent) => {
-    if (disabled) return
+    if (locked) return
     cancelAnimationFrame(raf.current)
     clearTimeout(fallback.current)
     setSpinning(false)
@@ -166,7 +188,7 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
         width: '100%',
         aspectRatio: '1',
         touchAction: 'none',
-        cursor: disabled ? 'default' : 'grab',
+        cursor: locked ? 'default' : 'grab',
         userSelect: 'none',
       }}
     >

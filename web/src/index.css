@@ -2794,6 +2794,33 @@ button.is-pressing:not(:disabled) {
   z-index: 2;
 }
 
+/* 현장 모드 진입·복귀 보조 버튼과 센서 실패 안내 */
+.spin-field-toggle {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1.5px solid var(--l-line);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--l-primary);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.spin-field-toggle:disabled { color: var(--l-ink-3); cursor: default; }
+
+.spin-field-notice {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 13px;
+  background: rgba(255, 122, 69, .1);
+  color: #a2482a;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .course-guide-header {
   display: flex;
   flex: none;
