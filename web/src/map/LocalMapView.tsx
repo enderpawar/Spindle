@@ -25,6 +25,8 @@ export interface MapViewProps {
   selectedId: string | null
   /** 당일 혼잡 예상 기준을 넘은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
   busyPoiIds?: ReadonlySet<string>
+  /** 큐레이션 외 전체 명소(areaBasedList2) — 작은 점 핀으로만 표시 */
+  extraSpots?: ReadonlyArray<{ id: string; name: string; lat: number; lon: number }>
   /** 핀 탭(id) 또는 빈 바다 탭(null) */
   onPick: (id: string | null) => void
   /** 선택 핀의 사진 프리뷰를 탭했을 때 상세 카드 열기 */
@@ -56,6 +58,7 @@ const Z_MAX = 6
 // 합성 레이어 크기와 직결되므로 뷰포트를 덮을 만큼만 둔다.
 const SEA_MARGIN = 1500
 const CANVAS_DPR_MAX = 1.5
+const EMPTY_EXTRA_SPOTS: NonNullable<MapViewProps['extraSpots']> = []
 
 function ease(t: number) {
   return 1 - Math.pow(1 - t, 3)
@@ -69,7 +72,16 @@ function pathMidpoint(d: string): { x: number; y: number } {
   return { x: nums[i], y: nums[i + 1] }
 }
 
-export function LocalMapView({ pois, departure, selectedId, busyPoiIds, onPick, onOpen, courseOrder }: MapViewProps) {
+export function LocalMapView({
+  pois,
+  departure,
+  selectedId,
+  busyPoiIds,
+  extraSpots = EMPTY_EXTRA_SPOTS,
+  onPick,
+  onOpen,
+  courseOrder,
+}: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [cam, setCam] = useState<Cam | null>(null)
@@ -138,7 +150,23 @@ export function LocalMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
       }),
     [pois],
   )
+  const extraPins = useMemo(
+    () =>
+      extraSpots.map((spot) => {
+        const { x, y } = project(spot.lat, spot.lon)
+        return { spot, x, y }
+      }),
+    [extraSpots],
+  )
   const dep = useMemo(() => project(departure.lat, departure.lon), [departure])
+  const fitPoints = useMemo(
+    () => [
+      ...pins.map((pin) => [pin.x, pin.y] as [number, number]),
+      ...extraPins.map((pin) => [pin.x, pin.y] as [number, number]),
+      [dep.x, dep.y] as [number, number],
+    ],
+    [dep.x, dep.y, extraPins, pins],
+  )
 
   // 코스 미리보기 — 방문 순서 맵(1-based)과 경로 색(코스 핀은 같은 방위색)
   const orderNum = useMemo(() => {
@@ -151,11 +179,11 @@ export function LocalMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
   // 초기 카메라: 표시 중인 핀 전체가 들어오게 (하단 카드 영역 고려해 아래 여백 크게)
   useEffect(() => {
     if (!size.w) return
-    const fit = fitCam(pins.map((p) => [p.x, p.y] as [number, number]).concat([[dep.x, dep.y]]))
+    const fit = fitCam(fitPoints)
     setZMin(Math.min(fit.z, coverZ))
     if (!cam) setCam(fit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, pins])
+  }, [size, fitPoints])
 
   function fitCam(pts: [number, number][]): Cam {
     const xs = pts.map((p) => p[0])
@@ -222,6 +250,7 @@ export function LocalMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
   useEffect(() => {
     if (!selectedId || !cam) return
     const pin = pins.find((p) => p.poi.id === selectedId)
+      ?? extraPins.find((p) => p.spot.id === selectedId)
     if (!pin) return
     // 줌은 바꾸지 않는다 — 순수 팬만 한다.
     // 줌을 바꾸면 지형 SVG의 scale() 지오메트리가 매 프레임 다시 래스터화되는데,
@@ -503,7 +532,40 @@ export function LocalMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
           </span>
         </div>
 
-        {/* POI 핀 — 선택 핀이 맨 위. (21개뿐 → 컬링 없이 전부 렌더: 합성 팬 중 화면 밖 핀이 튀어들어오지 않게) */}
+        {/* 전체 명소 점 — 큐레이션 핀보다 낮은 위계로 조용히 표시한다. */}
+        {extraPins.map(({ spot, x, y }) => {
+          const s = toScreen(x, y)
+          const selected = spot.id === selectedId
+          return (
+            <div
+              key={spot.id}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                transform: `translate3d(${s.x}px,${s.y}px,0)`,
+                zIndex: 1,
+                pointerEvents: 'none',
+                willChange: 'transform',
+              }}
+            >
+              <button
+                className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
+                type="button"
+                aria-label={spot.name}
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onPick(spot.id)
+                }}
+              >
+                {showPoiLabels && <span className="map-extra-spot__label">{spot.name}</span>}
+              </button>
+            </div>
+          )
+        })}
+
+        {/* 큐레이션 POI 핀 — 선택 핀이 맨 위. */}
         {pins.map(({ poi, x, y, color }) => {
           const s = toScreen(x, y)
           const sel = poi.id === selectedId
@@ -612,7 +674,7 @@ export function LocalMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
           className="l-icon-btn"
           aria-label="전체 보기"
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => animateTo(fitCam(pins.map((p) => [p.x, p.y] as [number, number]).concat([[dep.x, dep.y]])))}
+          onClick={() => animateTo(fitCam(fitPoints))}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
             <path d="M9 4 H4 v5 M15 4 h5 v5 M9 20 H4 v-5 M15 20 h5 v-5" />

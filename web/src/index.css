@@ -2243,7 +2243,87 @@ button.is-pressing:not(:disabled) {
   transition-timing-function: var(--ease-touch-down);
 }
 
+/* 큐레이션 외 전체 명소는 두 지도에서 같은 작은 점으로 표시한다. */
+.map-extra-spot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 1.5px solid #fff;
+  border-radius: 50%;
+  background: #7f9cc7;
+  box-shadow: 0 2px 5px rgba(40, 65, 105, 0.28);
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+  transition: width 180ms ease, height 180ms ease, box-shadow 180ms ease;
+}
+
+.map-extra-spot::after {
+  position: absolute;
+  inset: -15px;
+  content: '';
+}
+
+.map-extra-spot--selected {
+  width: 13px;
+  height: 13px;
+  box-shadow: 0 3px 8px rgba(40, 65, 105, 0.38);
+}
+
+.map-extra-spot:active:not(:disabled),
+.map-extra-spot.is-pressing:not(:disabled) {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+
+.map-extra-spot__label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.82);
+  color: #36527e;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
 /* 명소 지도 혼잡 예측. 현재 인원수가 아닌 당일 예측임을 텍스트로 함께 전달한다. */
+.map-status-stack {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 12;
+  display: flex;
+  max-width: calc(100% - 88px);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.map-status-stack > .congestion-status {
+  position: static;
+  max-width: 100%;
+  pointer-events: auto;
+}
+
+.extra-spots-status {
+  padding: 0 3px;
+  color: #49617f;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-shadow: 0 1px 3px #fff, 0 0 8px #fff;
+}
+
 .map-congestion-pin {
   position: absolute;
   z-index: 2;

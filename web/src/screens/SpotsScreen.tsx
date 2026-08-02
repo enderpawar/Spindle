@@ -5,6 +5,7 @@ import {
   matchBusyPois,
   type CongestionForecast,
 } from '../api/congestion'
+import { fetchExtraSpots, toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
@@ -13,6 +14,7 @@ import { MapView } from '../map/MapView'
 import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 
 const FILTERS = ['전체', '중구', '동구', '서구', '영도구']
+const CURATED_CONTENT_IDS = new Set(POI_POOL.map((poi) => poi.contentId))
 
 interface Props {
   departure: Departure
@@ -62,6 +64,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   const [mode, setMode] = useState<'map' | 'list'>('map')
   const [filter, setFilter] = useState('전체')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [extraSpots, setExtraSpots] = useState<ExtraSpot[] | null>(null)
   const [congestion, setCongestion] = useState<CongestionLoadState>({ status: 'loading' })
   const [congestionRetry, setCongestionRetry] = useState(0)
   const congestionDate = useMemo(() => localYyyymmdd(), [])
@@ -81,6 +84,20 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     }
   }, [congestionDate, congestionRetry])
 
+  useEffect(() => {
+    let active = true
+    fetchExtraSpots(CURATED_CONTENT_IDS)
+      .then((spots) => {
+        if (active) setExtraSpots(spots)
+      })
+      .catch((error: unknown) => {
+        console.warn('[명소 지도] 전체 명소를 불러오지 못했습니다.', error)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
   const busyByPoi = useMemo(
     () => congestion.status === 'loaded'
       ? matchBusyPois(POI_POOL, congestion.forecasts, congestionDate)
@@ -93,11 +110,29 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     const pool = filter === '전체' ? POI_POOL : POI_POOL.filter((p) => p.district === filter)
     return [...pool].sort((a, b) => a.walkMinutes - b.walkMinutes)
   }, [filter])
+  const filteredExtraSpots = useMemo(
+    () => extraSpots?.filter((spot) => filter === '전체' || spot.district === filter) ?? [],
+    [extraSpots, filter],
+  )
+  const extraDisplayPois = useMemo(
+    () => filteredExtraSpots.map((spot) => toDisplayPoi(spot, departure)),
+    [departure, filteredExtraSpots],
+  )
+  const selectedExtraPoi = useMemo(
+    () => extraDisplayPois.find((poi) => poi.id === selectedId) ?? null,
+    [extraDisplayPois, selectedId],
+  )
 
   // 필터가 바뀌어 선택 핀이 목록에서 빠지면 선택 해제
   useEffect(() => {
-    if (selectedId && !list.some((p) => p.id === selectedId)) setSelectedId(null)
-  }, [list, selectedId])
+    if (
+      selectedId
+      && !list.some((poi) => poi.id === selectedId)
+      && !filteredExtraSpots.some((spot) => spot.id === selectedId)
+    ) {
+      setSelectedId(null)
+    }
+  }, [filteredExtraSpots, list, selectedId])
 
   // ── 핀 → 카드 단방향 동기화 ──
   // 카드 스트립 스크롤은 지도를 움직이지 않는다(브라우즈 전용). 선택·지도 이동은
@@ -167,14 +202,22 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             departure={departure}
             selectedId={selectedId}
             busyPoiIds={busyPoiIds}
+            extraSpots={filteredExtraSpots}
             onPick={pick}
             onOpen={onSelect}
           />
-          <CongestionStatus
-            state={congestion}
-            count={busyPoiIds.size}
-            onRetry={() => setCongestionRetry((value) => value + 1)}
-          />
+          <div className="map-status-stack">
+            <CongestionStatus
+              state={congestion}
+              count={busyPoiIds.size}
+              onRetry={() => setCongestionRetry((value) => value + 1)}
+            />
+            {extraSpots && (
+              <div className="extra-spots-status" role="status">
+                큐레이션 {POI_POOL.length}곳 + 관광공사 등록 명소 {extraSpots.length}곳
+              </div>
+            )}
+          </div>
 
           {/* 하단 카드 스트립 — 브라우즈 전용. 스크롤해도 지도는 움직이지 않는다(핀 탭으로만 이동). */}
           <div
@@ -238,6 +281,41 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
               )
             })}
           </div>
+          {selectedExtraPoi && (() => {
+            const dir = directionOf(selectedExtraPoi.direction)
+            return (
+              <div
+                className="extra-spot-card motion-card-enter"
+                style={{
+                  position: 'absolute',
+                  left: 32,
+                  right: 32,
+                  bottom: 'calc(32px + env(safe-area-inset-bottom))',
+                  zIndex: 11,
+                  padding: '13px 14px 14px',
+                  border: '1.5px solid rgba(127,156,199,.32)',
+                  borderRadius: 20,
+                  background: '#fff',
+                  boxShadow: '0 14px 30px -12px rgba(20,50,140,.36)',
+                }}
+              >
+                <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedExtraPoi.name}
+                </div>
+                <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                  {selectedExtraPoi.category} · {selectedExtraPoi.district} · {dir.label}쪽 도보 {selectedExtraPoi.walkMinutes}분
+                </div>
+                <button
+                  className="btn btn-blue"
+                  type="button"
+                  onClick={() => onSelect(selectedExtraPoi)}
+                  style={{ marginTop: 9, width: '100%', minHeight: 44, borderRadius: 13, fontSize: 13.5 }}
+                >
+                  자세히 보기
+                </button>
+              </div>
+            )
+          })()}
           </div>
           <SourceLine style={{ flex: 'none', margin: '4px 16px calc(82px + env(safe-area-inset-bottom))' }} />
         </>

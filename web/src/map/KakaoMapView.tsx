@@ -14,6 +14,18 @@ interface PoiOverlayRecord extends PoiOverlayHost {
   overlay: KakaoCustomOverlay
 }
 
+type ExtraSpot = NonNullable<MapViewProps['extraSpots']>[number]
+const EMPTY_EXTRA_SPOTS: readonly ExtraSpot[] = []
+
+interface ExtraOverlayHost {
+  spotId: string
+  host: HTMLDivElement
+}
+
+interface ExtraOverlayRecord extends ExtraOverlayHost {
+  overlay: KakaoCustomOverlay
+}
+
 interface PoiPinProps {
   poi: Poi
   selected: boolean
@@ -104,6 +116,30 @@ function PoiPin({ poi, selected, busy, order, showLabel, onPick, onOpen }: PoiPi
   )
 }
 
+function ExtraSpotPin({ spot, selected, showLabel, onPick }: {
+  spot: ExtraSpot
+  selected: boolean
+  showLabel: boolean
+  onPick: (id: string | null) => void
+}) {
+  return (
+    <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>
+      <button
+        className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
+        type="button"
+        aria-label={spot.name}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation()
+          onPick(spot.id)
+        }}
+      >
+        {showLabel && <span className="map-extra-spot__label">{spot.name}</span>}
+      </button>
+    </div>
+  )
+}
+
 function DeparturePin({ name }: { name: string }) {
   return (
     <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>
@@ -117,24 +153,36 @@ function DeparturePin({ name }: { name: string }) {
 }
 
 /** 카카오 베이스맵 위에 기존 핀·프리뷰·경로 디자인을 DOM 오버레이로 유지한다. */
-export function KakaoMapView({ pois, departure, selectedId, busyPoiIds, onPick, onOpen, courseOrder }: MapViewProps) {
+export function KakaoMapView({
+  pois,
+  departure,
+  selectedId,
+  busyPoiIds,
+  extraSpots = EMPTY_EXTRA_SPOTS,
+  onPick,
+  onOpen,
+  courseOrder,
+}: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<KakaoMap | null>(null)
   const mapsRef = useRef<KakaoMapsNs | null>(window.kakao?.maps ?? null)
   const routeRef = useRef<KakaoPolyline | null>(null)
   const poiOverlaysRef = useRef<PoiOverlayRecord[]>([])
+  const extraOverlaysRef = useRef<ExtraOverlayRecord[]>([])
   const selectionPanTimerRef = useRef<number | null>(null)
   const initialDepartureRef = useRef(departure)
   const onPickRef = useRef(onPick)
   const [ready, setReady] = useState(false)
   const [level, setLevel] = useState(7)
   const [poiHosts, setPoiHosts] = useState<PoiOverlayHost[]>([])
+  const [extraHosts, setExtraHosts] = useState<ExtraOverlayHost[]>([])
   const [departureHost, setDepartureHost] = useState<HTMLDivElement | null>(null)
 
   onPickRef.current = onPick
 
   const poiById = useMemo(() => new Map(pois.map((poi) => [poi.id, poi])), [pois])
+  const extraById = useMemo(() => new Map(extraSpots.map((spot) => [spot.id, spot])), [extraSpots])
   const orderNum = useMemo(() => {
     const order = new Map<string, number>()
     courseOrder?.forEach((id, index) => order.set(id, index + 1))
@@ -196,9 +244,10 @@ export function KakaoMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
 
     const bounds = new maps.LatLngBounds()
     for (const poi of pois) bounds.extend(new maps.LatLng(poi.lat, poi.lon))
+    for (const spot of extraSpots) bounds.extend(new maps.LatLng(spot.lat, spot.lon))
     bounds.extend(new maps.LatLng(departure.lat, departure.lon))
     map.setBounds(bounds, 64, 44, 196, 44)
-  }, [departure.lat, departure.lon, pois])
+  }, [departure.lat, departure.lon, extraSpots, pois])
 
   useEffect(() => {
     if (ready) fitAll()
@@ -239,6 +288,40 @@ export function KakaoMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
       record.overlay.setZIndex(zIndex)
     }
   }, [busyPoiIds, poiById, poiHosts, selectedId])
+
+  useEffect(() => {
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!ready || !maps || !map) return
+
+    const records = extraSpots.map((spot) => {
+      const host = document.createElement('div')
+      const overlay = new maps.CustomOverlay({
+        position: new maps.LatLng(spot.lat, spot.lon),
+        content: host,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        zIndex: 5,
+        clickable: true,
+      })
+      overlay.setMap(map)
+      return { spotId: spot.id, host, overlay }
+    })
+
+    extraOverlaysRef.current = records
+    setExtraHosts(records.map(({ spotId, host }) => ({ spotId, host })))
+
+    return () => {
+      records.forEach(({ overlay }) => overlay.setMap(null))
+      if (extraOverlaysRef.current === records) extraOverlaysRef.current = []
+    }
+  }, [extraSpots, ready])
+
+  useEffect(() => {
+    for (const record of extraOverlaysRef.current) {
+      record.overlay.setZIndex(record.spotId === selectedId ? 9 : 5)
+    }
+  }, [extraHosts, selectedId])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -310,10 +393,10 @@ export function KakaoMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
     if (!ready || !selectedId) return
     const maps = mapsRef.current
     const map = mapRef.current
-    const poi = poiById.get(selectedId)
-    if (!maps || !map || !poi) return
+    const point = poiById.get(selectedId) ?? extraById.get(selectedId)
+    if (!maps || !map || !point) return
 
-    map.panTo(new maps.LatLng(poi.lat, poi.lon))
+    map.panTo(new maps.LatLng(point.lat, point.lon))
     const timeoutId = window.setTimeout(() => {
       const height = wrapRef.current?.clientHeight ?? 0
       if (mapRef.current === map) map.panBy(0, Math.round(height * 0.12))
@@ -324,7 +407,7 @@ export function KakaoMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
       window.clearTimeout(timeoutId)
       if (selectionPanTimerRef.current === timeoutId) selectionPanTimerRef.current = null
     }
-  }, [poiById, ready, selectedId])
+  }, [extraById, poiById, ready, selectedId])
 
   const zoomIn = () => {
     const map = mapRef.current
@@ -356,6 +439,21 @@ export function KakaoMapView({ pois, departure, selectedId, busyPoiIds, onPick, 
           />,
           host,
           poiId,
+        )
+      })}
+      {extraHosts.map(({ spotId, host }) => {
+        const spot = extraById.get(spotId)
+        if (!spot) return null
+        return createPortal(
+          <ExtraSpotPin
+            key={spotId}
+            spot={spot}
+            selected={spotId === selectedId}
+            showLabel={level <= 4}
+            onPick={onPick}
+          />,
+          host,
+          spotId,
         )
       })}
       {departureHost && createPortal(<DeparturePin name={departure.name} />, departureHost)}
