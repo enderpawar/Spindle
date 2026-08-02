@@ -28,6 +28,18 @@ function hasUsableCoords(point: CourseWaypoint): boolean {
 }
 
 /**
+ * 현재 위치에서 코스 1번 장소로 가는 카카오맵 목적지 전용 링크.
+ *
+ * Spindle은 현재 위치를 URL에 넣지 않는다. 사용자가 링크를 연 뒤 카카오맵이 자체 권한으로
+ * 출발지를 정하므로, 첫 장소 좌표가 유효하지 않으면 다음 장소로 건너뛰지 않고 `null`을 반환한다.
+ */
+export function kakaoMapFirstStopDirectionsUrl(stops: CourseWaypoint[]): string | null {
+  const first = stops[0]
+  if (!first || !hasUsableCoords(first)) return null
+  return kakaoMapDirectionsUrl(first.name, first.lat, first.lon)
+}
+
+/**
  * 확정 코스의 방문 순서를 그대로 넘기는 카카오맵 도보 길찾기 링크 (docs/course.md §7).
  *
  * 공개 관광지의 이름·좌표·순서만 URL에 담는다 — 사용자 GPS, 기기 방위각, GPS 정확도,

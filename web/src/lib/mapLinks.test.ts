@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { kakaoMapCourseWalkUrl, kakaoMapDirectionsUrl, kakaoMapSearchUrl } from './mapLinks'
+import {
+  kakaoMapCourseWalkUrl,
+  kakaoMapDirectionsUrl,
+  kakaoMapFirstStopDirectionsUrl,
+  kakaoMapSearchUrl,
+} from './mapLinks'
 
 describe('kakaoMapSearchUrl', () => {
   it('카카오맵 부산 장소 검색 링크를 만든다', () => {
@@ -82,5 +87,25 @@ describe('kakaoMapCourseWalkUrl', () => {
     expect(url).not.toContain(String(userLon))
     // 좌표 토큰은 코스 장소 수만큼만 존재한다 — 현재 위치·출발점·방위각이 끼어들 자리가 없다
     expect(url.match(/,3[0-9]\.[0-9]+,1[0-9]{2}\.[0-9]+/g)).toHaveLength(3)
+  })
+})
+
+describe('kakaoMapFirstStopDirectionsUrl', () => {
+  const 첫장소 = { name: '부산영화체험박물관', lat: 35.1011, lon: 129.0323 }
+  const 다음장소 = { name: '용두산공원', lat: 35.1007, lon: 129.0326 }
+
+  it('현재 위치를 넣지 않고 코스 1번 장소만 목적지로 연다', () => {
+    expect(kakaoMapFirstStopDirectionsUrl([첫장소, 다음장소])).toBe(
+      `https://map.kakao.com/link/to/${encodeURIComponent('부산영화체험박물관')},35.1011,129.0323`,
+    )
+  })
+
+  it('1번 장소 좌표가 유효하지 않으면 2번 장소로 건너뛰지 않는다', () => {
+    expect(
+      kakaoMapFirstStopDirectionsUrl([
+        { name: '좌표없음', lat: Number.NaN, lon: Number.NaN },
+        다음장소,
+      ]),
+    ).toBeNull()
   })
 })

@@ -4,7 +4,7 @@ import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
 import { MapView } from '../map/MapView'
-import { kakaoMapCourseWalkUrl, kakaoMapDirectionsUrl } from '../lib/mapLinks'
+import { kakaoMapCourseWalkUrl, kakaoMapDirectionsUrl, kakaoMapFirstStopDirectionsUrl } from '../lib/mapLinks'
 import { markVisited, useVisited } from '../lib/visited'
 import type { Departure } from '../mock/pois'
 import type { CourseStopView, ReadyCourse } from '../engine/spinCourse'
@@ -47,6 +47,9 @@ export function CourseScreen({ course, departure, onBack, onRespin, onStartGuida
   // 공개 관광지 이름·좌표·순서만 넘기고 출발점·현재 위치·방위각은 넘기지 않는다.
   // 좌표가 유효한 장소가 2곳 미만이면 null → 장소별 [카카오맵 길찾기]만 남긴다.
   const courseWalkHref = kakaoMapCourseWalkUrl(
+    stops.map((s) => ({ name: s.poi.name, lat: s.poi.lat, lon: s.poi.lon })),
+  )
+  const firstStopDirectionsHref = kakaoMapFirstStopDirectionsUrl(
     stops.map((s) => ({ name: s.poi.name, lat: s.poi.lat, lon: s.poi.lon })),
   )
 
@@ -181,7 +184,21 @@ export function CourseScreen({ course, departure, onBack, onRespin, onStartGuida
         })}
       </div>
 
-      {/* 코스 단위 보조 CTA — 1→2→3→4 순서만 넘기고 실제 경로 계산·안내는 카카오맵이 맡는다 */}
+      {/* 현재 위치→1번 장소는 목적지 전용 링크로 먼저 안내한다. 현재 위치는 카카오맵이 자체 처리한다. */}
+      {firstStopDirectionsHref && stops[0] && (
+        <a
+          href={firstStopDirectionsHref}
+          target="_blank"
+          rel="noreferrer"
+          className="btn"
+          onClick={() => recordNavigation(stops[0])}
+          style={{ flex: 'none', margin: '0 20px 8px', height: 48, background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
+        >
+          먼저 1번 장소로 길찾기
+        </a>
+      )}
+
+      {/* 전체 코스 보기는 1→2→3→4 순서만 넘기고 실제 경로 계산은 카카오맵이 맡는다 */}
       {courseWalkHref && (
         <a
           href={courseWalkHref}
@@ -190,13 +207,13 @@ export function CourseScreen({ course, departure, onBack, onRespin, onStartGuida
           className="btn"
           style={{ flex: 'none', margin: '0 20px 8px', height: 46, background: '#fff', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 14, textDecoration: 'none' }}
         >
-          카카오맵에서 코스 길찾기
+          1번부터 전체 코스 보기
         </a>
       )}
 
       <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 600 }}>
-        예상 이동시간이며 실제 도보 경로는 카카오맵에서 확인해 주세요.
-        {courseWalkHref && ' 코스 길찾기는 장소 순서만 넘기며, 새 화면이 열리지 않으면 장소별 길찾기를 이용해 주세요.'}
+        먼저 1번 장소까지 카카오맵에서 안내받은 뒤 코스를 시작해 주세요.
+        {courseWalkHref && ' 전체 코스 보기는 1번 장소부터의 방문 순서를 표시합니다.'}
       </p>
       <SourceLine style={{ flex: 'none', margin: '0 20px 4px' }} />
 
