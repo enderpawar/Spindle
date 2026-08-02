@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached } from './api/details'
+import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
 import { recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
@@ -87,6 +88,10 @@ function App() {
     setRec(nextRec)
     setCandidateIndex(0)
     setPoiReturn('home')
+    // 축제 목록은 방위와 무관하고 날짜로 세션 캐싱되므로 지금 데워둔다 — 결과 카드가
+    // 마운트 900ms 뒤 조회할 때 캐시에 이미 있어, 축제 카드가 네트워크 지연만큼 늦게
+    // 튀어나오지 않고 연출 타이밍대로 뜬다. 호출 수는 그대로(세션 캐시 디듀프).
+    void fetchOldTownFestivalsCached(todayYyyymmdd()).catch(() => {})
     const firstContentId = nextRec.candidates[0]?.contentId
     if (firstContentId) {
       // 리빌 연출(~700ms) 동안 결과 카드가 마운트 시 다시 호출할 상세 3종을 미리 데운다.
@@ -114,6 +119,7 @@ function App() {
     // 화면 전환과 겹쳐 상세를 미리 데운다 — 결과 카드가 즉시 이미지·방문정보를 채운다.
     void fetchPoiDetailCached(poi.contentId).catch(() => {})
     void fetchPoiCardDetailCached(poi.contentId).catch(() => {})
+    void fetchOldTownFestivalsCached(todayYyyymmdd()).catch(() => {})
     goTo('result')
   }
 
