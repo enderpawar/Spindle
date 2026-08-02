@@ -16,6 +16,7 @@
 - [ ] `npm run check` 로컬에서 통과 (guard + web + proxy 품질 게이트)
 - [ ] `npm run pwa:verify` 통과 (manifest·service worker 캐시 정책 검증)
 - [ ] TourAPI **운영계정** 인증키 확보 (Phase 0 항목, 발급 완료 상태여야 함)
+- [ ] 공공데이터포털에서 `한국관광공사_관광지 집중률 방문자 추이 예측 정보` 별도 활용신청 승인. 미승인 상태에서는 명소 지도에 재시도 안내만 표시되고 핵심 탐색 동선은 정상 동작
 
 ## 1. Cloudflare 계정 준비 (최초 1회, 사람)
 

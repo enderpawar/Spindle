@@ -23,6 +23,8 @@ interface Props {
   pois: Poi[]
   departure: Departure
   selectedId: string | null
+  /** 당일 혼잡 예상 기준을 넘은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
+  busyPoiIds?: ReadonlySet<string>
   /** 핀 탭(id) 또는 빈 바다 탭(null) */
   onPick: (id: string | null) => void
   /** 선택 핀의 사진 프리뷰를 탭했을 때 상세 카드 열기 */
@@ -67,7 +69,7 @@ function pathMidpoint(d: string): { x: number; y: number } {
   return { x: nums[i], y: nums[i + 1] }
 }
 
-export function MapView({ pois, departure, selectedId, onPick, onOpen, courseOrder }: Props) {
+export function MapView({ pois, departure, selectedId, busyPoiIds, onPick, onOpen, courseOrder }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [cam, setCam] = useState<Cam | null>(null)
@@ -505,6 +507,7 @@ export function MapView({ pois, departure, selectedId, onPick, onOpen, courseOrd
         {pins.map(({ poi, x, y, color }) => {
           const s = toScreen(x, y)
           const sel = poi.id === selectedId
+          const busy = busyPoiIds?.has(poi.id) ?? false
           const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
           const sizePx = sel ? 40 : inCourse ? 34 : poi.tier === 1 ? 31 : 26
@@ -516,7 +519,7 @@ export function MapView({ pois, departure, selectedId, onPick, onOpen, courseOrd
                 left: 0,
                 top: 0,
                 transform: `translate3d(${s.x}px,${s.y}px,0)`,
-                zIndex: sel ? 6 : poi.tier === 1 ? 3 : 2,
+                zIndex: sel ? 6 : busy ? 4 : poi.tier === 1 ? 3 : 2,
                 pointerEvents: 'none',
                 willChange: 'transform',
               }}
@@ -527,7 +530,7 @@ export function MapView({ pois, departure, selectedId, onPick, onOpen, courseOrd
                   e.stopPropagation()
                   onPick(poi.id)
                 }}
-                aria-label={poi.name}
+                aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : poi.name}
                 style={{
                   position: 'absolute',
                   left: 0,
@@ -555,6 +558,15 @@ export function MapView({ pois, departure, selectedId, onPick, onOpen, courseOrd
                     <circle cx="15" cy="14.4" r="4.6" fill="#fff" />
                   )}
                 </svg>
+                {busy && (
+                  <span
+                    className="map-congestion-pin"
+                    style={{ left: sizePx * 0.18, top: sizePx * -1.35 }}
+                    aria-hidden="true"
+                  >
+                    !
+                  </span>
+                )}
                 {(sel || showPoiLabels || inCourse) && (
                   <span
                     style={{

@@ -2150,6 +2150,126 @@ button.is-pressing:not(:disabled) {
   transition-timing-function: var(--ease-touch-down);
 }
 
+/* 명소 지도 혼잡 예측. 현재 인원수가 아닌 당일 예측임을 텍스트로 함께 전달한다. */
+.map-congestion-pin {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--l-orange);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(126, 47, 26, 0.3);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.congestion-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 12;
+  display: flex;
+  min-height: 36px;
+  max-width: calc(100% - 88px);
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 7px 18px -12px rgba(20, 40, 90, 0.45);
+  color: var(--l-ink-2);
+  font-size: 11.5px;
+  font-weight: 750;
+  line-height: 1.35;
+  backdrop-filter: blur(8px);
+}
+
+.congestion-status--error {
+  align-items: center;
+}
+
+.congestion-status button {
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--l-soft);
+  color: var(--l-primary);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.congestion-badge {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  color: #a9462d;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.congestion-status .congestion-badge {
+  min-height: 20px;
+  margin-top: 0;
+}
+
+.congestion-badge__mark {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--l-orange);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* 리스트 모드에서는 상태가 문서 흐름을 차지해 첫 카드를 가리지 않는다. */
+.motion-card-list > .congestion-status {
+  position: static;
+  max-width: none;
+  flex: none;
+  align-self: stretch;
+}
+
+@media (max-width: 320px) {
+  .spots-header {
+    gap: 8px;
+    padding-inline: 12px !important;
+  }
+
+  .spots-title {
+    font-size: 18px !important;
+    white-space: nowrap;
+  }
+
+  .spots-subtitle {
+    max-width: 116px;
+    font-size: 11px !important;
+    line-height: 1.3;
+  }
+
+  .spots-view-toggle button {
+    padding-inline: 9px !important;
+    font-size: 11.5px !important;
+  }
+}
+
 /* ui.md 공통 규칙 — 애니메이션 절제: 시스템 설정 존중 */
 @media (prefers-reduced-motion: reduce) {
   *,

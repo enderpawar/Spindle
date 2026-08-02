@@ -3,6 +3,7 @@ import {
   isAllowedImageHost,
   isValidContentId,
   normalizeImageUrl,
+  tourApiBaseFor,
   validateRequest,
 } from "../src/validate";
 
@@ -62,6 +63,37 @@ describe("validateRequest", () => {
   it("detailIntro2 등 상세 계열도 화이트리스트로 통과한다", () => {
     const r = run("/api/detailIntro2", "contentId=126508&contentTypeId=12");
     expect(r.ok).toBe(true);
+  });
+
+  it("관광지 혼잡 예측은 별도 서비스와 고정 지역코드 파라미터로 통과한다", () => {
+    const r = run(
+      "/api/tatsCnctrRatedList",
+      "areaCd=26&signguCd=26200&pageNo=1&numOfRows=100",
+    );
+    expect(r.ok).toBe(true);
+    expect(tourApiBaseFor("tatsCnctrRatedList")).toContain("TatsCnctrRateService");
+    expect(tourApiBaseFor("areaBasedList2")).toContain("KorService2");
+  });
+
+  it("서로 다른 TourAPI 서비스의 지역코드 파라미터를 섞으면 거부한다", () => {
+    const wrongForCongestion = run(
+      "/api/tatsCnctrRatedList",
+      "areaCode=6&sigunguCode=4&pageNo=1&numOfRows=100",
+    );
+    const wrongForPoi = run(
+      "/api/areaBasedList2",
+      "areaCd=26&signguCd=26200&pageNo=1&numOfRows=100",
+    );
+    expect(wrongForCongestion.ok).toBe(false);
+    expect(wrongForPoi.ok).toBe(false);
+  });
+
+  it("혼잡 예측 호출도 좌표·방위각 파라미터를 거부한다", () => {
+    for (const q of ["mapX=129.03", "mapY=35.1", "heading=180", "bearing=180"]) {
+      const r = run("/api/tatsCnctrRatedList", q);
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.status).toBe(400);
+    }
   });
 });
 

@@ -5,6 +5,8 @@
  */
 
 export const TOURAPI_BASE = "https://apis.data.go.kr/B551011/KorService2";
+export const TOURAPI_CONGESTION_BASE =
+  "https://apis.data.go.kr/B551011/TatsCnctrRateService";
 
 // tourapi 스킬 "허용 엔드포인트" 표와 1:1 — 이 목록 밖은 사용 금지
 export const ALLOWED_ENDPOINTS = new Set([
@@ -14,19 +16,19 @@ export const ALLOWED_ENDPOINTS = new Set([
   "detailImage2",
   "searchFestival2",
   "areaCode2",
+  "tatsCnctrRatedList",
 ]);
 
-// 클라이언트가 보낼 수 있는 파라미터 화이트리스트 — 좌표 파라미터는 여기 없으므로 자동 거부
-export const ALLOWED_PARAMS = new Set([
-  "areaCode",
-  "sigunguCode",
-  "contentId",
-  "contentTypeId",
-  "pageNo",
-  "numOfRows",
-  "eventStartDate",
-  "arrange",
-]);
+// 엔드포인트별 파라미터 화이트리스트. 두 TourAPI 서비스의 지역코드 체계를 섞지 않는다.
+const ENDPOINT_PARAMS: Readonly<Record<string, ReadonlySet<string>>> = {
+  areaBasedList2: new Set(["areaCode", "sigunguCode", "contentTypeId", "pageNo", "numOfRows", "arrange"]),
+  detailCommon2: new Set(["contentId"]),
+  detailIntro2: new Set(["contentId", "contentTypeId"]),
+  detailImage2: new Set(["contentId", "pageNo", "numOfRows"]),
+  searchFestival2: new Set(["areaCode", "sigunguCode", "eventStartDate", "pageNo", "numOfRows", "arrange"]),
+  areaCode2: new Set(["areaCode", "pageNo", "numOfRows"]),
+  tatsCnctrRatedList: new Set(["areaCd", "signguCd", "pageNo", "numOfRows"]),
+};
 
 // 파라미터 값은 짧은 영숫자만 (TourAPI 코드·ID·날짜 형태)
 const VALUE_RE = /^[A-Za-z0-9]{1,32}$/;
@@ -61,6 +63,11 @@ export type ValidationResult =
   | { ok: true; endpoint: string; params: Array<[string, string]> }
   | { ok: false; status: number; message: string };
 
+/** 허용된 엔드포인트가 속한 upstream을 선택한다. */
+export function tourApiBaseFor(endpoint: string): string {
+  return endpoint === "tatsCnctrRatedList" ? TOURAPI_CONGESTION_BASE : TOURAPI_BASE;
+}
+
 export function validateRequest(
   pathname: string,
   searchParams: URLSearchParams,
@@ -73,9 +80,10 @@ export function validateRequest(
     return { ok: false, status: 400, message: `endpoint not allowed: ${endpoint}` };
   }
 
+  const allowedParams = ENDPOINT_PARAMS[endpoint];
   const params: Array<[string, string]> = [];
   for (const [key, value] of searchParams) {
-    if (!ALLOWED_PARAMS.has(key)) {
+    if (!allowedParams.has(key)) {
       return { ok: false, status: 400, message: `param not allowed: ${key}` };
     }
     if (!VALUE_RE.test(value)) {

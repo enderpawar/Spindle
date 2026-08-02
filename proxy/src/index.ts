@@ -8,6 +8,7 @@ import {
   isAllowedImageHost,
   isValidContentId,
   normalizeImageUrl,
+  tourApiBaseFor,
   validateRequest,
 } from "./validate";
 
@@ -138,7 +139,7 @@ export default {
       return jsonError(env, 500, "service key not configured");
     }
 
-    const upstream = new URL(`${TOURAPI_BASE}/${result.endpoint}`);
+    const upstream = new URL(`${tourApiBaseFor(result.endpoint)}/${result.endpoint}`);
     for (const [key, value] of result.params) upstream.searchParams.set(key, value);
     // 디코딩된 키를 넣으면 URLSearchParams가 인코딩을 수행한다
     upstream.searchParams.set("serviceKey", env.TOURAPI_SERVICE_KEY);

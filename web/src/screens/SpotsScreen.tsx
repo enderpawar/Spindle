@@ -1,4 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  fetchOldTownCongestionCached,
+  localYyyymmdd,
+  matchBusyPois,
+  type CongestionForecast,
+} from '../api/congestion'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
@@ -14,11 +20,74 @@ interface Props {
   onSelect: (poi: Poi) => void
 }
 
+type CongestionLoadState =
+  | { status: 'loading' }
+  | { status: 'loaded'; forecasts: CongestionForecast[] }
+  | { status: 'error' }
+
+function CongestionBadge() {
+  return (
+    <span className="congestion-badge">
+      <span className="congestion-badge__mark" aria-hidden="true">!</span>
+      오늘 혼잡 예상
+    </span>
+  )
+}
+
+function CongestionStatus({ state, count, onRetry }: {
+  state: CongestionLoadState
+  count: number
+  onRetry: () => void
+}) {
+  if (state.status === 'error') {
+    return (
+      <div className="congestion-status congestion-status--error" role="alert">
+        <span>혼잡 예측을 불러오지 못했어요</span>
+        <button type="button" onClick={onRetry}>다시 시도</button>
+      </div>
+    )
+  }
+  if (state.status === 'loading') {
+    return <div className="congestion-status" role="status">혼잡 예측 확인 중</div>
+  }
+  return (
+    <div className="congestion-status" role="status">
+      {count > 0 ? <CongestionBadge /> : '오늘 혼잡 예상 명소 없음'}
+    </div>
+  )
+}
+
 /** 명소 탭 — 지도(기본)·리스트로 원도심·영도 POI 둘러보기 (Phase 2에서 areaBasedList2 연동) */
 export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   const [mode, setMode] = useState<'map' | 'list'>('map')
   const [filter, setFilter] = useState('전체')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [congestion, setCongestion] = useState<CongestionLoadState>({ status: 'loading' })
+  const [congestionRetry, setCongestionRetry] = useState(0)
+  const congestionDate = useMemo(() => localYyyymmdd(), [])
+
+  useEffect(() => {
+    let active = true
+    setCongestion({ status: 'loading' })
+    fetchOldTownCongestionCached(congestionDate)
+      .then((forecasts) => {
+        if (active) setCongestion({ status: 'loaded', forecasts })
+      })
+      .catch(() => {
+        if (active) setCongestion({ status: 'error' })
+      })
+    return () => {
+      active = false
+    }
+  }, [congestionDate, congestionRetry])
+
+  const busyByPoi = useMemo(
+    () => congestion.status === 'loaded'
+      ? matchBusyPois(POI_POOL, congestion.forecasts, congestionDate)
+      : new Map<string, CongestionForecast>(),
+    [congestion, congestionDate],
+  )
+  const busyPoiIds = useMemo(() => new Set(busyByPoi.keys()), [busyByPoi])
 
   const list = useMemo(() => {
     const pool = filter === '전체' ? POI_POOL : POI_POOL.filter((p) => p.district === filter)
@@ -48,12 +117,12 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
-      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px 16px 0', zIndex: 5 }}>
+      <header className="spots-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px 16px 0', zIndex: 5 }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--l-ink)' }}>명소 둘러보기</div>
-          <div style={{ marginTop: 2, fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>원도심과 영도, {POI_POOL.length}곳의 이야기</div>
+          <div className="spots-title" style={{ fontSize: 22, fontWeight: 900, color: 'var(--l-ink)' }}>명소 둘러보기</div>
+          <div className="spots-subtitle" style={{ marginTop: 2, fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>원도심과 영도, {POI_POOL.length}곳의 이야기</div>
         </div>
-        <div style={{ display: 'flex', padding: 3, gap: 2, borderRadius: 14, background: '#fff', boxShadow: '0 6px 14px -8px rgba(20,40,90,.25)' }}>
+        <div className="spots-view-toggle" style={{ display: 'flex', flex: 'none', padding: 3, gap: 2, borderRadius: 14, background: '#fff', boxShadow: '0 6px 14px -8px rgba(20,40,90,.25)' }}>
           {(
             [
               ['map', '지도'],
@@ -71,6 +140,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                 borderRadius: 11,
                 fontSize: 12.5,
                 fontWeight: 800,
+                whiteSpace: 'nowrap',
                 background: mode === m ? 'var(--l-primary)' : 'transparent',
                 color: mode === m ? '#fff' : '#7089b8',
               }}
@@ -92,7 +162,19 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
       {mode === 'map' ? (
         <>
           <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.6)' }}>
-          <MapView pois={list} departure={departure} selectedId={selectedId} onPick={pick} onOpen={onSelect} />
+          <MapView
+            pois={list}
+            departure={departure}
+            selectedId={selectedId}
+            busyPoiIds={busyPoiIds}
+            onPick={pick}
+            onOpen={onSelect}
+          />
+          <CongestionStatus
+            state={congestion}
+            count={busyPoiIds.size}
+            onRetry={() => setCongestionRetry((value) => value + 1)}
+          />
 
           {/* 하단 카드 스트립 — 브라우즈 전용. 스크롤해도 지도는 움직이지 않는다(핀 탭으로만 이동). */}
           <div
@@ -114,6 +196,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             {list.map((poi) => {
               const dir = directionOf(poi.direction)
               const sel = poi.id === selectedId
+              const busy = busyByPoi.has(poi.id)
               return (
                 <div
                   key={poi.id}
@@ -140,6 +223,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                     {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
                   </div>
+                  {busy && <CongestionBadge />}
                   <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {poi.story}
                   </div>
@@ -159,8 +243,14 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         </>
       ) : (
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(92px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <CongestionStatus
+            state={congestion}
+            count={busyPoiIds.size}
+            onRetry={() => setCongestionRetry((value) => value + 1)}
+          />
           {list.map((poi) => {
             const dir = directionOf(poi.direction)
+            const busy = busyByPoi.has(poi.id)
             return (
               <button
                 key={poi.id}
@@ -181,6 +271,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                     {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
                   </div>
+                  {busy && <CongestionBadge />}
                   <div style={{ marginTop: 4, fontSize: 11.5, lineHeight: 1.45, fontWeight: 500, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{poi.story}</div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
