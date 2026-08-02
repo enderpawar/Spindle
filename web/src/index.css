@@ -513,6 +513,78 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   white-space: nowrap;
 }
 
+.home-mission-card {
+  position: relative;
+  display: block;
+  width: calc(100% - 32px);
+  min-height: 148px;
+  margin: 24px 16px 0;
+  padding: 18px 116px 18px 18px;
+  overflow: hidden;
+  border: 1px solid #d7e5ff;
+  border-radius: 20px;
+  background: #eef4ff;
+  color: var(--l-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.home-mission-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-mission-label {
+  color: var(--l-primary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.home-mission-title {
+  display: -webkit-box;
+  margin-top: 5px;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: -0.3px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-mission-description {
+  display: -webkit-box;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--l-ink-2);
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-mission-cta {
+  margin-top: 11px;
+  color: var(--l-primary-deep);
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.home-mission-mascot {
+  position: absolute;
+  right: 3px;
+  bottom: -10px;
+  width: 108px;
+  max-width: none;
+  pointer-events: none;
+}
+
 @media (max-width: 359px) {
   .home-header {
     gap: 6px;
@@ -589,11 +661,32 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   .home-pick-title {
     font-size: 14px;
   }
+
+  .home-mission-card {
+    width: calc(100% - 24px);
+    min-height: 146px;
+    margin-inline: 12px;
+    padding: 16px 88px 16px 16px;
+  }
+
+  .home-mission-mascot {
+    right: -4px;
+    width: 86px;
+  }
 }
 
 @media (max-width: 299px) {
   .home-pick-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-mission-card {
+    padding-right: 72px;
+  }
+
+  .home-mission-mascot {
+    right: -9px;
+    width: 76px;
   }
 }
 
