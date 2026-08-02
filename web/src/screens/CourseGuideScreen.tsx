@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DemoGpsJoystick } from '../components/DemoGpsJoystick'
 import { PoiPhoto } from '../components/PoiPhoto'
-import { ScreenFrame } from '../components/ScreenFrame'
-import { SourceLine } from '../components/SourceLine'
 import { advanceArrival, guidanceSnapshot, type GuidanceSnapshot, type GuidanceTurn } from '../engine/courseGuidance'
-import { haversineMeters, type GeoPoint } from '../engine/geo'
+import { haversineMeters, movePointMeters, pointBeforeTarget, type GeoPoint } from '../engine/geo'
 import { HeadingSmoother } from '../engine/heading'
 import type { CourseStopView, ReadyCourse } from '../engine/spinCourse'
 import { zoneOf } from '../engine/zones'
 import { copyOf } from '../engine/curation'
 import { kakaoMapDirectionsUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
+import { LocalMapView } from '../map/LocalMapView'
+import type { Departure } from '../mock/pois'
 import { watchCurrentFix } from '../sensors/geolocation'
 import { subscribeHeading, type OrientationPermission } from '../sensors/orientation'
 
@@ -27,10 +28,10 @@ interface WakeLockSentinelLike {
 }
 
 const TURN_COPY: Record<GuidanceTurn, string> = {
-  forward: '직진 방향으로 계속 가요',
-  right: '다음 장소는 오른쪽 방향이에요',
-  left: '다음 장소는 왼쪽 방향이에요',
-  behind: '뒤쪽 방향으로 돌아봐요',
+  forward: '앞쪽으로 계속 이동하세요',
+  right: '오른쪽 방향으로 이동하세요',
+  left: '왼쪽 방향으로 이동하세요',
+  behind: '뒤쪽 방향으로 돌아가세요',
 }
 
 const TURN_ROTATION: Record<GuidanceTurn, number> = {
@@ -41,37 +42,46 @@ const TURN_ROTATION: Record<GuidanceTurn, number> = {
 }
 
 const METHOD_COPY: Record<CourseStopView['method'], string> = {
-  walk: '방향을 따라 걸어가요',
-  bridge: '다리를 건너 이동해야 해요',
+  walk: '방향을 따라 걸어가세요',
+  bridge: '다리를 건너 이동하는 구간이에요',
   transit: '대중교통으로 이동하는 구간이에요',
-  estimate: '카카오맵에서 실제 경로를 먼저 확인해 주세요',
+  estimate: '카카오맵에서 실제 경로를 확인해 주세요',
 }
 
 function distanceLabel(distanceM: number | null): string {
   if (distanceM === null) return '거리 확인 중'
-  if (distanceM < 1000) return `직선거리 약 ${Math.max(0, Math.round(distanceM / 10) * 10)}m`
-  return `직선거리 약 ${(distanceM / 1000).toFixed(1)}km`
+  if (distanceM < 1000) return `${Math.max(0, Math.round(distanceM / 10) * 10)}m 남음`
+  return `${(distanceM / 1000).toFixed(1)}km 남음`
+}
+
+function demoStart(stop: CourseStopView, courseHeading: number, index: number): { point: GeoPoint; heading: number; snapshot: GuidanceSnapshot } {
+  const target = { lat: stop.poi.lat, lng: stop.poi.lon }
+  const bearingToTarget = (courseHeading + index * 42) % 360
+  const point = pointBeforeTarget(target, bearingToTarget, 320 + index * 80)
+  const heading = (bearingToTarget + (index % 2 ? 72 : 0)) % 360
+  return { point, heading, snapshot: guidanceSnapshot(point, target, heading) }
 }
 
 export function CourseGuideScreen({ course, orientationPermission, demo = false, onExit }: Props) {
   const [manualDemo, setManualDemo] = useState(false)
   const isDemo = demo || manualDemo
   const [currentIndex, setCurrentIndex] = useState(0)
+  const currentStop = course.stops[currentIndex]
+  const initialDemo = useMemo(() => demoStart(course.stops[0], course.headingDeg, 0), [course])
   const [status, setStatus] = useState<GuideStatus>(() => demo ? 'guiding' : orientationPermission === 'granted' ? 'locating' : 'error')
-  const [snapshot, setSnapshot] = useState<GuidanceSnapshot | null>(() => demo ? {
-    distanceM: 320,
-    targetBearingDeg: course.headingDeg,
-    relativeDeg: 0,
-    turn: 'forward',
-  } : null)
+  const [snapshot, setSnapshot] = useState<GuidanceSnapshot | null>(() => demo ? initialDemo.snapshot : null)
   const [accuracyM, setAccuracyM] = useState<number | null>(null)
+  const [mapPosition, setMapPosition] = useState<GeoPoint | null>(() => demo ? initialDemo.point : null)
+  const [currentHeading, setCurrentHeading] = useState(() => demo ? initialDemo.heading : course.headingDeg)
   const [errorCopy, setErrorCopy] = useState(() => orientationPermission === 'denied'
     ? '나침반 권한이 없어 방향 안내를 시작할 수 없어요.'
     : orientationPermission === 'unsupported'
       ? '이 기기에서는 나침반 방향을 읽을 수 없어요.'
       : '')
+  const mapPositionRef = useRef<GeoPoint | null>(demo ? initialDemo.point : null)
+  const demoArrivalCountRef = useRef(0)
 
-  const currentStop = course.stops[currentIndex]
+  const targetPoint = useMemo(() => ({ lat: currentStop.poi.lat, lng: currentStop.poi.lon }), [currentStop])
   const tracking = !isDemo && (status === 'locating' || status === 'guiding')
 
   useEffect(() => {
@@ -83,13 +93,13 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
     let arrivalCount = 0
     let wakeLock: WakeLockSentinelLike | null = null
     let stopped = false
-    const target = { lat: currentStop.poi.lat, lng: currentStop.poi.lon }
 
     const updateDirection = () => {
       const heading = smoother.value
       if (!latestPoint || heading === null) return
-      const next = guidanceSnapshot(latestPoint, target, heading, previousTurn)
+      const next = guidanceSnapshot(latestPoint, targetPoint, heading, previousTurn)
       previousTurn = next.turn
+      setCurrentHeading(heading)
       setSnapshot(next)
       setStatus('guiding')
     }
@@ -100,7 +110,7 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
     })
     const headingTimer = window.setTimeout(() => {
       if (smoother.value === null) {
-        setErrorCopy('나침반 방향을 안정적으로 읽지 못했어요. 카카오맵 또는 수동 미리보기를 이용해 주세요.')
+        setErrorCopy('나침반 방향을 안정적으로 읽지 못했어요. 카카오맵 또는 GPS 조이스틱을 이용해 주세요.')
         setStatus('error')
       }
     }, 8_000)
@@ -108,14 +118,16 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
       (fix) => {
         if (stopped) return
         if (!zoneOf(fix.point)) {
-          setErrorCopy('부산 원도심·영도 권역 밖이에요. 카카오맵 또는 수동 미리보기를 이용해 주세요.')
+          setErrorCopy('부산 원도심·영도 권역 밖이에요. 카카오맵 또는 GPS 조이스틱을 이용해 주세요.')
           setStatus('error')
           return
         }
         latestPoint = fix.point
+        mapPositionRef.current = fix.point
+        setMapPosition(fix.point)
         latestAccuracy = fix.accuracyM
         setAccuracyM(fix.accuracyM)
-        const distanceM = haversineMeters(fix.point, target)
+        const distanceM = haversineMeters(fix.point, targetPoint)
         const arrival = advanceArrival(arrivalCount, distanceM, latestAccuracy)
         arrivalCount = arrival.consecutive
         if (arrival.arrived) {
@@ -135,7 +147,7 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
       },
       (error) => {
         setErrorCopy(error.kind === 'denied'
-          ? '위치 권한이 거부됐어요. 권한을 허용하거나 다른 안내를 이용해 주세요.'
+          ? '위치 권한이 거부됐어요. 권한을 허용하거나 GPS 조이스틱을 이용해 주세요.'
           : '현재 위치를 안정적으로 읽지 못했어요.')
         setStatus('error')
       },
@@ -155,17 +167,55 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
     return () => {
       stopped = true
       latestPoint = null
+      mapPositionRef.current = null
       unsubscribeHeading()
       unwatch()
       window.clearTimeout(headingTimer)
       document.removeEventListener('visibilitychange', handleVisibility)
       if (wakeLock) void wakeLock.release().catch(() => {})
     }
-  }, [course.headingDeg, currentStop, tracking])
+  }, [course.headingDeg, currentStop, targetPoint, tracking])
 
-  const showArrival = () => {
-    markVisited(currentStop.poi.id)
-    setStatus('arrived')
+  const applyDemoPosition = useCallback((point: GeoPoint, heading: number, sampleCount = 1) => {
+    mapPositionRef.current = point
+    setMapPosition(point)
+    setCurrentHeading(heading)
+    const next = guidanceSnapshot(point, targetPoint, heading, snapshot?.turn)
+    setSnapshot(next)
+    let progress = { consecutive: demoArrivalCountRef.current, arrived: false }
+    for (let i = 0; i < sampleCount; i += 1) {
+      progress = advanceArrival(progress.consecutive, next.distanceM, 5)
+    }
+    demoArrivalCountRef.current = progress.consecutive
+    if (progress.arrived) {
+      markVisited(currentStop.poi.id)
+      setStatus('arrived')
+    } else {
+      setStatus('guiding')
+    }
+  }, [currentStop.poi.id, snapshot?.turn, targetPoint])
+
+  const moveDemo = useCallback((eastMeters: number, northMeters: number, heading: number) => {
+    const current = mapPositionRef.current
+    if (!current) return
+    applyDemoPosition(movePointMeters(current, eastMeters, northMeters), heading)
+  }, [applyDemoPosition])
+
+  const enableManualDemo = () => {
+    const nextDemo = demoStart(currentStop, course.headingDeg, currentIndex)
+    demoArrivalCountRef.current = 0
+    setManualDemo(true)
+    setSnapshot(nextDemo.snapshot)
+    setCurrentHeading(nextDemo.heading)
+    mapPositionRef.current = nextDemo.point
+    setMapPosition(nextDemo.point)
+    setStatus('guiding')
+  }
+
+  const moveNearDestination = () => {
+    const bearing = snapshot?.targetBearingDeg ?? course.headingDeg
+    const point = pointBeforeTarget(targetPoint, bearing, 38)
+    applyDemoPosition(point, bearing, 2)
   }
 
   const nextStop = () => {
@@ -174,99 +224,118 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
       return
     }
     const nextIndex = currentIndex + 1
+    const nextCourseStop = course.stops[nextIndex]
     setCurrentIndex(nextIndex)
-    setSnapshot(isDemo ? {
-      distanceM: 260 + nextIndex * 90,
-      targetBearingDeg: course.headingDeg,
-      relativeDeg: nextIndex % 2 ? 75 : -65,
-      turn: nextIndex % 2 ? 'right' : 'left',
-    } : null)
     setAccuracyM(null)
-    setStatus(isDemo ? 'guiding' : 'locating')
+    demoArrivalCountRef.current = 0
+    if (isDemo) {
+      const nextDemo = demoStart(nextCourseStop, course.headingDeg, nextIndex)
+      setSnapshot(nextDemo.snapshot)
+      setCurrentHeading(nextDemo.heading)
+      mapPositionRef.current = nextDemo.point
+      setMapPosition(nextDemo.point)
+      setStatus('guiding')
+    } else {
+      setSnapshot(null)
+      setMapPosition(null)
+      mapPositionRef.current = null
+      setStatus('locating')
+    }
   }
 
-  if (status === 'completed') {
-    return (
-      <ScreenFrame style={{ background: 'var(--l-bg)', padding: '24px 22px calc(28px + env(safe-area-inset-bottom))' }}>
-        <div className="course-guide-complete">
-          <span aria-hidden>✦</span>
-          <p>코스 완료</p>
-          <h1>오늘의 코스를<br />모두 만났어요</h1>
-          <p>{course.stops.length}곳을 방향에 맡겨 둘러봤어요.</p>
-        </div>
-        <SourceLine style={{ marginTop: 'auto' }} />
-        <button type="button" className="btn btn-blue" style={{ height: 56, marginTop: 16 }} onClick={onExit}>스핀으로 돌아가기</button>
-      </ScreenFrame>
-    )
+  const mapDeparture: Departure = {
+    id: 'course-current',
+    name: '현재 위치',
+    desc: '활성 코스 안내',
+    lat: mapPosition?.lat ?? currentStop.poi.lat,
+    lon: mapPosition?.lng ?? currentStop.poi.lon,
   }
-
-  if (status === 'arrived') {
-    return (
-      <ScreenFrame style={{ background: 'var(--l-bg)' }}>
-        <header className="course-guide-header"><span>{currentIndex + 1} / {course.stops.length}</span><button type="button" onClick={onExit}>종료</button></header>
-        <div className="course-arrival-photo"><PoiPhoto contentId={currentStop.poi.contentId} alt={currentStop.poi.name} scrim /></div>
-        <main className="course-arrival-copy">
-          <p>도착했어요!</p>
-          <h1>{currentStop.poi.name}</h1>
-          <p>{copyOf(currentStop.poi.contentId) ?? currentStop.poi.story}</p>
-        </main>
-        <SourceLine style={{ marginTop: 'auto' }} />
-        <div className="course-guide-actions">
-          <button type="button" className="btn btn-blue" onClick={nextStop}>{currentIndex === course.stops.length - 1 ? '코스 마치기' : '다음 경로'}</button>
-        </div>
-      </ScreenFrame>
-    )
-  }
-
   const guidanceUnavailable = status === 'error' || status === 'paused'
   const turn = snapshot?.turn ?? 'forward'
-  const nonWalk = currentStop.method !== 'walk'
+  const instruction = currentStop.method === 'walk' ? TURN_COPY[turn] : METHOD_COPY[currentStop.method]
+  const sourceText = '출처: ⓒ한국관광공사 · 지도 © OpenStreetMap'
 
   return (
-    <ScreenFrame style={{ background: 'var(--l-bg)' }}>
-      <header className="course-guide-header">
-        <span>{currentIndex + 1} / {course.stops.length}</span>
-        <button type="button" onClick={guidanceUnavailable ? onExit : () => setStatus('paused')}>{guidanceUnavailable ? '종료' : '일시정지'}</button>
-      </header>
-      <main className="course-guide-main">
-        <div className="course-guide-kicker">다음 장소</div>
-        <h1>{currentStop.poi.name}</h1>
-        {isDemo && <div className="course-demo-badge">심사용 수동 데모</div>}
+    <div className="screen course-nav-screen">
+      <div className="course-nav-map" aria-label="현재 위치와 다음 목적지 지도">
+        <LocalMapView
+          pois={[currentStop.poi]}
+          departure={mapDeparture}
+          selectedId={null}
+          onPick={() => {}}
+          courseOrder={[currentStop.poi.id]}
+          currentPosition={mapPosition ?? undefined}
+          currentHeadingDeg={currentHeading}
+          navigationMode
+        />
+      </div>
 
-        {guidanceUnavailable ? (
-          <section className="course-guide-fallback" role="status">
-            <h2>{status === 'paused' ? '안내를 잠시 멈췄어요' : '센서 안내를 사용할 수 없어요'}</h2>
+      <header className="course-nav-topbar">
+        <div><strong>{currentIndex + 1}</strong><span>/ {course.stops.length}</span></div>
+        <button type="button" onClick={guidanceUnavailable || status === 'completed' ? onExit : () => setStatus('paused')}>
+          {guidanceUnavailable || status === 'completed' ? '종료' : '일시정지'}
+        </button>
+      </header>
+
+      {isDemo && status !== 'arrived' && status !== 'completed' && (
+        <div className="course-nav-demo-float">
+          <DemoGpsJoystick onStep={moveDemo} />
+        </div>
+      )}
+
+      <section className={`course-nav-sheet course-nav-sheet--${status}`} aria-live="polite">
+        <div className="course-nav-sheet__handle" aria-hidden />
+
+        {status === 'completed' ? (
+          <div className="course-nav-complete">
+            <span>코스 완료</span>
+            <h1>오늘의 코스를 모두 만났어요</h1>
+            <p>{course.stops.length}곳을 방향에 맡겨 둘러봤어요.</p>
+            <button type="button" className="btn btn-blue" onClick={onExit}>스핀으로 돌아가기</button>
+          </div>
+        ) : status === 'arrived' ? (
+          <div className="course-nav-arrived">
+            <div className="course-nav-arrived__photo"><PoiPhoto contentId={currentStop.poi.contentId} alt={currentStop.poi.name} scrim /></div>
+            <div className="course-nav-arrived__copy">
+              <span>도착했어요!</span>
+              <h1>{currentStop.poi.name}</h1>
+              <p>{copyOf(currentStop.poi.contentId) ?? currentStop.poi.story}</p>
+            </div>
+            <button type="button" className="btn btn-blue" onClick={nextStop}>{currentIndex === course.stops.length - 1 ? '코스 마치기' : '다음 경로'}</button>
+          </div>
+        ) : guidanceUnavailable ? (
+          <div className="course-nav-fallback">
+            <h1>{status === 'paused' ? '안내를 잠시 멈췄어요' : '센서 안내를 사용할 수 없어요'}</h1>
             <p>{status === 'paused' ? '계속하려면 아래 버튼을 눌러 주세요.' : errorCopy}</p>
-            {status === 'paused' && orientationPermission === 'granted' && (
+            {status === 'paused' && orientationPermission === 'granted' && !isDemo && (
               <button type="button" className="btn btn-blue" onClick={() => setStatus('locating')}>안내 계속하기</button>
             )}
-            <button type="button" className="btn" onClick={() => {
-              setManualDemo(true)
-              setSnapshot({ distanceM: 320, targetBearingDeg: course.headingDeg, relativeDeg: 0, turn: 'forward' })
-              setStatus('guiding')
-            }}>수동으로 미리보기</button>
-          </section>
+            <button type="button" className="btn" onClick={enableManualDemo}>GPS 조이스틱 사용</button>
+          </div>
         ) : (
-          <>
-            {nonWalk && <div className="course-method-card"><strong>{METHOD_COPY[currentStop.method]}</strong><span>약 {currentStop.legMinutes}분 구간</span></div>}
-            {!nonWalk && (
-              <div className={`course-guide-arrow${status === 'locating' ? ' is-locating' : ''}`} style={{ transform: `rotate(${TURN_ROTATION[turn]}deg)` }} aria-hidden>
-                <svg viewBox="0 0 120 140"><path d="M60 8 L108 62 H78 V132 H42 V62 H12 Z" /></svg>
+          <div className="course-nav-guidance">
+            <div className="course-nav-guidance__row">
+              <div className={`course-nav-turn${status === 'locating' ? ' is-locating' : ''}`} style={{ transform: `rotate(${TURN_ROTATION[turn]}deg)` }} aria-hidden>
+                <span />
               </div>
-            )}
-            <h2>{nonWalk ? '먼저 이동 구간을 확인해요' : status === 'locating' ? '현재 방향을 찾는 중…' : TURN_COPY[turn]}</h2>
-            <p className="course-guide-distance">{distanceLabel(snapshot?.distanceM ?? null)}</p>
-            {accuracyM !== null && <p className="course-guide-accuracy">GPS 정확도 약 {Math.round(accuracyM)}m</p>}
-            {isDemo && <button type="button" className="btn course-demo-arrive" onClick={showArrival}>도착 화면 보기</button>}
-          </>
+              <div className="course-nav-guidance__copy">
+                <span>{isDemo ? 'GPS 시연 안내' : status === 'locating' ? '위치 확인 중' : '다음 이동'}</span>
+                <h1>{status === 'locating' ? '현재 방향을 찾고 있어요' : instruction}</h1>
+              </div>
+            </div>
+            <div className="course-nav-destination">
+              <div><span>다음 장소</span><strong>{currentStop.poi.name}</strong></div>
+              <div className="course-nav-distance"><strong>{distanceLabel(snapshot?.distanceM ?? null)}</strong>{accuracyM !== null && <span>GPS ±{Math.round(accuracyM)}m</span>}</div>
+            </div>
+            <div className="course-nav-actions">
+              <a className="btn" href={kakaoMapDirectionsUrl(currentStop.poi.name, currentStop.poi.lat, currentStop.poi.lon)} target="_blank" rel="noreferrer">카카오맵</a>
+              {isDemo && <button type="button" className="btn" onClick={moveNearDestination}>도착 위치로 이동</button>}
+            </div>
+          </div>
         )}
-      </main>
 
-      <div className="course-guide-map-note">
-        <p>실제 도보 경로는 카카오맵에서 확인해 주세요.</p>
-        <a className="btn" href={kakaoMapDirectionsUrl(currentStop.poi.name, currentStop.poi.lat, currentStop.poi.lon)} target="_blank" rel="noreferrer">카카오맵 길찾기</a>
-      </div>
-      <SourceLine style={{ margin: '8px 20px calc(14px + env(safe-area-inset-bottom))' }} />
-    </ScreenFrame>
+        <p className="course-nav-source">{sourceText}</p>
+      </section>
+    </div>
   )
 }

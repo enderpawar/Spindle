@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BRIDGES, GEO, LAND_PATH, ROADS_MAJOR, ROADS_MINOR, project } from './busanGeo'
 import { directionOf, type Departure, type Poi } from '../mock/pois'
 import { MapPoiPreview } from '../components/MapPoiPreview'
+import type { GeoPoint } from '../engine/geo'
 
 /*
  * 원도심·영도 벡터 지도 — OSM 실측 해안선·도로 위에 POI 핀을 올린다.
@@ -35,6 +36,12 @@ export interface MapViewProps {
   onOpen?: (poi: Poi) => void
   /** 코스 미리보기 — 방문 순서대로 정렬된 poi id. 주어지면 출발→순서대로 경로선과 순번 핀을 그린다. */
   courseOrder?: string[]
+  /** 활성 안내의 현재 위치. 단말에서만 투영하고 외부 지도 SDK에는 전달하지 않는다. */
+  currentPosition?: GeoPoint
+  /** 현재 진행 방향(0=북). 현재 위치 포인터 회전에만 사용한다. */
+  currentHeadingDeg?: number
+  /** 현재 위치→다음 목적지에 집중하는 전체화면 안내 카메라. */
+  navigationMode?: boolean
 }
 
 /** 해상 교량 라벨 — 고가도로 세그먼트는 라벨을 달지 않는다 */
@@ -84,6 +91,9 @@ export function LocalMapView({
   onPick,
   onOpen,
   courseOrder,
+  currentPosition,
+  currentHeadingDeg = 0,
+  navigationMode = false,
 }: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -162,13 +172,22 @@ export function LocalMapView({
     [extraSpots],
   )
   const dep = useMemo(() => project(departure.lat, departure.lon), [departure])
+  const current = useMemo(
+    () => currentPosition ? project(currentPosition.lat, currentPosition.lng) : null,
+    [currentPosition],
+  )
   const fitPoints = useMemo(
-    () => [
-      ...pins.map((pin) => [pin.x, pin.y] as [number, number]),
-      ...extraPins.map((pin) => [pin.x, pin.y] as [number, number]),
-      [dep.x, dep.y] as [number, number],
-    ],
-    [dep.x, dep.y, extraPins, pins],
+    () => navigationMode
+      ? [
+          ...pins.map((pin) => [pin.x, pin.y] as [number, number]),
+          ...(current ? [[current.x, current.y] as [number, number]] : []),
+        ]
+      : [
+          ...pins.map((pin) => [pin.x, pin.y] as [number, number]),
+          ...extraPins.map((pin) => [pin.x, pin.y] as [number, number]),
+          [dep.x, dep.y] as [number, number],
+        ],
+    [current, dep.x, dep.y, extraPins, navigationMode, pins],
   )
 
   // 코스 미리보기 — 방문 순서 맵(1-based)과 경로 색(코스 핀은 같은 방위색)
@@ -184,7 +203,7 @@ export function LocalMapView({
     if (!size.w) return
     const fit = fitCam(fitPoints)
     setZMin(Math.min(fit.z, coverZ))
-    if (!cam) setCam(fit)
+    if (!cam || navigationMode) setCam(fit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size, fitPoints])
 
@@ -193,8 +212,10 @@ export function LocalMapView({
     const ys = pts.map((p) => p[1])
     const minX = Math.min(...xs), maxX = Math.max(...xs)
     const minY = Math.min(...ys), maxY = Math.max(...ys)
-    const padT = 64, padS = 44, padB = 196
-    const z = Math.min((size.w - padS * 2) / Math.max(maxX - minX, 1), (size.h - padT - padB) / Math.max(maxY - minY, 1))
+    const padT = navigationMode ? 108 : 64
+    const padS = navigationMode ? 38 : 44
+    const padB = navigationMode ? Math.min(size.h * 0.5, 430) : 196
+    const z = Math.min(Z_MAX, (size.w - padS * 2) / Math.max(maxX - minX, 1), (size.h - padT - padB) / Math.max(maxY - minY, 1))
     return {
       z,
       cx: (minX + maxX) / 2,
@@ -447,6 +468,8 @@ export function LocalMapView({
   const districtOpacity = cam.z > 3.4 ? 0 : 1
   const selectedPin = selectedId ? pins.find((p) => p.poi.id === selectedId) : null
   const depScreen = toScreen(dep.x, dep.y)
+  const currentScreen = current ? toScreen(current.x, current.y) : null
+  const routeStartScreen = currentScreen ?? depScreen
   return (
     <div
       ref={wrapRef}
@@ -475,13 +498,18 @@ export function LocalMapView({
       {courseOrder && courseOrder.length > 0 ? (
         <svg width={size.w} height={size.h} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} aria-hidden>
           {(() => {
-            const seq = [depScreen]
+            const seq = [routeStartScreen]
             for (const id of courseOrder) {
               const pin = pins.find((p) => p.poi.id === id)
               if (pin) seq.push(toScreen(pin.x, pin.y))
             }
             const points = seq.map((s) => `${s.x},${s.y}`).join(' ')
-            return <polyline points={points} fill="none" stroke={routeColor} strokeWidth={2.5} strokeDasharray="2 8" strokeLinecap="round" strokeLinejoin="round" opacity={0.9} style={{ animation: 'mapdash 1.2s linear infinite' }} />
+            return navigationMode ? (
+              <>
+                <polyline points={points} fill="none" stroke="rgba(255,255,255,.92)" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round" />
+                <polyline points={points} fill="none" stroke={routeColor} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+              </>
+            ) : <polyline points={points} fill="none" stroke={routeColor} strokeWidth={2.5} strokeDasharray="2 8" strokeLinecap="round" strokeLinejoin="round" opacity={0.9} style={{ animation: 'mapdash 1.2s linear infinite' }} />
           })()}
         </svg>
       ) : selectedPin ? (
@@ -527,13 +555,27 @@ export function LocalMapView({
           })}
 
         {/* 출발점 마커 */}
-        <div style={{ position: 'absolute', transform: `translate(${depScreen.x}px,${depScreen.y}px)` }}>
+        {!navigationMode && <div style={{ position: 'absolute', transform: `translate(${depScreen.x}px,${depScreen.y}px)` }}>
           <span style={{ position: 'absolute', left: -22, top: -22, width: 44, height: 44, borderRadius: '50%', background: 'rgba(47,92,255,.22)', animation: 'maprip 2.4s ease-out infinite' }} />
           <span style={{ position: 'absolute', left: -8, top: -8, width: 16, height: 16, borderRadius: '50%', background: '#2f5cff', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(20,50,140,.45)' }} />
           <span style={{ position: 'absolute', left: 12, top: -9, padding: '3px 8px', borderRadius: 8, background: 'rgba(255,255,255,.92)', fontSize: 10.5, fontWeight: 800, color: '#17347f', whiteSpace: 'nowrap', boxShadow: '0 3px 10px -3px rgba(20,50,140,.35)' }}>
             출발 · {departure.name}
           </span>
-        </div>
+        </div>}
+
+        {/* 활성 안내 현재 위치. 실제·demo 좌표 모두 단말 투영만 한다. */}
+        {navigationMode && currentScreen && (
+          <div
+            className="map-current-position"
+            style={{ transform: `translate3d(${currentScreen.x}px,${currentScreen.y}px,0)` }}
+            role="img"
+            aria-label="현재 위치"
+          >
+            <span className="map-current-position__accuracy" />
+            <span className="map-current-position__heading" style={{ transform: `translateX(-50%) rotate(${currentHeadingDeg}deg)` }} />
+            <span className="map-current-position__dot" />
+          </div>
+        )}
 
         {/* 전체 명소 축소형 핀 — 큐레이션 핀보다 낮은 위계로 조용히 표시한다. */}
         {extraPins.map(({ spot, x, y }) => {
@@ -581,8 +623,8 @@ export function LocalMapView({
           const s = toScreen(x, y)
           const sel = poi.id === selectedId
           const busy = busyPoiIds?.has(poi.id) ?? false
-          const n = orderNum.get(poi.id)
           const good = goodPoiIds?.has(poi.id) ?? false
+          const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
           const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 22 : 16
           return (
@@ -680,7 +722,7 @@ export function LocalMapView({
       </div>
 
       {/* ── 컨트롤 ── */}
-      <div style={{ position: 'absolute', right: 14, top: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ position: 'absolute', right: 14, top: navigationMode ? 76 : 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <button className="l-icon-btn" aria-label="확대" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomBy(1.6)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.6} strokeLinecap="round" aria-hidden>
             <path d="M12 5 v14 M5 12 h14" />
@@ -704,7 +746,7 @@ export function LocalMapView({
       </div>
 
       {/* 데이터 출처 (ODbL 표기 의무) */}
-      <span style={{ position: 'absolute', right: 8, bottom: 6, fontSize: 9, fontWeight: 600, color: 'rgba(70,100,150,.55)', pointerEvents: 'none' }}>
+      <span style={{ position: 'absolute', right: 8, bottom: navigationMode ? '49%' : 6, fontSize: 9, fontWeight: 600, color: 'rgba(70,100,150,.7)', pointerEvents: 'none' }}>
         지도 © OpenStreetMap
       </span>
     </div>

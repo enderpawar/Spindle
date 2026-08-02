@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { advanceArrival, guidanceSnapshot, guidanceTurn, relativeHeadingDeg } from './courseGuidance'
+import { bearingDeg, haversineMeters, movePointMeters, pointBeforeTarget } from './geo'
 
 describe('코스 탐험형 방향 안내', () => {
   it('0/360 경계에서 가장 짧은 상대각을 계산한다', () => {
@@ -33,5 +34,20 @@ describe('코스 탐험형 방향 안내', () => {
     expect(advanceArrival(0, 40, 30)).toEqual({ consecutive: 1, arrived: false })
     expect(advanceArrival(1, 40, 30)).toEqual({ consecutive: 2, arrived: true })
     expect(advanceArrival(1, 60, 30)).toEqual({ consecutive: 0, arrived: false })
+  })
+})
+
+describe('demo GPS 위치 이동', () => {
+  it('동·북 방향 미터 이동을 실제 거리로 변환한다', () => {
+    const start = { lat: 35.1, lng: 129.03 }
+    const moved = movePointMeters(start, 30, 40)
+    expect(haversineMeters(start, moved)).toBeCloseTo(50, 0)
+  })
+
+  it('목표에서 지정 거리만큼 떨어진 시작점을 만든다', () => {
+    const target = { lat: 35.1, lng: 129.03 }
+    const start = pointBeforeTarget(target, 90, 320)
+    expect(haversineMeters(start, target)).toBeCloseTo(320, 0)
+    expect(bearingDeg(start, target)).toBeCloseTo(90, 0)
   })
 })
