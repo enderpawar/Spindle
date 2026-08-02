@@ -36,12 +36,16 @@ export interface MapViewProps {
   onOpen?: (poi: Poi) => void
   /** 코스 미리보기 — 방문 순서대로 정렬된 poi id. 주어지면 출발→순서대로 경로선과 순번 핀을 그린다. */
   courseOrder?: string[]
-  /** 활성 안내의 현재 위치. 단말에서만 투영하고 외부 지도 SDK에는 전달하지 않는다. */
+  /** 활성 안내의 현재 위치. 안내 계산과 현재 위치 표시에만 사용한다. */
   currentPosition?: GeoPoint
   /** 현재 진행 방향(0=북). 현재 위치 포인터 회전에만 사용한다. */
   currentHeadingDeg?: number
   /** 현재 위치→다음 목적지에 집중하는 전체화면 안내 카메라. */
   navigationMode?: boolean
+  /** 심사용 가상 GPS 이동 중 현재 위치를 지도 포커스에 고정한다. 실제 GPS에는 사용하지 않는다. */
+  followCurrentPosition?: boolean
+  /** 실제로 선택된 베이스맵 공급자를 상위 화면의 출처 표시에 알린다. */
+  onProviderChange?: (provider: 'kakao' | 'local') => void
 }
 
 /** 해상 교량 라벨 — 고가도로 세그먼트는 라벨을 달지 않는다 */
@@ -94,6 +98,7 @@ export function LocalMapView({
   currentPosition,
   currentHeadingDeg = 0,
   navigationMode = false,
+  followCurrentPosition = false,
 }: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -203,9 +208,19 @@ export function LocalMapView({
     if (!size.w) return
     const fit = fitCam(fitPoints)
     setZMin(Math.min(fit.z, coverZ))
-    if (!cam || navigationMode) setCam(fit)
+    if (!cam || (navigationMode && !followCurrentPosition)) setCam(fit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size, fitPoints])
+
+  // 심사용 조이스틱은 현재 위치를 화면 위쪽 지도 영역에 고정하고 지형이 아래에서 움직이게 한다.
+  useEffect(() => {
+    if (!followCurrentPosition || !current || !size.h) return
+    setCam((previous) => previous && ({
+      ...previous,
+      cx: current.x,
+      cy: current.y + size.h * 0.18 / previous.z,
+    }))
+  }, [current, followCurrentPosition, size.h])
 
   function fitCam(pts: [number, number][]): Cam {
     const xs = pts.map((p) => p[0])

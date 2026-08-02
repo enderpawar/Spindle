@@ -166,6 +166,16 @@ function DeparturePin({ name }: { name: string }) {
   )
 }
 
+function CurrentPositionPin({ headingDeg }: { headingDeg: number }) {
+  return (
+    <div className="map-current-position" role="img" aria-label="현재 위치">
+      <span className="map-current-position__accuracy" />
+      <span className="map-current-position__heading" style={{ transform: `translateX(-50%) rotate(${headingDeg}deg)` }} />
+      <span className="map-current-position__dot" />
+    </div>
+  )
+}
+
 /** 카카오 베이스맵 위에 기존 핀·프리뷰·경로 디자인을 DOM 오버레이로 유지한다. */
 export function KakaoMapView({
   pois,
@@ -177,6 +187,10 @@ export function KakaoMapView({
   onPick,
   onOpen,
   courseOrder,
+  currentPosition,
+  currentHeadingDeg = 0,
+  navigationMode = false,
+  followCurrentPosition = false,
 }: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -186,6 +200,10 @@ export function KakaoMapView({
   const poiOverlaysRef = useRef<PoiOverlayRecord[]>([])
   const extraOverlaysRef = useRef<ExtraOverlayRecord[]>([])
   const selectionPanTimerRef = useRef<number | null>(null)
+  const followTimerRef = useRef<number | null>(null)
+  const latestFollowPositionRef = useRef(currentPosition)
+  const currentOverlayRef = useRef<KakaoCustomOverlay | null>(null)
+  const routeStyleRef = useRef<string | null>(null)
   const initialDepartureRef = useRef(departure)
   const onPickRef = useRef(onPick)
   const [ready, setReady] = useState(false)
@@ -193,8 +211,10 @@ export function KakaoMapView({
   const [poiHosts, setPoiHosts] = useState<PoiOverlayHost[]>([])
   const [extraHosts, setExtraHosts] = useState<ExtraOverlayHost[]>([])
   const [departureHost, setDepartureHost] = useState<HTMLDivElement | null>(null)
+  const [currentPositionHost, setCurrentPositionHost] = useState<HTMLDivElement | null>(null)
 
   onPickRef.current = onPick
+  latestFollowPositionRef.current = currentPosition
 
   const poiById = useMemo(() => new Map(pois.map((poi) => [poi.id, poi])), [pois])
   const extraById = useMemo(() => new Map(extraSpots.map((spot) => [spot.id, spot])), [extraSpots])
@@ -214,7 +234,7 @@ export function KakaoMapView({
     const initialDeparture = initialDepartureRef.current
     const map = new maps.Map(container, {
       center: new maps.LatLng(initialDeparture.lat, initialDeparture.lon),
-      level: 7,
+      level: navigationMode ? 5 : 7,
     })
     mapRef.current = map
     setLevel(map.getLevel())
@@ -235,10 +255,12 @@ export function KakaoMapView({
       maps.event.removeListener(map, 'dragstart', handleDragStart)
       maps.event.removeListener(map, 'zoom_changed', handleZoom)
       handleDragStart()
+      if (followTimerRef.current !== null) window.clearTimeout(followTimerRef.current)
+      followTimerRef.current = null
       if (mapRef.current === map) mapRef.current = null
       container.replaceChildren()
     }
-  }, [])
+  }, [navigationMode])
 
   useEffect(() => {
     if (!ready) return
@@ -257,12 +279,18 @@ export function KakaoMapView({
     const map = mapRef.current
     if (!maps || !map) return
 
+    if (navigationMode) {
+      map.setCenter(new maps.LatLng(departure.lat, departure.lon))
+      map.setLevel(5)
+      return
+    }
+
     const bounds = new maps.LatLngBounds()
     for (const poi of pois) bounds.extend(new maps.LatLng(poi.lat, poi.lon))
     for (const spot of extraSpots) bounds.extend(new maps.LatLng(spot.lat, spot.lon))
     bounds.extend(new maps.LatLng(departure.lat, departure.lon))
     map.setBounds(bounds, 64, 44, 196, 44)
-  }, [departure.lat, departure.lon, extraSpots, pois])
+  }, [departure.lat, departure.lon, extraSpots, navigationMode, pois])
 
   useEffect(() => {
     if (ready) fitAll()
@@ -343,6 +371,11 @@ export function KakaoMapView({
     const map = mapRef.current
     if (!ready || !maps || !map) return
 
+    if (navigationMode) {
+      setDepartureHost(null)
+      return
+    }
+
     const host = document.createElement('div')
     const overlay = new maps.CustomOverlay({
       position: new maps.LatLng(departure.lat, departure.lon),
@@ -356,17 +389,69 @@ export function KakaoMapView({
     setDepartureHost(host)
 
     return () => overlay.setMap(null)
-  }, [departure.lat, departure.lon, ready])
+  }, [departure.lat, departure.lon, navigationMode, ready])
 
   useEffect(() => {
-    routeRef.current?.setMap(null)
-    routeRef.current = null
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!ready || !navigationMode || !currentPosition || !maps || !map) return
 
+    if (!currentOverlayRef.current) {
+      const host = document.createElement('div')
+      const overlay = new maps.CustomOverlay({
+        position: new maps.LatLng(currentPosition.lat, currentPosition.lng),
+        content: host,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        zIndex: 120,
+        clickable: false,
+      })
+      overlay.setMap(map)
+      currentOverlayRef.current = overlay
+      setCurrentPositionHost(host)
+      return
+    }
+
+    currentOverlayRef.current.setPosition(new maps.LatLng(currentPosition.lat, currentPosition.lng))
+  }, [currentPosition, navigationMode, ready])
+
+  useEffect(() => () => {
+    currentOverlayRef.current?.setMap(null)
+    currentOverlayRef.current = null
+  }, [])
+
+  useEffect(() => {
+    if (navigationMode) return
+    currentOverlayRef.current?.setMap(null)
+    currentOverlayRef.current = null
+    setCurrentPositionHost(null)
+  }, [navigationMode])
+
+  // 가상 GPS만 지도 카메라가 추종한다. 실제 GPS 좌표는 카카오 지도 중심·타일 요청에 쓰지 않는다.
+  useEffect(() => {
+    if (!ready || !navigationMode || !followCurrentPosition || !currentPosition) return
+    if (followTimerRef.current !== null) return
+
+    followTimerRef.current = window.setTimeout(() => {
+      followTimerRef.current = null
+      const maps = mapsRef.current
+      const map = mapRef.current
+      const point = latestFollowPositionRef.current
+      if (!maps || !map || !point) return
+      map.setCenter(new maps.LatLng(point.lat, point.lng))
+    }, 120)
+
+  }, [currentPosition, followCurrentPosition, navigationMode, ready])
+
+  useEffect(() => {
     const maps = mapsRef.current
     const map = mapRef.current
     if (!ready || !maps || !map) return
 
-    const path = [new maps.LatLng(departure.lat, departure.lon)]
+    const routeStart = navigationMode && currentPosition
+      ? new maps.LatLng(currentPosition.lat, currentPosition.lng)
+      : new maps.LatLng(departure.lat, departure.lon)
+    const path = [routeStart]
     let color = routeColor
     let strokeWeight = 2.5
     let strokeOpacity = 0.9
@@ -386,7 +471,20 @@ export function KakaoMapView({
       }
     }
 
-    if (path.length < 2) return
+    if (path.length < 2) {
+      routeRef.current?.setMap(null)
+      routeRef.current = null
+      routeStyleRef.current = null
+      return
+    }
+
+    const routeStyle = `${color}:${strokeWeight}:${strokeOpacity}`
+    if (routeRef.current && routeStyleRef.current === routeStyle) {
+      routeRef.current.setPath(path)
+      return
+    }
+
+    routeRef.current?.setMap(null)
 
     const route = new maps.Polyline({
       path,
@@ -397,12 +495,14 @@ export function KakaoMapView({
     })
     route.setMap(map)
     routeRef.current = route
+    routeStyleRef.current = routeStyle
+  }, [courseOrder, currentPosition, departure.lat, departure.lon, navigationMode, poiById, ready, routeColor, selectedId])
 
-    return () => {
-      route.setMap(null)
-      if (routeRef.current === route) routeRef.current = null
-    }
-  }, [courseOrder, departure.lat, departure.lon, poiById, ready, routeColor, selectedId])
+  useEffect(() => () => {
+    routeRef.current?.setMap(null)
+    routeRef.current = null
+    routeStyleRef.current = null
+  }, [])
 
   useEffect(() => {
     if (!ready || !selectedId) return
@@ -436,7 +536,10 @@ export function KakaoMapView({
 
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#c3dcf9' }}>
-      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0 }} />
+      <div
+        ref={mapContainerRef}
+        style={{ position: 'absolute', inset: navigationMode ? '0 0 min(48dvh, 430px) 0' : 0 }}
+      />
 
       {poiHosts.map(({ poiId, host }) => {
         const poi = poiById.get(poiId)
@@ -474,9 +577,10 @@ export function KakaoMapView({
           spotId,
         )
       })}
-      {departureHost && createPortal(<DeparturePin name={departure.name} />, departureHost)}
+      {departureHost && !navigationMode && createPortal(<DeparturePin name={departure.name} />, departureHost)}
+      {currentPositionHost && navigationMode && createPortal(<CurrentPositionPin headingDeg={currentHeadingDeg} />, currentPositionHost)}
 
-      <div style={{ position: 'absolute', right: 14, top: 14, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ position: 'absolute', right: 14, top: navigationMode ? 76 : 14, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <button className="l-icon-btn" aria-label="확대" onPointerDown={(event) => event.stopPropagation()} onClick={zoomIn}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.6} strokeLinecap="round" aria-hidden>
             <path d="M12 5 v14 M5 12 h14" />

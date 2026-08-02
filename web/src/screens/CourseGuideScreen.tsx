@@ -9,7 +9,7 @@ import { zoneOf } from '../engine/zones'
 import { copyOf } from '../engine/curation'
 import { kakaoMapDirectionsUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
-import { LocalMapView } from '../map/LocalMapView'
+import { MapView } from '../map/MapView'
 import type { Departure } from '../mock/pois'
 import { watchCurrentFix } from '../sensors/geolocation'
 import { subscribeHeading, type OrientationPermission } from '../sensors/orientation'
@@ -64,6 +64,7 @@ function demoStart(stop: CourseStopView, courseHeading: number, index: number): 
 
 export function CourseGuideScreen({ course, orientationPermission, demo = false, onExit }: Props) {
   const [manualDemo, setManualDemo] = useState(false)
+  const [mapProvider, setMapProvider] = useState<'loading' | 'kakao' | 'local'>('loading')
   const isDemo = demo || manualDemo
   const [currentIndex, setCurrentIndex] = useState(0)
   const currentStop = course.stops[currentIndex]
@@ -82,6 +83,8 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
   const demoArrivalCountRef = useRef(0)
 
   const targetPoint = useMemo(() => ({ lat: currentStop.poi.lat, lng: currentStop.poi.lon }), [currentStop])
+  const mapPois = useMemo(() => [currentStop.poi], [currentStop.poi])
+  const mapCourseOrder = useMemo(() => [currentStop.poi.id], [currentStop.poi.id])
   const tracking = !isDemo && (status === 'locating' || status === 'guiding')
 
   useEffect(() => {
@@ -244,29 +247,31 @@ export function CourseGuideScreen({ course, orientationPermission, demo = false,
   }
 
   const mapDeparture: Departure = {
-    id: 'course-current',
-    name: '현재 위치',
+    id: `course-target-${currentStop.poi.id}`,
+    name: currentStop.poi.name,
     desc: '활성 코스 안내',
-    lat: mapPosition?.lat ?? currentStop.poi.lat,
-    lon: mapPosition?.lng ?? currentStop.poi.lon,
+    lat: currentStop.poi.lat,
+    lon: currentStop.poi.lon,
   }
   const guidanceUnavailable = status === 'error' || status === 'paused'
   const turn = snapshot?.turn ?? 'forward'
   const instruction = currentStop.method === 'walk' ? TURN_COPY[turn] : METHOD_COPY[currentStop.method]
-  const sourceText = '출처: ⓒ한국관광공사 · 지도 © OpenStreetMap'
+  const sourceText = `출처: ⓒ한국관광공사${mapProvider === 'kakao' ? ' · 지도: 카카오맵' : mapProvider === 'local' ? ' · 지도 © OpenStreetMap' : ''}`
 
   return (
     <div className="screen course-nav-screen">
       <div className="course-nav-map" aria-label="현재 위치와 다음 목적지 지도">
-        <LocalMapView
-          pois={[currentStop.poi]}
+        <MapView
+          pois={mapPois}
           departure={mapDeparture}
           selectedId={null}
           onPick={() => {}}
-          courseOrder={[currentStop.poi.id]}
+          courseOrder={mapCourseOrder}
           currentPosition={mapPosition ?? undefined}
           currentHeadingDeg={currentHeading}
           navigationMode
+          followCurrentPosition={isDemo}
+          onProviderChange={setMapProvider}
         />
       </div>
 
