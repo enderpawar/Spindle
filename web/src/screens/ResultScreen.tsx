@@ -6,8 +6,8 @@ import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
 import { CuratedCopy } from '../components/CuratedCopy'
-import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
 import { copyOf } from '../engine/curation'
+import { kakaoMapSearchUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
 import type { Poi, Recommendation } from '../mock/pois'
@@ -35,7 +35,6 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [detail, setDetail] = useState<PoiDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
-  const [navSheet, setNavSheet] = useState(false)
   const [stampToast, setStampToast] = useState<string | null>(null)
   const [festival, setFestival] = useState<Festival | null>(null)
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -160,8 +159,6 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const activeGalleryImage = galleryImages[galleryIndex] ?? detailImageUrl
   const curatedCopy = copyOf(poi.contentId)
 
-  const mapQuery = encodeURIComponent(`부산 ${poi.name}`)
-
   const openGallery = () => {
     setGalleryOpen(true)
     setGalleryIndex(0)
@@ -207,8 +204,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   }
 
   // 길찾기(=방문 의사)에서 도장을 획득한다 — 새 방문일 때만 연출.
-  const openNav = () => {
-    setNavSheet(true)
+  const recordNavigation = () => {
     setStampToast(null)
     if (markVisited(poi.id)) setStampToast(poi.district)
   }
@@ -370,9 +366,17 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
       {/* 하단 액션 바 */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', display: 'flex', gap: 12, background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
-        <button className="btn btn-blue" style={{ flex: 1, height: 56, fontSize: 16 }} onClick={openNav} disabled={loading}>
+        <a
+          href={kakaoMapSearchUrl(poi.name)}
+          target="_blank"
+          rel="noreferrer"
+          className="btn btn-blue"
+          style={{ flex: 1, height: 56, fontSize: 16, textDecoration: 'none', pointerEvents: loading ? 'none' : undefined, opacity: loading ? 0.55 : undefined }}
+          aria-disabled={loading}
+          onClick={recordNavigation}
+        >
           길찾기
-        </button>
+        </a>
         <button onClick={onShare} aria-label="공유 카드 만들기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }} disabled={loading}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
             <circle cx="6" cy="12" r="2.5" />
@@ -389,18 +393,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
         </button>
       </div>
 
-      {/* 길찾기 앱 선택 시트 */}
-      {navSheet && (
-        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
-          <button aria-label="닫기" onClick={() => { setNavSheet(false); setStampToast(null) }} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(12,26,54,.45)', cursor: 'pointer' }} />
-          <div className="motion-sheet" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(26px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.2)' }}>
-            <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--l-ink)', marginBottom: stampToast ? 10 : 14 }}>어떤 지도로 안내할까요?</div>
-            {stampToast && <StampNotice district={stampToast} />}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <NavLink href={`https://map.kakao.com/link/search/${mapQuery}`} label="카카오맵" brand="kakao" />
-              <NavLink href={`https://map.naver.com/p/search/${mapQuery}`} label="네이버지도" brand="naver" />
-            </div>
-          </div>
+      {stampToast && (
+        <div style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(90px + env(safe-area-inset-bottom))', zIndex: 4 }}>
+          <StampNotice district={stampToast} />
         </div>
       )}
 
@@ -598,21 +593,6 @@ function normalizeInfoValue(value: string): string {
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .trim()
-}
-
-function NavLink({ href, label, brand }: { href: string; label: string; brand: 'kakao' | 'naver' }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="btn"
-      style={{ height: 54, background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-ink)', fontSize: 15, textDecoration: 'none', justifyContent: 'flex-start', paddingLeft: 16, gap: 12 }}
-    >
-      <span style={{ display: 'grid', placeItems: 'center', flex: 'none' }}>{brand === 'kakao' ? <KakaoIcon /> : <NaverIcon />}</span>
-      {label}으로 길찾기
-    </a>
-  )
 }
 
 function ResultSkeleton() {

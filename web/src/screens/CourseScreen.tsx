@@ -3,8 +3,8 @@ import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
-import { KakaoIcon, NaverIcon } from '../components/BrandIcon'
 import { MapView } from '../map/MapView'
+import { kakaoMapSearchUrl } from '../lib/mapLinks'
 import { markVisited, useVisited } from '../lib/visited'
 import type { Departure } from '../mock/pois'
 import type { CourseStopView, ReadyCourse } from '../engine/spinCourse'
@@ -34,7 +34,6 @@ const METHOD_LABEL: Record<CourseStopView['method'], string> = {
 export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
   const { direction, stops, totalMinutes, reasons } = course
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [navStop, setNavStop] = useState<CourseStopView | null>(null)
   const [stampToast, setStampToast] = useState<string | null>(null)
   const visited = useVisited()
 
@@ -61,8 +60,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
   }, [selectedId])
 
   // 길찾기(=방문 의사)에서 도장을 획득한다 — 결과 카드와 동일한 규칙.
-  const openNav = (stop: CourseStopView) => {
-    setNavStop(stop)
+  const recordNavigation = (stop: CourseStopView) => {
     setStampToast(null)
     if (markVisited(stop.poi.id)) {
       setStampToast(stop.poi.district)
@@ -157,17 +155,19 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                   {stop.poi.category} · {stop.poi.district}
                 </div>
                 <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>{legLabel(stop)}</div>
-                <button
-                  type="button"
+                <a
+                  href={kakaoMapSearchUrl(stop.poi.name)}
+                  target="_blank"
+                  rel="noreferrer"
                   onClick={(e) => {
                     e.stopPropagation()
-                    openNav(stop)
+                    recordNavigation(stop)
                   }}
                   className="btn"
-                  style={{ marginTop: 11, height: 42, width: '100%', background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 13.5 }}
+                  style={{ marginTop: 11, height: 42, width: '100%', background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 13.5, textDecoration: 'none' }}
                 >
                   이 장소 길찾기
-                </button>
+                </a>
               </div>
             </div>
           )
@@ -179,11 +179,24 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
       </p>
       <SourceLine style={{ flex: 'none', margin: '0 20px 4px' }} />
 
+      {stampToast && (
+        <div style={{ flex: 'none', margin: '0 20px 8px' }}>
+          <StampNotice district={stampToast} />
+        </div>
+      )}
+
       {/* 하단 액션 바 */}
       <div style={{ flex: 'none', padding: '4px 20px calc(16px + env(safe-area-inset-bottom))', display: 'flex', gap: 12 }}>
-        <button className="btn btn-blue" style={{ flex: 1, height: 54, fontSize: 16 }} onClick={() => openNav(stops[0])}>
+        <a
+          href={kakaoMapSearchUrl(stops[0].poi.name)}
+          target="_blank"
+          rel="noreferrer"
+          className="btn btn-blue"
+          style={{ flex: 1, height: 54, fontSize: 16, textDecoration: 'none' }}
+          onClick={() => recordNavigation(stops[0])}
+        >
           첫 장소부터 출발
-        </button>
+        </a>
         <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 54, height: 54, borderRadius: 18, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
             <path d="M3 12 a9 9 0 1 1 3 6.7" />
@@ -192,37 +205,6 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
         </button>
       </div>
 
-      {/* 길찾기 앱 선택 시트 */}
-      {navStop && (
-        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
-          <button aria-label="닫기" onClick={() => { setNavStop(null); setStampToast(null) }} style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(12,26,54,.45)', cursor: 'pointer' }} />
-          <div className="motion-sheet" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(26px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.2)' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>{navStop.order}번째 · {navStop.poi.district}</div>
-            <div style={{ marginTop: 2, marginBottom: stampToast ? 10 : 14, fontSize: 17, fontWeight: 900, color: 'var(--l-ink)' }}>{navStop.poi.name}</div>
-            {stampToast && <StampNotice district={stampToast} />}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <NavLink href={`https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${navStop.poi.name}`)}`} label="카카오맵" brand="kakao" />
-              <NavLink href={`https://map.naver.com/p/search/${encodeURIComponent(`부산 ${navStop.poi.name}`)}`} label="네이버지도" brand="naver" />
-            </div>
-          </div>
-        </div>
-      )}
-
     </ScreenFrame>
-  )
-}
-
-function NavLink({ href, label, brand }: { href: string; label: string; brand: 'kakao' | 'naver' }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="btn"
-      style={{ height: 54, background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-ink)', fontSize: 15, textDecoration: 'none', justifyContent: 'flex-start', paddingLeft: 16, gap: 12 }}
-    >
-      <span style={{ display: 'grid', placeItems: 'center', flex: 'none' }}>{brand === 'kakao' ? <KakaoIcon /> : <NaverIcon />}</span>
-      {label}으로 길찾기
-    </a>
   )
 }
