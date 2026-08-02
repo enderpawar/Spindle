@@ -37,6 +37,26 @@ function CongestionBadge() {
   )
 }
 
+function PoiCardBody({ poi, busy, good }: { poi: Poi; busy: boolean; good: boolean }) {
+  const dir = directionOf(poi.direction)
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ width: 10, height: 10, borderRadius: '50%', background: dir.color, flex: 'none' }} />
+        <span style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</span>
+      </div>
+      <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+        {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
+      </div>
+      {busy && <CongestionBadge />}
+      {!busy && good && <GoodToGoBadge />}
+      <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        {poi.story}
+      </div>
+    </>
+  )
+}
+
 function GoodToGoBadge() {
   return (
     <span className="good-to-go-badge">
@@ -248,71 +268,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
           </div>
 
           {/* 하단 카드 스트립 — 브라우즈 전용. 스크롤해도 지도는 움직이지 않는다(핀 탭으로만 이동). */}
-          <div
-            ref={stripRef}
-            className="no-scrollbar motion-card-list"
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 'calc(24px + env(safe-area-inset-bottom))',
-              display: 'flex',
-              gap: 12,
-              overflowX: 'auto',
-              scrollSnapType: 'x mandatory',
-              padding: '4px 32px 8px',
-              zIndex: 10,
-            }}
-          >
-            {list.map((poi) => {
-              const dir = directionOf(poi.direction)
-              const sel = poi.id === selectedId
-              const busy = busyByPoi.has(poi.id)
-              const good = goodByPoi.has(poi.id)
-              return (
-                <div
-                  key={poi.id}
-                  className="motion-card-enter"
-                  ref={(el) => {
-                    if (el) cardRefs.current.set(poi.id, el)
-                    else cardRefs.current.delete(poi.id)
-                  }}
-                  style={{
-                    flex: 'none',
-                    width: 'calc(100% - 64px)',
-                    scrollSnapAlign: 'center',
-                    background: '#fff',
-                    borderRadius: 20,
-                    padding: '12px 14px',
-                    boxShadow: sel ? '0 14px 30px -12px rgba(20,50,140,.4)' : '0 8px 20px -14px rgba(20,40,90,.3)',
-                    border: sel ? `1.5px solid ${dir.color}` : '1.5px solid transparent',
-                    transition: 'box-shadow .2s ease, border-color .2s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: dir.color, flex: 'none' }} />
-                    <span style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</span>                  </div>
-                  <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
-                    {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
-                  </div>
-                  {busy && <CongestionBadge />}
-                  {!busy && good && <GoodToGoBadge />}
-                  <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {poi.story}
-                  </div>
-                  <button
-                    className="btn btn-blue"
-                    onClick={() => onSelect(poi)}
-                    style={{ marginTop: 9, width: '100%', minHeight: 44, borderRadius: 13, fontSize: 13.5 }}
-                  >
-                    자세히 보기
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-          {selectedExtraPoi && (() => {
-            const dir = directionOf(selectedExtraPoi.direction)
+          {selectedExtraPoi ? (() => {
             const busy = busyByPoi.has(selectedExtraPoi.id)
             const good = goodByPoi.has(selectedExtraPoi.id)
             return (
@@ -322,23 +278,16 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   position: 'absolute',
                   left: 32,
                   right: 32,
-                  bottom: 'calc(32px + env(safe-area-inset-bottom))',
-                  zIndex: 11,
-                  padding: '13px 14px 14px',
-                  border: '1.5px solid rgba(127,156,199,.32)',
-                  borderRadius: 20,
+                  bottom: 'calc(24px + env(safe-area-inset-bottom))',
+                  zIndex: 10,
                   background: '#fff',
-                  boxShadow: '0 14px 30px -12px rgba(20,50,140,.36)',
+                  borderRadius: 20,
+                  padding: '12px 14px',
+                  boxShadow: '0 14px 30px -12px rgba(20,50,140,.4)',
+                  border: `1.5px solid ${directionOf(selectedExtraPoi.direction).color}`,
                 }}
               >
-                <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {selectedExtraPoi.name}
-                </div>
-                <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
-                  {selectedExtraPoi.category} · {selectedExtraPoi.district} · {dir.label}쪽 도보 {selectedExtraPoi.walkMinutes}분
-                </div>
-                {busy && <CongestionBadge />}
-                {!busy && good && <GoodToGoBadge />}
+                <PoiCardBody poi={selectedExtraPoi} busy={busy} good={good} />
                 <button
                   className="btn btn-blue"
                   type="button"
@@ -349,7 +298,61 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                 </button>
               </div>
             )
-          })()}
+          })() : (
+            <div
+              ref={stripRef}
+              className="no-scrollbar motion-card-list"
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 'calc(24px + env(safe-area-inset-bottom))',
+                display: 'flex',
+                gap: 12,
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                padding: '4px 32px 8px',
+                zIndex: 10,
+              }}
+            >
+              {list.map((poi) => {
+                const dir = directionOf(poi.direction)
+                const sel = poi.id === selectedId
+                const busy = busyByPoi.has(poi.id)
+                const good = goodByPoi.has(poi.id)
+                return (
+                  <div
+                    key={poi.id}
+                    className="motion-card-enter"
+                    ref={(el) => {
+                      if (el) cardRefs.current.set(poi.id, el)
+                      else cardRefs.current.delete(poi.id)
+                    }}
+                    style={{
+                      flex: 'none',
+                      width: 'calc(100% - 64px)',
+                      scrollSnapAlign: 'center',
+                      background: '#fff',
+                      borderRadius: 20,
+                      padding: '12px 14px',
+                      boxShadow: sel ? '0 14px 30px -12px rgba(20,50,140,.4)' : '0 8px 20px -14px rgba(20,40,90,.3)',
+                      border: sel ? `1.5px solid ${dir.color}` : '1.5px solid transparent',
+                      transition: 'box-shadow .2s ease, border-color .2s ease',
+                    }}
+                  >
+                    <PoiCardBody poi={poi} busy={busy} good={good} />
+                    <button
+                      className="btn btn-blue"
+                      onClick={() => onSelect(poi)}
+                      style={{ marginTop: 9, width: '100%', minHeight: 44, borderRadius: 13, fontSize: 13.5 }}
+                    >
+                      자세히 보기
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
           </div>
           <SourceLine style={{ flex: 'none', margin: '4px 16px calc(82px + env(safe-area-inset-bottom))' }} />
         </>
