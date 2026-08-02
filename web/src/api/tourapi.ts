@@ -89,6 +89,21 @@ export function extractItems<T>(body: ListBody<T>): T[] {
   return Array.isArray(item) ? item : [item];
 }
 
+// contentId → contentTypeId 인덱스. 세션 시작 목록 호출(areaBasedList2)의 응답에서
+// 부수적으로 채워지는 메모리 전용 맵으로, 탭이 닫히면 사라진다 (절대 원칙 3 — 영속화·
+// 정적 파일화 금지). 상세 조회가 detailIntro2를 detailCommon2와 병렬로 띄우는 데만 쓰고,
+// 값이 없으면 호출부가 기존 직렬 경로로 폴백하므로 표시 내용에는 영향을 주지 않는다.
+const contentTypeIndex = new Map<string, string>();
+
+function rememberContentTypeId(poi: AreaPoi): void {
+  if (poi.contentid && poi.contenttypeid) contentTypeIndex.set(poi.contentid, poi.contenttypeid);
+}
+
+/** 세션 목록 호출로 이미 알고 있는 contentTypeId (모르면 undefined) */
+export function getKnownContentTypeId(contentId: string): string | undefined {
+  return contentTypeIndex.get(contentId);
+}
+
 /** 한 구의 POI 전체를 페이징으로 수집 */
 export async function fetchAreaPois(
   sigunguCode: string,
@@ -108,6 +123,7 @@ export async function fetchAreaPois(
       fetchImpl,
     );
     const items = extractItems(body);
+    for (const item of items) rememberContentTypeId(item);
     all.push(...items);
     const totalCount = toNumber(String(body.totalCount)) ?? 0;
     if (all.length >= totalCount || items.length === 0) return all;
@@ -136,6 +152,7 @@ export function fetchAreaPoisCached(
 /** 테스트용 — 세션 캐시 초기화 */
 export function clearSessionCache(): void {
   sessionCache.clear();
+  contentTypeIndex.clear();
 }
 
 /**

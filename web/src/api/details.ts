@@ -3,7 +3,14 @@
  * 프록시 경유·세션 메모리 캐시만 사용 (tourapi 스킬 규약, 절대 원칙 3).
  * 이용시간·쉬는날은 자유 텍스트 → 파싱은 engine/operation.ts, 실패 시 원문 노출.
  */
-import { API_BASE, TourApiError, callTourApi, extractItems, type ListBody } from "./tourapi";
+import {
+  API_BASE,
+  TourApiError,
+  callTourApi,
+  extractItems,
+  getKnownContentTypeId,
+  type ListBody,
+} from "./tourapi";
 
 type FetchLike = typeof fetch;
 
@@ -344,15 +351,32 @@ async function fetchCardDetail(contentId: string, fetchImpl: FetchLike): Promise
 }
 
 async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<PoiDetail> {
-  const common = await fetchCommonCached(contentId, fetchImpl);
+  // detailIntro2는 contentTypeId를 요구해 원래 detailCommon2 응답을 기다려야 했다.
+  // 세션 목록 호출이 이미 알려준 값이 있으면 두 호출을 동시에 띄워 한 홉을 없앤다
+  // (없으면 기존대로 common을 기다렸다가 호출 — 결과는 동일).
+  const commonPromise = fetchCommonCached(contentId, fetchImpl);
+  const knownContentTypeId = getKnownContentTypeId(contentId);
+  const introPromise = knownContentTypeId
+    ? callTourApi<ListBody<DetailIntroItem>>(
+        "detailIntro2",
+        { contentId, contentTypeId: knownContentTypeId },
+        fetchImpl,
+      )
+    : commonPromise.then((c) =>
+        callTourApi<ListBody<DetailIntroItem>>(
+          "detailIntro2",
+          { contentId, contentTypeId: c.contenttypeid },
+          fetchImpl,
+        ),
+      );
+  // intro를 먼저 띄웠으므로 common 실패 시 미처리 거부가 남지 않게 흡수해 둔다.
+  introPromise.catch(() => {});
+
+  const common = await commonPromise;
 
   // 소개(intro)·이미지는 실패해도 카드 자체는 뜨도록 부분 실패 허용
   const [introResult, imageResult] = await Promise.allSettled([
-    callTourApi<ListBody<DetailIntroItem>>(
-      "detailIntro2",
-      { contentId, contentTypeId: common.contenttypeid },
-      fetchImpl,
-    ),
+    introPromise,
     fetchRepresentativeImageCached(contentId, common, fetchImpl),
   ]);
 

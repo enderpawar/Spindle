@@ -13,7 +13,7 @@ import {
   stripHtml,
   visitFactsFromIntro,
 } from "./details";
-import { TourApiError } from "./tourapi";
+import { TourApiError, clearSessionCache, fetchAreaPois } from "./tourapi";
 
 /** TourAPI 목록 응답 봉투 — item이 null이면 빈 결과("") */
 function envelope(item: unknown): unknown {
@@ -69,6 +69,7 @@ function makeFetch(routes: Routes) {
 beforeEach(() => {
   clearDetailCache();
   clearImageCache();
+  clearSessionCache(); // contentTypeId 인덱스도 함께 비운다 — 테스트 간 누수 방지
 });
 
 describe("stripHtml", () => {
@@ -381,5 +382,74 @@ describe("fetchPoiImageCached — 썸네일 경량 이미지", () => {
 
   it("poiImageProxyUrl은 contentId로 프록시 이미지 경로를 만든다", () => {
     expect(poiImageProxyUrl("126122")).toBe("/api/img?contentId=126122");
+  });
+});
+
+describe("detailIntro2 병렬 발사 (세션 목록 contentTypeId 인덱스)", () => {
+  /** detailCommon2를 응답하지 않게 붙잡아 두는 fetch 목 — intro가 먼저 나갔는지 본다 */
+  function makeStalledCommonFetch() {
+    const calls: string[] = [];
+    let releaseCommon!: () => void;
+    const commonGate = new Promise<void>((resolve) => {
+      releaseCommon = resolve;
+    });
+    const fetchMock = vi.fn((url: string | URL) => {
+      const u = String(url);
+      calls.push(u);
+      if (u.includes("/api/detailCommon2")) {
+        return commonGate.then(() =>
+          jsonResponse(envelope({ contentid: "301", contenttypeid: "14", title: "인덱스" })),
+        );
+      }
+      if (u.includes("/api/detailIntro2")) {
+        return Promise.resolve(jsonResponse(envelope({ usetime: "09:00~18:00" })));
+      }
+      return Promise.resolve(jsonResponse(envelope(null)));
+    });
+    return { fetchMock, calls, releaseCommon };
+  }
+
+  /** 목록 응답으로 contentTypeId 인덱스를 채운다 */
+  async function warmIndex(): Promise<void> {
+    const listFetch = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(
+          envelope([{ contentid: "301", contenttypeid: "14", title: "인덱스", addr1: "부산" }]),
+        ),
+      ),
+    );
+    await fetchAreaPois("15", listFetch as unknown as typeof fetch);
+  }
+
+  it("인덱스가 있으면 detailCommon2 응답 전에 detailIntro2를 띄운다", async () => {
+    await warmIndex();
+    const { fetchMock, calls, releaseCommon } = makeStalledCommonFetch();
+
+    const pending = fetchPoiDetailCached("301", fetchMock as unknown as typeof fetch);
+    await vi.waitFor(() => {
+      expect(calls.some((u) => u.includes("detailIntro2"))).toBe(true);
+    });
+    // common은 아직 응답 전 — 두 호출이 겹쳐서 나갔다는 뜻
+    const introUrl = calls.find((u) => u.includes("detailIntro2")) ?? "";
+    expect(introUrl).toContain("contentTypeId=14");
+
+    releaseCommon();
+    const detail = await pending;
+    expect(detail.visitFactsStatus).toBe("ready");
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailIntro2"))).toHaveLength(1);
+  });
+
+  it("인덱스가 없으면 기존대로 detailCommon2를 기다렸다가 호출한다", async () => {
+    const { fetchMock, calls, releaseCommon } = makeStalledCommonFetch();
+
+    const pending = fetchPoiDetailCached("301", fetchMock as unknown as typeof fetch);
+    await vi.waitFor(() => {
+      expect(calls.some((u) => u.includes("detailCommon2"))).toBe(true);
+    });
+    expect(calls.some((u) => u.includes("detailIntro2"))).toBe(false);
+
+    releaseCommon();
+    const detail = await pending;
+    expect(detail.visitFactsStatus).toBe("ready");
   });
 });
