@@ -43,6 +43,23 @@ npx wrangler pages deploy web/dist --project-name=spindle
 - 프로젝트명은 `spindle`로 통일한다 (`.github/workflows/deploy.yml`의 `CLOUDFLARE_PAGES_PROJECT`와 반드시 일치). 다른 이름을 쓰려면 워크플로 파일의 값도 함께 바꿀 것.
 - 배포 후 발급된 기본 도메인은 `https://spindle-6vp.pages.dev`다. (`spindle.pages.dev`가 이미 사용 중이어서 Cloudflare가 접미사를 부여함.) 커스텀 도메인을 붙이려면 Pages 프로젝트 → Custom domains에서 연결(선택 사항, DNS가 Cloudflare에 있어야 간편).
 
+## 2.1 카카오맵 JavaScript 키·Web 플랫폼 등록 (최초 1회, 사람)
+
+1. 카카오 developers 콘솔 → 내 애플리케이션 → 앱 설정 → 플랫폼 → Web에 아래 사이트 도메인을 등록한다.
+   - `http://localhost:5173`
+   - 프로덕션 Pages 도메인(`https://spindle-6vp.pages.dev` 또는 실제 커스텀 도메인)
+   - 사용할 Preview 도메인(예: `https://<hash>.spindle.pages.dev`)
+   도메인이 등록되지 않으면 해당 환경에서 지도가 로드되지 않는다.
+2. 앱 설정에서 **카카오맵 사용 활성화**가 켜져 있는지 확인한다.
+3. Cloudflare Pages 프로젝트 → Settings → Variables and Secrets의 빌드 환경변수에 `VITE_KAKAO_JS_KEY`를 추가한다. **Production과 Preview에 각각** 같은 JavaScript 키를 등록한다.
+4. 로컬 개발은 `web/.env.local`에 아래 값을 넣는다.
+   ```
+   VITE_KAKAO_JS_KEY=<JavaScript 키>
+   ```
+   `web/.env.local`은 `web/.gitignore`의 `*.local` 규칙으로 무시됨을 확인했다. 실제 키는 저장소에 커밋하지 않는다.
+
+카카오 JavaScript 키는 도메인 제한을 걸어 쓰는 공개용 빌드 키이며 TourAPI `serviceKey`처럼 프록시에 보관하는 비밀키가 아니다. 키 누락·SDK 로드 실패 시 지도는 기존 자체 벡터 지도로 자동 폴백한다.
+
 ## 3. Cloudflare Workers 배포 + 시크릿 등록 (proxy/)
 
 1. 운영계정 TourAPI 인증키를 Workers 시크릿으로 등록 (로컬 1회, 값은 **디코딩된** 키):
