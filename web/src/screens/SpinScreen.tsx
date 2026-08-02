@@ -4,6 +4,7 @@ import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
 import { DIRECTIONS, directionFromHeading, type Departure } from '../mock/pois'
+import type { ThemeInfo } from '../engine/themes'
 
 interface Props {
   departure: Departure
@@ -13,10 +14,15 @@ interface Props {
   onOpenDeparture: () => void
   onSpun: (headingDeg: number) => void
   onNavigate: (tab: NavTab) => void
+  theme?: ThemeInfo
+  themeStep?: number
+  themeTarget?: number
+  onOpenTheme: () => void
+  onClearTheme: () => void
 }
 
 /** 스핀 탭 — 밤바다 몰입 화면. 원판 드래그 또는 돌리기 버튼으로 방위를 정한다 */
-export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate }: Props) {
+export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate, theme, themeStep, themeTarget, onOpenTheme, onClearTheme }: Props) {
   const rose = useRef<CompassRoseHandle>(null)
   const [spinning, setSpinning] = useState(false)
   const [settled, setSettled] = useState(false)
@@ -69,8 +75,8 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           </>
         ) : (
           <>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>오늘, 어느 쪽으로 갈까요?</h1>
-            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>원판을 휙 돌리고, 방향에 맡겨보세요</p>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{theme ? `${theme.label} 테마, 어느 쪽으로 갈까요?` : '오늘, 어느 쪽으로 갈까요?'}</h1>
+            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{theme ? '선택한 테마 안에서 방향이 장소를 골라줘요' : '원판을 휙 돌리고, 방향에 맡겨보세요'}</p>
           </>
         )}
       </div>
@@ -83,7 +89,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
               position: 'absolute',
               inset: '-14%',
               borderRadius: '50%',
-              background: `radial-gradient(circle, ${settled ? liveDir.color : 'rgba(91,147,255,.9)'} 0%, transparent 62%)`,
+              background: `radial-gradient(circle, ${settled ? liveDir.color : theme?.color ?? 'rgba(91,147,255,.9)'} 0%, transparent 62%)`,
               opacity: settled ? 0.34 : 0.14,
               transition: 'opacity .4s ease',
               pointerEvents: 'none',
@@ -108,12 +114,27 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
               <path d="M50 41 L52.6 47.4 L59.5 48 L54.2 52.4 L55.8 59 L50 55.4 L44.2 59 L45.8 52.4 L40.5 48 L47.4 47.4 Z" fill="#2f5cff" />
             </svg>
           </div>
+          {theme && !busy && (
+            <div className="spin-theme-disc-mark" style={{ '--theme-color': theme.color } as React.CSSProperties}>
+              {theme.label} 디스크
+            </div>
+          )}
         </div>
       </div>
 
       {/* 하단 컨트롤 — 내브 높이만큼 여백 (스핀 중에는 페이드아웃) */}
       <div style={{ position: 'relative', minHeight: 150, padding: '0 24px calc(104px + env(safe-area-inset-bottom))', zIndex: 2 }}>
         <div style={{ opacity: busy ? 0 : 1, pointerEvents: busy ? 'none' : 'auto', transition: 'opacity .25s ease', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {theme && (
+            <div className="spin-theme-control">
+              <div>
+                <strong style={{ color: theme.color }}>{theme.label}</strong>
+                <span>{themeStep}/{themeTarget}번째 장면</span>
+              </div>
+              <button type="button" onClick={onOpenTheme}>바꾸기</button>
+              <button type="button" onClick={onClearTheme}>해제</button>
+            </div>
+          )}
           <DialSlider minutes={dial} onChange={onDialChange} />
           <button className="btn btn-blue" style={{ height: 58, fontSize: 17 }} onClick={() => rose.current?.spin()}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" aria-hidden>

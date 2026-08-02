@@ -14,6 +14,7 @@ const BACK_EDGES = new Set([
   'course>result',
   'course>spin',
   'share>result',
+  'theme>spin',
   'theme>home',
   'festival>home',
 ])

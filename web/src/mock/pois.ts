@@ -181,6 +181,8 @@ export interface Recommendation {
   candidates: Poi[]
   /** 후보 부족으로 인접 방위까지 넓힌 경우 (ui.md S3 — 사유 1줄 노출) */
   expandReason?: string
+  /** 선택형 테마 스핀의 장면·미션 정보. 없으면 기존 기본 스핀. */
+  theme?: import('../engine/themes').ThemeSpinResult
 }
 
 // 스핀 추천 배선은 engine/spinRecommend.ts로 이동 — 실제 점수 엔진(방향×접근×운영×분산)을

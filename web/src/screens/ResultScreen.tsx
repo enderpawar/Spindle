@@ -19,6 +19,8 @@ interface Props {
   onBack: () => void
   onRespin: () => void
   onShare: () => void
+  onContinueTheme: () => void
+  onFinishTheme: () => void
   /**
    * 이 방향으로 코스 짜기 — 현재 보고 있는 장소를 첫 장소로 코스를 만든다.
    * 코스가 만들어지면 App이 코스 화면으로 이동(반환값 null), 장소가 부족하면 사유 문자열을 반환한다.
@@ -27,7 +29,7 @@ interface Props {
 }
 
 /** S4 결과 카드 · 의미 레이어 (디자인 3a-4) — 이야기 · 왜 여기? · 도장 힌트 */
-export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onBuildCourse }: Props) {
+export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse }: Props) {
   const { direction } = rec
   const poi = rec.candidates[candidateIndex]
   const [loading, setLoading] = useState(true)
@@ -316,6 +318,28 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 <button type="button" onClick={openInfo}>자세히 보기 ›</button>
               </section>
 
+              {rec.theme && (
+                <section
+                  className="result-theme-journey"
+                  style={{ '--theme-color': rec.theme.color } as React.CSSProperties}
+                  aria-labelledby="result-theme-mission-title"
+                >
+                  <div className="result-theme-progress">
+                    <strong>{rec.theme.label} 테마</strong>
+                    <span>{rec.theme.step}/{rec.theme.target}번째 장면</span>
+                  </div>
+                  <h3 id="result-theme-mission-title">이번 장소에서 해볼 일</h3>
+                  <p>{rec.theme.mission}</p>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={rec.theme.step < rec.theme.target ? onContinueTheme : onFinishTheme}
+                  >
+                    {rec.theme.step < rec.theme.target ? '같은 테마로 다음 스핀' : '테마 여정 마치기'}
+                  </button>
+                </section>
+              )}
+
               {fullDetailLoading && <VisitFactsSkeleton />}
               {!fullDetailLoading && primaryVisitFacts.length > 0 && (
                 <VisitFactsSection facts={primaryVisitFacts} />
@@ -327,23 +351,26 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 </p>
               )}
 
-              {/* 이 방향으로 코스 짜기 — 단일 추천을 2~4곳 코스로 확장 (docs/course.md).
-                  주 CTA(길찾기)와 경쟁하지 않도록 중립 톤 카드로 표현한다. */}
-              <button
-                type="button"
-                onClick={buildCourse}
-                className="btn result-course-action"
-              >
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 900, letterSpacing: -0.2 }}>이 방향으로 코스 짜기</span>
-                  <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
-                </span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
-                  <path d="M9 6 l6 6 -6 6" />
-                </svg>
-              </button>
-              {courseNotice && (
-                <p className="result-course-notice" role="status">{courseNotice}</p>
+              {!rec.theme && (
+                <>
+                  {/* 일반 스핀은 방향 코스로 확장할 수 있다. 테마 여정에서는 다른 테마가 섞이지 않도록 숨긴다. */}
+                  <button
+                    type="button"
+                    onClick={buildCourse}
+                    className="btn result-course-action"
+                  >
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 900, letterSpacing: -0.2 }}>이 방향으로 코스 짜기</span>
+                      <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
+                    </span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
+                      <path d="M9 6 l6 6 -6 6" />
+                    </svg>
+                  </button>
+                  {courseNotice && (
+                    <p className="result-course-notice" role="status">{courseNotice}</p>
+                  )}
+                </>
               )}
 
               {rec.candidates.length > 1 && (
@@ -385,12 +412,12 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             <path d="M8.2 10.8 L15.8 7.2 M8.2 13.2 L15.8 16.8" />
           </svg>
         </button>
-        <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
+        {!rec.theme && <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
             <path d="M3 12 a9 9 0 1 1 3 6.7" />
             <path d="M3 20 v-4 h4" />
           </svg>
-        </button>
+        </button>}
       </div>
 
       {stampToast && (

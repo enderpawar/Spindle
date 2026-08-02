@@ -11,6 +11,12 @@ import { TIER_WEIGHT, type Tier as CurationTier } from './curation'
 import { haversineMeters, type GeoPoint } from './geo'
 import { recommend as scoreRecommend, type DialMinutes, type EnginePoi } from './recommend'
 import {
+  poisByTheme,
+  themeInfo,
+  themeSpinResult,
+  type ThemeJourney,
+} from './themes'
+import {
   directionOf,
   POI_POOL,
   type Departure,
@@ -52,6 +58,8 @@ export interface SpinRecommendInput {
   prevContentId?: string
   /** 테스트용 시드 주입 (기본 Math.random) */
   rng?: () => number
+  /** 선택한 테마와 현재 여정 장면. 없으면 기존 전체 후보 스핀. */
+  themeJourney?: ThemeJourney
 }
 
 /**
@@ -60,12 +68,19 @@ export interface SpinRecommendInput {
  */
 export function recommendFromSpin(input: SpinRecommendInput): Recommendation {
   const rng = input.rng ?? Math.random
+  const activePool = input.themeJourney
+    ? poisByTheme(input.themeJourney.themeId)
+    : POI_POOL
+  const activeIds = new Set(activePool.map((poi) => poi.contentId))
+  const activeEnginePois = input.themeJourney
+    ? ENGINE_POIS.filter((poi) => activeIds.has(poi.contentId))
+    : ENGINE_POIS
   const run = (budgetMinutes: DialMinutes) =>
     scoreRecommend({
       origin: toGeo(input.departure),
       heading: input.heading,
       budgetMinutes,
-      pois: ENGINE_POIS,
+      pois: activeEnginePois,
       rng,
       prevContentId: input.prevContentId,
       dispersionWeightOf,
@@ -94,21 +109,35 @@ export function recommendFromSpin(input: SpinRecommendInput): Recommendation {
   // 후보가 하나도 없으면 출발점에서 가장 가까운 곳으로 안내한다.
   if (candidates.length === 0) {
     const origin = toGeo(input.departure)
-    const nearest = [...POI_POOL].sort(
+    const repeatSafePool = activePool.filter((poi) => poi.contentId !== input.prevContentId)
+    const nearestPool = repeatSafePool.length > 0 ? repeatSafePool : activePool
+    const nearest = [...nearestPool].sort(
       (a, b) =>
         haversineMeters(origin, { lat: a.lat, lng: a.lon }) -
         haversineMeters(origin, { lat: b.lat, lng: b.lon }),
     )[0]
+    const theme = input.themeJourney ? themeSpinResult(input.themeJourney, rng) : undefined
     return {
       direction,
       candidates: [nearest],
-      expandReason: '이 방향엔 마땅한 곳이 없어 가까운 곳으로 안내했어요',
+      expandReason: input.themeJourney
+        ? `${themeInfo(input.themeJourney.themeId).label} 테마 안에서 가까운 곳으로 안내했어요`
+        : '이 방향엔 마땅한 곳이 없어 가까운 곳으로 안내했어요',
+      theme,
     }
   }
 
-  const expandReason = dialWidened
-    ? '이 시간 안에는 없어서, 조금 먼 곳까지 넓혔어요'
-    : result.expansionReason
+  const selectedTheme = input.themeJourney ? themeInfo(input.themeJourney.themeId) : undefined
+  const expandReason = selectedTheme
+    ? dialWidened
+      ? `${selectedTheme.label} 장소를 찾으려고 조금 먼 곳까지 넓혔어요`
+      : result.expansion === 'none'
+        ? undefined
+        : `이 방향에는 ${selectedTheme.label} 장소가 없어 가까운 방향까지 넓혔어요`
+    : dialWidened
+      ? '이 시간 안에는 없어서, 조금 먼 곳까지 넓혔어요'
+      : result.expansionReason
 
-  return { direction, candidates, expandReason }
+  const theme = input.themeJourney ? themeSpinResult(input.themeJourney, rng) : undefined
+  return { direction, candidates, expandReason, theme }
 }
