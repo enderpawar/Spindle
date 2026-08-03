@@ -105,7 +105,7 @@ export function recommendFromSpin(input: SpinRecommendInput): Recommendation {
     })
     .filter((p): p is Poi => p !== null)
 
-  // 이론상 도달 불가(21곳이 157.5° 밖에 전부 몰릴 수 없음)하지만 시연 데드엔드를 원천 차단:
+  // 이론상 도달 불가(55곳이 157.5° 밖에 전부 몰릴 수 없음)하지만 시연 데드엔드를 원천 차단:
   // 후보가 하나도 없으면 출발점에서 가장 가까운 곳으로 안내한다.
   if (candidates.length === 0) {
     const origin = toGeo(input.departure)
