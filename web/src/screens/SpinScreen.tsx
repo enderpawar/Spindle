@@ -102,7 +102,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
       </div>
       {purposeNotice && <p className="spin-purpose-notice" role="status">{purposeNotice}</p>}
 
-      <div style={{ textAlign: 'center', padding: '18px 24px 0', zIndex: 2, minHeight: 84 }}>
+      <div className="spin-heading">
         {busy ? (
           <>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>{settled ? '오늘의 방향은' : '방향을 찾는 중…'}</div>
@@ -118,8 +118,8 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
         )}
       </div>
 
-      <div style={{ flex: 1, display: 'grid', placeItems: 'center', padding: '8px 0', zIndex: 1 }}>
-        <div style={{ position: 'relative', width: 'min(72vw, 300px)' }}>
+      <div className="spin-compass-stage">
+        <div className="spin-compass-shell">
           <div
             aria-hidden
             style={{
@@ -167,7 +167,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
       </div>
 
       {/* 하단 컨트롤 — 내브 높이만큼 여백 (스핀 중에는 페이드아웃) */}
-      <div style={{ position: 'relative', minHeight: 150, padding: '0 24px calc(104px + env(safe-area-inset-bottom))', zIndex: 2 }}>
+      <div className="spin-controls">
         <div style={{ opacity: busy ? 0 : 1, pointerEvents: busy ? 'none' : 'auto', transition: 'opacity .25s ease', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {theme && purpose === 'single' && (
             <div className="spin-theme-control">

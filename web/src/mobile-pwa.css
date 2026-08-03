@@ -1,36 +1,27 @@
 /* iOS viewport and safe-area corrections.
-   Kept after index.css so every screen shares one predictable app frame. */
-:root {
-  --app-viewport-height: 100vh;
-}
+   Kept after index.css so every screen shares one predictable app frame.
 
-@supports (height: 100dvh) {
-  :root {
-    --app-viewport-height: 100dvh;
-  }
-}
-
-/* In an installed PWA there is no browser toolbar to avoid. Some iOS versions
-   still retain the smaller Safari viewport for dvh, leaving a strip below the
-   app. Use the large viewport only in standalone/fullscreen display modes. */
-@media (display-mode: standalone), (display-mode: fullscreen) {
-  :root {
-    --app-viewport-height: 100lvh;
-  }
-}
+   Do not size the installed app with lvh: iOS can expose lvh without the
+   translucent status-bar area, which leaves exactly that height as a strip at
+   the bottom. Pinning the root to the viewport edges also follows Safari's
+   visible viewport while its browser bars expand and collapse. */
 
 html,
-body,
-#root {
+body {
   height: 100%;
 }
 
 #root {
-  min-height: var(--app-viewport-height);
+  position: fixed;
+  inset: 0;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .screen-transition {
-  height: var(--app-viewport-height);
+  height: 100%;
+  min-height: 0;
 }
 
 .screen {
@@ -41,7 +32,7 @@ body,
 }
 
 .home-guide {
-  height: var(--app-viewport-height);
+  height: 100%;
 }
 
 /* The spot sheet already ends above the global bottom navigation, so it must

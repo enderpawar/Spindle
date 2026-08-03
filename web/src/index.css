@@ -959,6 +959,74 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   cursor: pointer;
 }
 
+/* 스핀 화면은 Safari 주소창이 펼쳐진 짧은 뷰포트에서도 하단 컨트롤이
+   내비게이션 아래로 밀리지 않도록 남은 높이에 맞춰 원판을 줄인다. */
+.spin-heading {
+  z-index: 2;
+  min-height: 84px;
+  padding: 18px 24px 0;
+  text-align: center;
+}
+
+.spin-compass-stage {
+  z-index: 1;
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  place-items: center;
+  padding: 8px 0;
+}
+
+.spin-compass-shell {
+  position: relative;
+  width: min(72vw, 300px);
+}
+
+.spin-controls {
+  position: relative;
+  z-index: 2;
+  min-height: 150px;
+  padding: 0 24px calc(104px + env(safe-area-inset-bottom));
+}
+
+@media (max-height: 700px) {
+  .spin-heading {
+    min-height: 70px;
+    padding-top: 8px;
+  }
+
+  .spin-compass-stage {
+    padding-block: 2px;
+  }
+
+  .spin-compass-shell {
+    width: min(58vw, 220px);
+  }
+
+  .spin-controls {
+    min-height: 138px;
+  }
+}
+
+@media (max-height: 600px) {
+  .spin-heading {
+    min-height: 62px;
+    padding-top: 4px;
+  }
+
+  .spin-heading h1 {
+    font-size: 21px !important;
+  }
+
+  .spin-heading p {
+    margin-top: 4px !important;
+  }
+
+  .spin-compass-shell {
+    width: min(52vw, 184px);
+  }
+}
+
 .theme-disc-intro {
   display: grid;
   grid-template-columns: 164px minmax(0, 1fr);
