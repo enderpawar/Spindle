@@ -133,6 +133,43 @@ describe('혼잡 예측 POI 매칭', () => {
     expect(matched.size).toBe(0)
   })
 
+  it('이름이 포함 관계인 별개 관광지의 값을 옮겨붙이지 않는다', () => {
+    // 실데이터(2026-08-03): 집중률 목록에 "국제시장"과 "국제시장 먹자골목"이 따로 있다.
+    const foodAlley = [{ id: 'food-alley', name: '국제시장 먹자골목' }]
+    const forecasts = [
+      forecast({ attractionName: '국제시장', rate: 85 }),
+      forecast({ attractionName: '국제시장 먹자골목', rate: 40 }),
+    ]
+
+    expect(matchBusyPois(foodAlley, forecasts, '20260802').size).toBe(0)
+    expect(matchComfortablePois(foodAlley, forecasts, '20260802').get('food-alley')?.rate).toBe(40)
+  })
+
+  it('정확히 같은 이름이 포함 매칭보다 우선한다', () => {
+    const both = [
+      { id: 'market', name: '국제시장' },
+      { id: 'food-alley', name: '국제시장 먹자골목' },
+    ]
+    const matched = matchBusyPois(both, [forecast({ attractionName: '국제시장', rate: 85 })], '20260802')
+
+    expect(matched.has('market')).toBe(true)
+    expect(matched.has('food-alley')).toBe(false)
+  })
+
+  it('서로 다른 관광지명이 같은 POI에 포함 매칭되면 둘 다 버린다', () => {
+    const tunnel = [{ id: 'tunnel', name: '영도 흰여울해안터널' }]
+    const matched = matchBusyPois(
+      tunnel,
+      [
+        forecast({ attractionName: '흰여울해안터널', rate: 85 }),
+        forecast({ attractionName: '영도 흰여울해안', rate: 90 }),
+      ],
+      '20260802',
+    )
+
+    expect(matched.size).toBe(0)
+  })
+
   it('로컬 날짜를 YYYYMMDD로 만든다', () => {
     expect(localYyyymmdd(new Date(2026, 7, 2))).toBe('20260802')
   })
