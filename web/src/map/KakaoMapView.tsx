@@ -123,14 +123,18 @@ function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen, s
   )
 }
 
-function ExtraSpotPin({ spot, selected, busy, good, showLabel, onPick }: {
+function ExtraSpotPin({ spot, selected, busy, good, showLabel, onPick, onOpen, showPreview }: {
   spot: ExtraSpot
   selected: boolean
   busy: boolean
   good: boolean
   showLabel: boolean
   onPick: (id: string | null) => void
+  onOpen?: (poi: Poi) => void
+  showPreview: boolean
 }) {
+  const color = directionOf(spot.direction).color
+
   return (
     <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>
       <button
@@ -151,6 +155,8 @@ function ExtraSpotPin({ spot, selected, busy, good, showLabel, onPick }: {
         {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
         {(selected || showLabel) && <span className="map-extra-spot__label">{spot.name}</span>}
       </button>
+
+      {selected && showPreview && <MapPoiPreview poi={spot} color={color} onOpen={onOpen} />}
     </div>
   )
 }
@@ -593,6 +599,8 @@ export function KakaoMapView({
             good={goodPoiIds?.has(spotId) ?? false}
             showLabel={level <= 4}
             onPick={onPick}
+            onOpen={onOpen}
+            showPreview={showSelectedPreview}
           />,
           host,
           spotId,

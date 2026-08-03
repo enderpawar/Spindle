@@ -28,8 +28,8 @@ export interface MapViewProps {
   busyPoiIds?: ReadonlySet<string>
   /** 당일 혼잡 예측이 낮아 가기 좋은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
   goodPoiIds?: ReadonlySet<string>
-  /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로만 표시 */
-  extraSpots?: ReadonlyArray<{ id: string; name: string; lat: number; lon: number }>
+  /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로 표시. Poi 형태라 프리뷰도 재사용한다. */
+  extraSpots?: ReadonlyArray<Poi>
   /** 핀 탭(id) 또는 빈 바다 탭(null) */
   onPick: (id: string | null) => void
   /** 선택 핀의 사진 프리뷰를 탭했을 때 상세 카드 열기 */
@@ -606,6 +606,7 @@ export function LocalMapView({
           const selected = spot.id === selectedId
           const busy = busyPoiIds?.has(spot.id) ?? false
           const good = goodPoiIds?.has(spot.id) ?? false
+          const color = directionOf(spot.direction).color
           return (
             <div
               key={spot.id}
@@ -637,6 +638,8 @@ export function LocalMapView({
                 {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
                 {(selected || showPoiLabels) && <span className="map-extra-spot__label">{spot.name}</span>}
               </button>
+
+              {selected && showSelectedPreview && <MapPoiPreview poi={spot} color={color} onOpen={onOpen} />}
             </div>
           )
         })}

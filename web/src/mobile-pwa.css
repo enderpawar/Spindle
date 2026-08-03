@@ -1,0 +1,51 @@
+/* iOS standalone viewport and safe-area corrections.
+   Kept after index.css so every screen shares one predictable app frame. */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.screen-transition {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.screen {
+  height: 100%;
+  min-height: 0;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: 0;
+}
+
+/* The spot sheet already ends above the global bottom navigation, so it must
+   not reserve the device bottom safe area a second time. Give its photo a
+   stable mobile-first size instead of only the flex space left by the copy. */
+.spot-sheet {
+  height: min(68%, 500px);
+  min-height: min(360px, calc(100% - 24px));
+  padding-bottom: 14px;
+}
+
+.spot-sheet__photo {
+  flex: 1 1 clamp(170px, 26dvh, 240px);
+  min-height: 170px;
+  max-height: 240px;
+}
+
+@media (max-height: 700px) {
+  .spot-sheet {
+    min-height: min(326px, calc(100% - 16px));
+  }
+
+  .spot-sheet__photo {
+    flex-basis: clamp(150px, 24dvh, 190px);
+    min-height: 150px;
+    max-height: 190px;
+  }
+}
