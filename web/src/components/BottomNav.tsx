@@ -26,12 +26,10 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
       className="bottom-nav"
       aria-label="주요 메뉴"
       style={{
-        position: 'fixed',
+        position: 'absolute',
         bottom: 0,
-        left: '50%',
-        width: '100%',
-        maxWidth: 480,
-        transform: 'translateX(-50%)',
+        left: 0,
+        right: 0,
         background: '#fff',
         boxShadow: '0 -6px 20px -8px rgba(20,40,90,.18)',
         display: 'flex',
