@@ -270,7 +270,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             selectedId={selectedId}
             busyPoiIds={busyPoiIds}
             goodPoiIds={goodPoiIds}
-            extraSpots={filteredExtraSpots}
+            extraSpots={extraDisplayPois}
             onPick={pick}
             onOpen={onSelect}
             showSelectedPreview={false}
@@ -302,7 +302,23 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   <path d="M6 6 L18 18 M18 6 L6 18" />
                 </svg>
               </button>
-              <div className="spot-sheet__photo">
+              <div
+                className="spot-sheet__photo"
+                style={{ background: `linear-gradient(145deg, ${directionOf(selectedPoi.direction).color}, #1e4fd8 135%)` }}
+              >
+                <svg
+                  width="34"
+                  height="34"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="rgba(255,255,255,.68)"
+                  strokeWidth={1.5}
+                  style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)' }}
+                  aria-hidden
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M14.8 9.2 L11 11 L9.2 14.8 L13 13 Z" fill="rgba(255,255,255,.68)" />
+                </svg>
                 <PoiPhoto contentId={selectedPoi.contentId} alt={selectedPoi.name} scrim />
               </div>
               <div className="spot-sheet__body">

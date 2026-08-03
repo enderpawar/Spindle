@@ -2593,7 +2593,6 @@ button.is-pressing:not(:disabled) {
   min-height: 0;
   overflow: hidden;
   border-radius: 16px;
-  background: #dbe7f8;
 }
 
 .spot-sheet__body { flex: none; padding-top: 11px; }

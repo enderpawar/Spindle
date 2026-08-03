@@ -114,13 +114,14 @@ export function normalizeAttractionName(name: string): string {
   return name.toLocaleLowerCase('ko-KR').replace(/[^가-힣a-z0-9]/g, '')
 }
 
-function uniquePoiMatch(pois: readonly NamedPoi[], attractionName: string): NamedPoi | undefined {
-  const target = normalizeAttractionName(attractionName)
-  if (!target) return undefined
+/** 정규화 후 완전히 같은 이름이 유일할 때만 연결한다. */
+function exactPoiMatch(pois: readonly NamedPoi[], target: string): NamedPoi | undefined {
   const exact = pois.filter((poi) => normalizeAttractionName(poi.name) === target)
-  if (exact.length === 1) return exact[0]
+  return exact.length === 1 ? exact[0] : undefined
+}
 
-  // 공식명에 지역명·시설 유형이 덧붙는 경우만 보수적으로 포괄 매칭한다.
+/** 공식명에 지역명·시설 유형이 덧붙는 경우만 보수적으로 포괄 매칭한다. */
+function containedPoiMatch(pois: readonly NamedPoi[], target: string): NamedPoi | undefined {
   const contained = pois.filter((poi) => {
     const candidate = normalizeAttractionName(poi.name)
     return Math.min(candidate.length, target.length) >= 4 &&
@@ -129,20 +130,57 @@ function uniquePoiMatch(pois: readonly NamedPoi[], attractionName: string): Name
   return contained.length === 1 ? contained[0] : undefined
 }
 
-/** 당일 예측을 POI id로 색인한다. 중복 예측은 보수적으로 가장 높은 값을 사용한다. */
+/** 같은 POI에 여러 예측이 걸리면 보수적으로 가장 높은 값을 남긴다. */
+function keepHigher(
+  matched: Map<string, CongestionForecast>,
+  poiId: string,
+  forecast: CongestionForecast,
+): void {
+  const previous = matched.get(poiId)
+  if (!previous || forecast.rate > previous.rate) matched.set(poiId, forecast)
+}
+
+/**
+ * 당일 예측을 POI id로 색인한다.
+ *
+ * 정확 일치를 먼저 확정하고 포함 매칭은 남은 POI에만 허용한다 — "국제시장"과
+ * "국제시장 먹자골목"처럼 한쪽이 다른 쪽 이름을 통째로 포함하는 별개 관광지가
+ * 실제로 존재해서, 한 번에 처리하면 남의 혼잡도가 옮겨붙는다.
+ */
 function matchForecastsToPois(
   pois: readonly NamedPoi[],
   forecasts: readonly CongestionForecast[],
   targetDate: string,
 ): ReadonlyMap<string, CongestionForecast> {
   const matched = new Map<string, CongestionForecast>()
+  const pending: { target: string; forecast: CongestionForecast }[] = []
+
+  // 1패스 — 이름이 정확히 같은 예측만 POI를 선점한다.
   for (const forecast of forecasts) {
     if (forecast.forecastDate !== targetDate) continue
-    const poi = uniquePoiMatch(pois, forecast.attractionName)
-    if (!poi) continue
-    const previous = matched.get(poi.id)
-    if (!previous || forecast.rate > previous.rate) matched.set(poi.id, forecast)
+    const target = normalizeAttractionName(forecast.attractionName)
+    if (!target) continue
+    const poi = exactPoiMatch(pois, target)
+    if (poi) keepHigher(matched, poi.id, forecast)
+    else pending.push({ target, forecast })
   }
+
+  // 2패스 — 포함 매칭은 선점되지 않은 POI에만 건다. 서로 다른 관광지명이 같은 POI를
+  // 노리면 어느 쪽이 그 장소인지 알 수 없으므로 둘 다 버린다.
+  const claims = new Map<string, { names: Set<string>; forecasts: CongestionForecast[] }>()
+  for (const { target, forecast } of pending) {
+    const poi = containedPoiMatch(pois, target)
+    if (!poi || matched.has(poi.id)) continue
+    const claim = claims.get(poi.id) ?? { names: new Set<string>(), forecasts: [] }
+    claim.names.add(target)
+    claim.forecasts.push(forecast)
+    claims.set(poi.id, claim)
+  }
+  for (const [poiId, claim] of claims) {
+    if (claim.names.size > 1) continue
+    for (const forecast of claim.forecasts) keepHigher(matched, poiId, forecast)
+  }
+
   return matched
 }
 
