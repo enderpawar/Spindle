@@ -305,6 +305,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             showSelectedPreview={false}
             selectionOffsetRatio={0.24}
           />
+          <div className="spots-source-overlay">
+            <SourceLine style={{ margin: 0, color: '#61789d', fontSize: 9.5, lineHeight: 1.25 }} />
+          </div>
           <div className="map-status-stack">
             <CongestionStatus
               state={congestion}
@@ -365,7 +368,6 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             </section>
           )}
           </div>
-          <SourceLine style={{ flex: 'none', margin: '4px 16px calc(82px + env(safe-area-inset-bottom))' }} />
         </>
       ) : (
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(92px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10 }}>
