@@ -204,30 +204,32 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         userSelect: 'none',
       }}
     >
-      {/* 회전 방위환 — 중앙 별 + 4방위 로즈 (docs/design/ocean-compass star-b).
-          가운데 별은 앱 아이콘(pwa-icon.svg)의 4방위 별 마크와 같은 형태다 —
-          PWA 아이콘·홈 브랜드 마크·스핀 FAB이 모두 이 별을 공유한다.
-          색은 #2f5cff 하나로 두고 명암은 불투명도 단계로만 만든다 — 두 파랑을 맞붙이면
-          접힌 면이 얼룩처럼 보인다. 주황은 회전부에 넣지 않는다(원판과 함께 돌면
-          북쪽이 아닌 곳을 가리키게 된다). */}
+      {/*
+        회전 원판 — 눈금 링·4방위 날·방위 라벨만 돈다.
+        중앙 보스와 로고, 12시 주황 인덱스는 아래 고정 레이어에 있다.
+        색은 #2f5cff 하나로 두고 명암은 불투명도로만 나눈다.
+      */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
           <circle cx="160" cy="160" r="150" fill="#f7f9ff" stroke="#c9d8f5" strokeWidth="1.5" />
 
-          {/* 눈금 링 — 5°마다 짧은 눈금, 45°(8방위)마다 길고 진한 눈금 */}
+          {/* 안쪽 링 — 방위 라벨과 눈금 띠를 가르는 얇은 경계 */}
+          <circle cx="160" cy="160" r="122" fill="none" stroke="#c9d8f5" strokeWidth="1" />
+
+          {/* 방위 눈금 — 8방위에만. 촘촘한 보조 눈금은 8방위 스냅보다 정밀해 보여서 뺐다. */}
           <g stroke="#2f5cff" strokeLinecap="round">
-            {Array.from({ length: 72 }, (_, i) => {
-              const deg = i * 5
-              const major = deg % 45 === 0
+            {Array.from({ length: 8 }, (_, i) => {
+              const deg = i * 45
+              const cardinal = i % 2 === 0
               return (
                 <line
                   key={deg}
                   x1="160"
-                  y1={major ? 124 : 130}
+                  y1="124"
                   x2="160"
-                  y2="137"
-                  strokeWidth={major ? 2 : 1}
-                  strokeOpacity={major ? 0.55 : 0.3}
+                  y2={cardinal ? 138 : 133}
+                  strokeWidth={cardinal ? 2.5 : 1.5}
+                  strokeOpacity={cardinal ? 0.85 : 0.5}
                   transform={`rotate(${deg} 160 160)`}
                 />
               )
@@ -246,7 +248,7 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
             </g>
           ))}
 
-          {/* 방위 라벨 — 주방위는 크고 진하게, 대각은 작고 옅게. 글자는 apply()에서 역회전해 정립한다 */}
+          {/* 방위 라벨 — 주방위는 진하게, 대각은 옅게. 글자는 apply()에서 역회전해 항상 정립한다 */}
           <g textAnchor="middle" style={{ fontFamily: 'inherit' }}>
             {RING_LABELS.map((label, i) => {
               const cardinal = i % 2 === 0
@@ -260,8 +262,9 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
                   x={lx}
                   y={ly}
                   dominantBaseline="middle"
-                  fill={cardinal ? '#17347f' : '#8ba3cf'}
-                  style={{ fontSize: cardinal ? 21 : 11, fontWeight: cardinal ? 800 : 700 }}
+                  fill="#2f5cff"
+                  fillOpacity={cardinal ? 1 : 0.55}
+                  style={{ fontSize: cardinal ? 13 : 10, fontWeight: cardinal ? 800 : 600 }}
                 >
                   {label}
                 </text>
