@@ -67,50 +67,51 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect
         })}
       </div>
 
-      {/* 선택 테마 소개 */}
-      <div style={{ padding: '10px 18px 0', zIndex: 2 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-          <b style={{ color: theme.color, fontWeight: 900 }}>{theme.label}</b> · {theme.tagline} · {pois.length}곳
-        </div>
-      </div>
-
-      <section className="theme-disc-intro" aria-labelledby="theme-disc-title">
-        <div className="theme-disc-preview" style={{ '--theme-color': theme.color } as React.CSSProperties} aria-hidden="true">
-          {DIRECTIONS.map((direction, index) => (
-            <span
-              key={direction.id}
-              className="theme-disc-direction"
-              style={{
-                '--disc-angle': `${index * 45}deg`,
-                '--disc-counter-angle': `${-index * 45}deg`,
-              } as React.CSSProperties}
-            >
-              {direction.label.slice(0, 1)}
-            </span>
-          ))}
-          <div className="theme-disc-center">
-            <strong>{theme.label}</strong>
-            <span>{pois.length}곳</span>
+      {/* 선택 테마 소개·디스크·장소 목록은 한 흐름으로 함께 스크롤한다. */}
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
+        <div style={{ padding: '10px 18px 0', zIndex: 2 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>
+            <b style={{ color: theme.color, fontWeight: 900 }}>{theme.label}</b> · {theme.tagline} · {pois.length}곳
           </div>
         </div>
-        <div className="theme-disc-copy">
-          <h1 id="theme-disc-title">{theme.label} 테마로 방향을 맡겨보세요</h1>
-          <p>{journeyTarget}개의 장면과 매번 다른 여행 미션을 만나요.</p>
-          <button
-            type="button"
-            className="btn btn-blue"
-            onClick={() => onStart(themeId)}
-            disabled={pois.length === 0}
-          >
-            이 테마로 돌리기
-          </button>
-        </div>
-      </section>
 
-      {/* POI 덱 그리드 */}
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 16px calc(110px + env(safe-area-inset-bottom))' }}>
-        <h2 className="theme-poi-heading">이 테마에 들어 있는 장소</h2>
-        <div key={themeId} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
+        <section className="theme-disc-intro" aria-labelledby="theme-disc-title">
+          <div className="theme-disc-preview" style={{ '--theme-color': theme.color } as React.CSSProperties} aria-hidden="true">
+            {DIRECTIONS.map((direction, index) => (
+              <span
+                key={direction.id}
+                className="theme-disc-direction"
+                style={{
+                  '--disc-angle': `${index * 45}deg`,
+                  '--disc-counter-angle': `${-index * 45}deg`,
+                } as React.CSSProperties}
+              >
+                {direction.label.slice(0, 1)}
+              </span>
+            ))}
+            <div className="theme-disc-center">
+              <strong>{theme.label}</strong>
+              <span>{pois.length}곳</span>
+            </div>
+          </div>
+          <div className="theme-disc-copy">
+            <h1 id="theme-disc-title">{theme.label} 테마로 방향을 맡겨보세요</h1>
+            <p>{journeyTarget}개의 장면과 매번 다른 여행 미션을 만나요.</p>
+            <button
+              type="button"
+              className="btn btn-blue"
+              onClick={() => onStart(themeId)}
+              disabled={pois.length === 0}
+            >
+              이 테마로 돌리기
+            </button>
+          </div>
+        </section>
+
+        {/* POI 덱 그리드 */}
+        <div style={{ padding: '14px 16px 0' }}>
+          <h2 className="theme-poi-heading">이 테마에 들어 있는 장소</h2>
+          <div key={themeId} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
           {pois.map((poi) => {
             const dir = directionOf(poi.direction)
             const done = visited.has(poi.id)
@@ -143,8 +144,9 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect
               </button>
             )
           })}
+          </div>
+          <SourceLine />
         </div>
-        <SourceLine />
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />
