@@ -39,7 +39,6 @@ interface TargetRect {
   top: number
   width: number
   height: number
-  frameHeight: number
 }
 
 export function HomeGuide({ onClose }: { onClose: () => void }) {
@@ -66,7 +65,6 @@ export function HomeGuide({ onClose }: { onClose: () => void }) {
         top: Math.max(8, targetBox.top - frameBox.top - sidePadding),
         width: Math.min(targetBox.width + sidePadding * 2, frameBox.width - 16),
         height: targetBox.height + sidePadding * 2,
-        frameHeight: frameBox.height,
       })
     }
 
@@ -81,10 +79,6 @@ export function HomeGuide({ onClose }: { onClose: () => void }) {
     }
   }, [step])
 
-  const panelAtTop = !last && targetRect
-    ? targetRect.top + targetRect.height / 2 > targetRect.frameHeight * 0.48
-    : false
-
   return (
     <div className="home-guide" role="dialog" aria-modal="true" aria-label="Spindle 화면 사용법">
       {!targetRect && <div className="home-guide-backdrop" />}
@@ -95,7 +89,7 @@ export function HomeGuide({ onClose }: { onClose: () => void }) {
         />
       )}
 
-      <section className={`home-guide-panel ${panelAtTop ? 'home-guide-panel--top' : 'home-guide-panel--bottom'}`} aria-live="polite">
+      <section className="home-guide-panel home-guide-panel--bottom" aria-live="polite">
         <div className="home-guide-panel-head">
           <span>{index + 1} / {STEPS.length}</span>
           <button type="button" onClick={onClose}>건너뛰기</button>

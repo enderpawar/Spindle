@@ -836,10 +836,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   animation: motionDialogIn var(--motion-sheet) var(--ease-motion) both;
 }
 
-.home-guide-panel--top {
-  top: calc(18px + env(safe-area-inset-top));
-}
-
 .home-guide-panel--bottom {
   bottom: calc(18px + env(safe-area-inset-bottom));
 }
