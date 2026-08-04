@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <g data-part="rotating-disc">
+    <defs>
+      <radialGradient id="spindle-compass-c-field" cx="48%" cy="43%" r="64%">
+        <stop offset="0" stop-color="#143A5C"/>
+        <stop offset="0.68" stop-color="#0F2540"/>
+        <stop offset="1" stop-color="#091C32"/>
+      </radialGradient>
+      <linearGradient id="spindle-compass-c-water" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#F4F6FB"/>
+        <stop offset="0.45" stop-color="#3ca8df"/>
+        <stop offset="1" stop-color="#1e4fd8"/>
+      </linearGradient>
+      <linearGradient id="spindle-compass-c-depth" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#3ca8df"/>
+        <stop offset="1" stop-color="#143A5C"/>
+      </linearGradient>
+    </defs>
+    <path d="M-70 -70H390V390H-70Z" fill="#0F2540"/>
+    <circle cx="160" cy="160" r="154" fill="url(#spindle-compass-c-field)"/>
+    <circle cx="160" cy="160" r="149" fill="none" stroke="#3ca8df" stroke-width="0.8" opacity="0.55"/>
+    <path d="M27 143C61 128 91 136 118 149C146 163 176 168 205 152C235 135 261 133 293 146" fill="none" stroke="#8ba3cf" stroke-width="1" opacity="0.28"/>
+    <path d="M31 169C62 155 91 158 120 173C150 188 181 187 209 171C237 155 263 156 290 169" fill="none" stroke="#3ca8df" stroke-width="1.2" opacity="0.34"/>
+    <path d="M43 197C72 183 98 186 124 199C149 212 176 213 201 200C226 186 249 184 277 195" fill="none" stroke="#8ba3cf" stroke-width="0.8" opacity="0.2"/>
+    <g stroke="#0F2540" stroke-width="1.2" stroke-linejoin="round">
+      <path d="M160 57C151 72 147 88 149 104C151 119 143 128 137 139C150 135 153 148 160 160C167 147 174 137 184 133C174 120 169 111 171 98C174 82 168 68 160 57Z" fill="url(#spindle-compass-c-water)"/>
+      <path d="M235 85C219 90 207 99 200 113C194 126 183 130 171 136C185 138 181 151 160 160C174 166 188 165 198 171C199 155 203 144 214 137C227 128 234 113 235 85Z" fill="url(#spindle-compass-c-depth)"/>
+      <path d="M264 160C249 150 234 147 219 150C204 153 194 146 182 139C187 153 174 156 160 160C173 168 184 174 190 185C203 174 213 169 226 171C242 174 256 168 264 160Z" fill="url(#spindle-compass-c-water)"/>
+      <path d="M235 235C230 219 221 207 207 200C194 194 190 183 184 171C182 185 169 181 160 160C154 174 155 188 149 198C165 199 176 203 183 214C192 227 207 234 235 235Z" fill="url(#spindle-compass-c-depth)"/>
+      <path d="M160 263C169 248 173 232 171 216C169 201 177 192 183 181C170 185 167 172 160 160C153 173 146 183 136 187C146 200 151 209 149 222C146 238 152 252 160 263Z" fill="url(#spindle-compass-c-water)"/>
+      <path d="M85 235C101 230 113 221 120 207C126 194 137 190 149 184C135 182 139 169 160 160C146 154 132 155 122 149C121 165 117 176 106 183C93 192 86 207 85 235Z" fill="url(#spindle-compass-c-depth)"/>
+      <path d="M56 160C71 170 86 173 101 170C116 167 126 174 138 181C133 167 146 164 160 160C147 152 136 146 130 135C117 146 107 151 94 149C78 146 64 152 56 160Z" fill="url(#spindle-compass-c-water)"/>
+      <path d="M85 85C90 101 99 113 113 120C126 126 130 137 136 149C138 135 151 139 160 160C166 146 165 132 171 122C155 121 144 117 137 106C128 93 113 86 85 85Z" fill="url(#spindle-compass-c-depth)"/>
+    </g>
+    <g fill="none" stroke="#F4F6FB" stroke-linecap="round">
+      <path d="M147 92Q158 84 170 94" stroke-width="2" opacity="0.7"/>
+      <path d="M206 111Q218 110 225 120" stroke-width="1.6" opacity="0.55"/>
+      <path d="M224 152Q238 158 241 168" stroke-width="2" opacity="0.64"/>
+      <path d="M207 204Q212 216 203 225" stroke-width="1.6" opacity="0.52"/>
+      <path d="M149 226Q158 237 170 227" stroke-width="2" opacity="0.62"/>
+      <path d="M111 207Q101 216 93 207" stroke-width="1.6" opacity="0.5"/>
+      <path d="M92 151Q80 160 91 170" stroke-width="2" opacity="0.6"/>
+      <path d="M109 112Q101 101 112 94" stroke-width="1.6" opacity="0.5"/>
+      <path d="M128 143Q141 137 151 146T174 146T194 141" stroke-width="1.5" opacity="0.48"/>
+      <path d="M121 174Q135 165 149 174T177 174T201 169" stroke-width="1.5" opacity="0.42"/>
+    </g>
+    <g fill="#F4F6FB">
+      <circle cx="151" cy="69" r="2.2" opacity="0.72"/><circle cx="168" cy="78" r="1.4" opacity="0.58"/>
+      <circle cx="158" cy="98" r="1.1" opacity="0.55"/><circle cx="196" cy="104" r="1.8" opacity="0.68"/>
+      <circle cx="218" cy="119" r="1.2" opacity="0.52"/><circle cx="241" cy="151" r="2" opacity="0.7"/>
+      <circle cx="219" cy="163" r="1.1" opacity="0.54"/><circle cx="226" cy="195" r="1.7" opacity="0.64"/>
+      <circle cx="207" cy="217" r="1.2" opacity="0.52"/><circle cx="168" cy="241" r="2" opacity="0.68"/>
+      <circle cx="153" cy="219" r="1.1" opacity="0.5"/><circle cx="123" cy="225" r="1.8" opacity="0.66"/>
+      <circle cx="101" cy="208" r="1.2" opacity="0.52"/><circle cx="78" cy="169" r="2" opacity="0.7"/>
+      <circle cx="101" cy="153" r="1.1" opacity="0.5"/><circle cx="91" cy="122" r="1.7" opacity="0.64"/>
+      <circle cx="110" cy="101" r="1.2" opacity="0.52"/><circle cx="133" cy="119" r="1.1" opacity="0.5"/>
+      <circle cx="144" cy="151" r="1.5" opacity="0.7"/><circle cx="172" cy="143" r="1.2" opacity="0.56"/>
+      <circle cx="184" cy="159" r="1.6" opacity="0.62"/><circle cx="165" cy="181" r="1.2" opacity="0.52"/>
+      <circle cx="140" cy="178" r="1.5" opacity="0.6"/><circle cx="127" cy="160" r="1.1" opacity="0.54"/>
+    </g>
+    <g fill="#FF7A45">
+      <circle cx="160" cy="30" r="3"/>
+      <circle cx="251.92" cy="68.08" r="3"/>
+      <circle cx="290" cy="160" r="3"/>
+      <circle cx="251.92" cy="251.92" r="3"/>
+      <circle cx="160" cy="290" r="3"/>
+      <circle cx="68.08" cy="251.92" r="3"/>
+      <circle cx="30" cy="160" r="3"/>
+      <circle cx="68.08" cy="68.08" r="3"/>
+    </g>
+    <circle cx="160" cy="160" r="15" fill="#0F2540" stroke="#3ca8df" stroke-width="1.5"/>
+    <path d="M160 148C166 153 166 167 160 172C154 167 154 153 160 148Z" fill="#F4F6FB" opacity="0.92"/>
+    <path d="M148 160C153 154 167 154 172 160C167 166 153 166 148 160Z" fill="#8ba3cf" opacity="0.82"/>
+    <circle cx="160" cy="160" r="4" fill="#FF7A45"/>
+    <g data-part="ring-labels" fill="#F4F6FB" font-family="inherit" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.4">
+      <text x="160" y="49" fill="#FF7A45">N</text>
+      <text x="238.49" y="81.51">NE</text>
+      <text x="271" y="160">E</text>
+      <text x="238.49" y="238.49">SE</text>
+      <text x="160" y="271">S</text>
+      <text x="81.51" y="238.49">SW</text>
+      <text x="49" y="160">W</text>
+      <text x="81.51" y="81.51">NW</text>
+    </g>
+  </g>
+  <g data-part="fixed-indicator">
+    <path d="M160 3L147 17L152 30L160 25L168 30L173 17Z" fill="#FF7A45" stroke="#F4F6FB" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M160 25V39" fill="none" stroke="#FF7A45" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

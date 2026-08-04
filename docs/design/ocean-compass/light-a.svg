@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <g data-part="rotating-disc">
+    <defs>
+      <path id="spindle-compass-light-a-minor" d="M160 9V16M174.54 9.72L173.86 16.69M188.94 11.85L187.58 18.72M203.06 15.38L201.03 22.08M216.78 20.27L214.1 26.74M229.95 26.47L226.66 32.65M242.46 33.91L238.59 39.73"/>
+      <path id="spindle-compass-light-a-mid" d="M160 9V20M189.45 11.9L187.31 22.69M217.73 20.66L213.52 30.82M243.88 34.86L237.77 44.01"/>
+      <path id="spindle-compass-light-a-major" d="M160 8V25"/>
+      <path id="spindle-compass-light-a-cardinal-dark" d="M160 66L160 160L137 135Z"/>
+      <path id="spindle-compass-light-a-cardinal-light" d="M160 66L183 135L160 160Z"/>
+      <path id="spindle-compass-light-a-ordinal-dark" d="M160 89L160 160L145 143Z"/>
+      <path id="spindle-compass-light-a-ordinal-light" d="M160 89L175 143L160 160Z"/>
+    </defs>
+    <circle cx="160" cy="160" r="153" fill="#ffffff" stroke="#17347f" stroke-width="1.5"/>
+    <circle cx="160" cy="160" r="147" fill="#f3f7ff" stroke="#8ba3cf" stroke-width="1"/>
+    <circle cx="160" cy="160" r="137" fill="#ffffff" stroke="#17347f" stroke-width="1"/>
+    <circle cx="160" cy="160" r="132" fill="none" stroke="#dbe6fa" stroke-width="1"/>
+    <g fill="none" stroke="#3a4c78" stroke-width="0.85" stroke-linecap="round">
+      <use href="#spindle-compass-light-a-minor"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(45 160 160)"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(90 160 160)"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(135 160 160)"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(180 160 160)"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(225 160 160)"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(270 160 160)"/>
+      <use href="#spindle-compass-light-a-minor" transform="rotate(315 160 160)"/>
+    </g>
+    <g fill="none" stroke="#17347f" stroke-width="1.15" stroke-linecap="round">
+      <use href="#spindle-compass-light-a-mid"/>
+      <use href="#spindle-compass-light-a-mid" transform="rotate(90 160 160)"/>
+      <use href="#spindle-compass-light-a-mid" transform="rotate(180 160 160)"/>
+      <use href="#spindle-compass-light-a-mid" transform="rotate(270 160 160)"/>
+    </g>
+    <g fill="none" stroke="#2f5cff" stroke-width="2" stroke-linecap="round">
+      <use href="#spindle-compass-light-a-major"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(45 160 160)"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(90 160 160)"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(135 160 160)"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(180 160 160)"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(225 160 160)"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(270 160 160)"/>
+      <use href="#spindle-compass-light-a-major" transform="rotate(315 160 160)"/>
+    </g>
+    <g fill="none" stroke="#3ca8df" stroke-width="1" stroke-linecap="round">
+      <path d="M92 147Q109 137 126 147T160 147T194 147T228 147"/>
+      <path d="M96 169Q112 159 128 169T160 169T192 169T224 169"/>
+      <path d="M109 192Q122 184 135 192T161 192T187 192T213 192"/>
+    </g>
+    <g stroke="#17347f" stroke-width="1" stroke-linejoin="round">
+      <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f"/>
+      <use href="#spindle-compass-light-a-cardinal-light" fill="#3ca8df"/>
+      <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(90 160 160)"/>
+      <use href="#spindle-compass-light-a-cardinal-light" fill="#3a4c78" transform="rotate(90 160 160)"/>
+      <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(180 160 160)"/>
+      <use href="#spindle-compass-light-a-cardinal-light" fill="#3ca8df" transform="rotate(180 160 160)"/>
+      <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(270 160 160)"/>
+      <use href="#spindle-compass-light-a-cardinal-light" fill="#3a4c78" transform="rotate(270 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(45 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-light" fill="#3a4c78" transform="rotate(45 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(135 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-light" fill="#3ca8df" transform="rotate(135 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(225 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-light" fill="#3a4c78" transform="rotate(225 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(315 160 160)"/>
+      <use href="#spindle-compass-light-a-ordinal-light" fill="#3ca8df" transform="rotate(315 160 160)"/>
+    </g>
+    <path d="M160 66L160 103L151 93Z" fill="#FF7A45" stroke="#17347f" stroke-width="1" stroke-linejoin="round"/>
+    <circle cx="160" cy="160" r="13" fill="#ffffff" stroke="#17347f" stroke-width="1.5"/>
+    <circle cx="160" cy="160" r="5" fill="#1e4fd8"/>
+    <g data-part="ring-labels" fill="#17347f" font-family="inherit" font-size="11" font-weight="700" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.45">
+      <text x="160" y="48" fill="#FF7A45">N</text>
+      <text x="239.2" y="80.8">NE</text>
+      <text x="272" y="160">E</text>
+      <text x="239.2" y="239.2">SE</text>
+      <text x="160" y="272">S</text>
+      <text x="80.8" y="239.2">SW</text>
+      <text x="48" y="160">W</text>
+      <text x="80.8" y="80.8">NW</text>
+    </g>
+  </g>
+  <g data-part="fixed-indicator">
+    <path d="M160 2L149 17L154 29L160 25L166 29L171 17Z" fill="#FF7A45" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M160 25V38" fill="none" stroke="#FF7A45" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,5 +1,4 @@
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
-import { directionFromHeading } from '../mock/pois'
 
 interface Props {
   disabled?: boolean
@@ -20,9 +19,9 @@ const STOP_THRESHOLD = 0.02 // deg/ms — 정지 판정
 const DECAY_TAU = 480 // ms — 감속 시정수 (초속 1.8deg/ms 기준 약 2.5바퀴)
 const MAX_VELOCITY = 3.2
 /** 방위 라벨이 놓이는 반지름 — 역회전 계산과 렌더가 같은 값을 써야 한다 */
-const LABEL_RADIUS = 82
-/** 해도 방위환 라벨 — 8방위 스냅과 일치하는 약어 + 방위각 (docs/design/ocean-compass) */
-const RING_LABELS = ['N 000', 'NE 045', 'E 090', 'SE 135', 'S 180', 'SW 225', 'W 270', 'NW 315']
+const LABEL_RADIUS = 112
+/** 방위환 라벨 — 8방위 스냅과 일치 (docs/design/ocean-compass light-a) */
+const RING_LABELS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 const polar = (r: number, deg: number) => {
   const rad = (deg * Math.PI) / 180
@@ -46,7 +45,6 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
   const fallback = useRef<ReturnType<typeof setTimeout>>(undefined)
   // 매 프레임 setState를 피하려고 DOM을 직접 갱신한다 (원판 transform과 같은 방식).
   const labelRefs = useRef<(SVGTextElement | null)[]>([])
-  const readoutRef = useRef<SVGTextElement>(null)
 
   const headingOf = (rot: number) => ((-rot % 360) + 360) % 360
 
@@ -61,10 +59,6 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
       const [lx, ly] = polar(LABEL_RADIUS, i * 45)
       el.setAttribute('transform', `rotate(${-rotation.current} ${lx} ${ly})`)
     }
-    if (readoutRef.current) {
-      readoutRef.current.textContent = `${directionFromHeading(heading).label} ${String(Math.round(heading) % 360).padStart(3, '0')}°`
-    }
-
     onHeading?.(heading)
   }
 
@@ -210,44 +204,77 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         userSelect: 'none',
       }}
     >
-      {/* 회전 방위환 — 해도 눈금형 (docs/design/ocean-compass proto-2) */}
+      {/* 회전 방위환 — 종이 해도형 8방위 접힌 로즈 (docs/design/ocean-compass light-a) */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
-          <circle cx="160" cy="160" r="154" fill="#ffffff" stroke="#dbe6fa" strokeWidth="2" />
-          <circle cx="160" cy="160" r="143" fill="#ffffff" stroke="#17347f" strokeWidth="1.5" />
-          <circle cx="160" cy="160" r="127" fill="none" stroke="#8ba3cf" strokeWidth="1" />
-          <circle cx="160" cy="160" r="101" fill="#e8f0ff" stroke="#dbe6fa" strokeWidth="1.5" />
-
-          {/* 10도 눈금 — 32방위 해도 로즈의 보조 눈금을 8방위 스핀용으로 줄인 것.
-              회전 중 속도감을 주되 8방위보다 정밀해 보이지 않도록 라벨은 달지 않는다. */}
-          <g stroke="#3a4c78" strokeLinecap="square">
-            {Array.from({ length: 36 }, (_, i) => {
-              const deg = i * 10
-              const major = deg % 90 === 0
-              const mid = deg % 30 === 0
-              return (
-                <line
-                  key={deg}
-                  x1="160"
-                  y1="17"
-                  x2="160"
-                  y2={major ? 34 : mid ? 29 : 25}
-                  strokeWidth={major ? 2.5 : 1}
-                  transform={`rotate(${deg} 160 160)`}
-                />
-              )
-            })}
+          <defs>
+          <path id="spindle-compass-light-a-minor" d="M160 9V16M174.54 9.72L173.86 16.69M188.94 11.85L187.58 18.72M203.06 15.38L201.03 22.08M216.78 20.27L214.1 26.74M229.95 26.47L226.66 32.65M242.46 33.91L238.59 39.73"/>
+          <path id="spindle-compass-light-a-mid" d="M160 9V20M189.45 11.9L187.31 22.69M217.73 20.66L213.52 30.82M243.88 34.86L237.77 44.01"/>
+          <path id="spindle-compass-light-a-major" d="M160 8V25"/>
+          <path id="spindle-compass-light-a-cardinal-dark" d="M160 66L160 160L137 135Z"/>
+          <path id="spindle-compass-light-a-cardinal-light" d="M160 66L183 135L160 160Z"/>
+          <path id="spindle-compass-light-a-ordinal-dark" d="M160 89L160 160L145 143Z"/>
+          <path id="spindle-compass-light-a-ordinal-light" d="M160 89L175 143L160 160Z"/>
+          </defs>
+          <circle cx="160" cy="160" r="153" fill="#ffffff" stroke="#17347f" strokeWidth="1.5"/>
+          <circle cx="160" cy="160" r="147" fill="#f3f7ff" stroke="#8ba3cf" strokeWidth="1"/>
+          <circle cx="160" cy="160" r="137" fill="#ffffff" stroke="#17347f" strokeWidth="1"/>
+          <circle cx="160" cy="160" r="132" fill="none" stroke="#dbe6fa" strokeWidth="1"/>
+          <g fill="none" stroke="#3a4c78" strokeWidth="0.85" strokeLinecap="round">
+          <use href="#spindle-compass-light-a-minor"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(45 160 160)"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(90 160 160)"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(135 160 160)"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(180 160 160)"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(225 160 160)"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(270 160 160)"/>
+          <use href="#spindle-compass-light-a-minor" transform="rotate(315 160 160)"/>
           </g>
-
-          {/* 8방위 스냅 지점 표시 */}
-          <g stroke="#2f5cff" strokeWidth="2" opacity="0.7">
-            {Array.from({ length: 8 }, (_, i) => (
-              <line key={i} x1="160" y1="42" x2="160" y2="59" transform={`rotate(${i * 45} 160 160)`} />
-            ))}
+          <g fill="none" stroke="#17347f" strokeWidth="1.15" strokeLinecap="round">
+          <use href="#spindle-compass-light-a-mid"/>
+          <use href="#spindle-compass-light-a-mid" transform="rotate(90 160 160)"/>
+          <use href="#spindle-compass-light-a-mid" transform="rotate(180 160 160)"/>
+          <use href="#spindle-compass-light-a-mid" transform="rotate(270 160 160)"/>
           </g>
+          <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeLinecap="round">
+          <use href="#spindle-compass-light-a-major"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(45 160 160)"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(90 160 160)"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(135 160 160)"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(180 160 160)"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(225 160 160)"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(270 160 160)"/>
+          <use href="#spindle-compass-light-a-major" transform="rotate(315 160 160)"/>
+          </g>
+          <g fill="none" stroke="#3ca8df" strokeWidth="1" strokeLinecap="round">
+          <path d="M92 147Q109 137 126 147T160 147T194 147T228 147"/>
+          <path d="M96 169Q112 159 128 169T160 169T192 169T224 169"/>
+          <path d="M109 192Q122 184 135 192T161 192T187 192T213 192"/>
+          </g>
+          <g stroke="#17347f" strokeWidth="1" strokeLinejoin="round">
+          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f"/>
+          <use href="#spindle-compass-light-a-cardinal-light" fill="#3ca8df"/>
+          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(90 160 160)"/>
+          <use href="#spindle-compass-light-a-cardinal-light" fill="#3a4c78" transform="rotate(90 160 160)"/>
+          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(180 160 160)"/>
+          <use href="#spindle-compass-light-a-cardinal-light" fill="#3ca8df" transform="rotate(180 160 160)"/>
+          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(270 160 160)"/>
+          <use href="#spindle-compass-light-a-cardinal-light" fill="#3a4c78" transform="rotate(270 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(45 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-light" fill="#3a4c78" transform="rotate(45 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(135 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-light" fill="#3ca8df" transform="rotate(135 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(225 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-light" fill="#3a4c78" transform="rotate(225 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(315 160 160)"/>
+          <use href="#spindle-compass-light-a-ordinal-light" fill="#3ca8df" transform="rotate(315 160 160)"/>
+          </g>
+          <path d="M160 66L160 103L151 93Z" fill="#FF7A45" stroke="#17347f" strokeWidth="1" strokeLinejoin="round"/>
+          <circle cx="160" cy="160" r="13" fill="#ffffff" stroke="#17347f" strokeWidth="1.5"/>
+          <circle cx="160" cy="160" r="5" fill="#1e4fd8"/>
 
-          {/* 방위 라벨 — 위치는 원판을 따라 돌지만 글자는 apply()에서 역회전시켜 항상 정립한다 */}
-          <g fill="#17347f" textAnchor="middle" style={{ fontSize: 12, fontWeight: 800, fontFamily: 'inherit' }}>
+          {/* 방위 라벨 — 위치는 원판을 따라 돌고 글자는 apply()에서 역회전시켜 항상 정립한다 */}
+          <g fill="#17347f" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fontFamily: 'inherit', letterSpacing: '0.45px' }}>
             {RING_LABELS.map((label, i) => {
               const [lx, ly] = polar(LABEL_RADIUS, i * 45)
               return (
@@ -258,49 +285,25 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
                   }}
                   x={lx}
                   y={ly}
-                  dominantBaseline="central"
+                  dominantBaseline="middle"
+                  fill={i === 0 ? '#FF7A45' : undefined}
                 >
                   {label}
                 </text>
               )
             })}
           </g>
-
-          {/* 북방 표시 — 고정 인덱스보다 약하게 둬서 "결과"와 경쟁하지 않게 한다 */}
-          <path d="M160 89 L151 109 L160 104 L169 109 Z" fill="#1e4fd8" />
         </svg>
       </div>
 
-      {/* 고정 인덱스와 선택값 — 회전하지 않는다. 화면 12시가 곧 알고리즘 입력 방위각이다. */}
+      {/* 고정 인덱스 — 회전하지 않는다. 화면 12시가 곧 알고리즘 입력 방위각이다. */}
       <svg
         viewBox="0 0 320 320"
         aria-hidden
         style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}
       >
-        <path d="M143 5 H177 L169 18 H151 Z" fill="#ff7a45" />
-        <path d="M151 18 L160 39 L169 18 Z" fill="#ffb38f" stroke="#ff7a45" strokeWidth="2" />
-        <line x1="160" y1="39" x2="160" y2="69" stroke="#ff7a45" strokeWidth="2.5" />
-        <line x1="151" y1="69" x2="169" y2="69" stroke="#ff7a45" strokeWidth="2.5" />
-
-        <path
-          d="M126 130 H194 Q208 130 208 144 V176 Q208 190 194 190 H126 Q112 190 112 176 V144 Q112 130 126 130 Z"
-          fill="#ffffff"
-          stroke="#2f5cff"
-          strokeWidth="2"
-        />
-        <text x="160" y="153" fill="#8ba3cf" textAnchor="middle" style={{ fontSize: 10, fontWeight: 750, fontFamily: 'inherit' }}>
-          선택 방위
-        </text>
-        <text
-          ref={readoutRef}
-          x="160"
-          y="175"
-          fill="#17347f"
-          textAnchor="middle"
-          style={{ fontSize: 18, fontWeight: 850, fontFamily: 'inherit' }}
-        >
-          북 000°
-        </text>
+        <path d="M160 2L149 17L154 29L160 25L166 29L171 17Z" fill="#FF7A45" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round"/>
+        <path d="M160 25V38" fill="none" stroke="#FF7A45" strokeWidth="3" strokeLinecap="round"/>
       </svg>
     </div>
   )
