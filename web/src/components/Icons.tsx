@@ -67,27 +67,6 @@ export function NavSettingsIcon({ size = 24 }: NavIconProps) {
 }
 
 /**
- * 스핀 FAB — Spindle 로고 마크 그대로.
- * 앱 아이콘(`public/pwa-icon.svg`)에서 바깥 남색 사각형만 걷어냈다:
- * 주황 링 원 + 흰 4방위 별 + 주황 중심점 + 흰 십자 눈금. 원 안은 비워 파란 FAB이 비친다.
- */
-export function NavSpinIcon({ size = 28 }: NavIconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
-      <circle cx="256" cy="256" r="154" fill="none" stroke="#FF7A45" strokeWidth={18} />
-      <path d="M256 96l42 118 118 42-118 42-42 118-42-118-118-42 118-42z" fill="currentColor" />
-      <path
-        d="M256 128v50M256 334v50M128 256h50M334 256h50"
-        stroke="currentColor"
-        strokeWidth={18}
-        strokeLinecap="round"
-      />
-      <circle cx="256" cy="256" r="28" fill="#FF7A45" />
-    </svg>
-  )
-}
-
-/**
  * 큐레이션 명소 핀 내부 도형 — 30×38 viewBox 안에 그린다.
  * 지도 위에서 배경과 붙지 않도록 몸통에 흰 테두리를 유지한다.
  */
@@ -126,24 +105,5 @@ export function SpotPinShape({ color }: { color: string }) {
       />
       <circle cx="9" cy="8.25" r="2.5" fill="#17347f" />
     </>
-  )
-}
-
-/**
- * 스핀 원판 중앙 허브 — 회전하지 않는 고정 나침반 (assets/icons/compass-hub-b.svg).
- * 앱 아이콘의 4방위 별과 형제가 되도록 긴 날 4 + 짧은 날 4의 로즈로 그린다.
- * 북쪽 끝만 브랜드 주황으로 찍어 12시가 "가리키는 곳"임을 형태로 알린다.
- * 회전 중심은 (50,50) — 원판 라벨과 겹치지 않도록 중앙에 불투명 흰 면을 둔다.
- */
-export function CompassHubArt() {
-  return (
-    <svg viewBox="0 0 100 100" aria-hidden>
-      <circle cx="50" cy="50" r="42" fill="#ffffff" stroke="#dbe6fa" strokeWidth={2} />
-      <path d="M50 50 28 28 45 39ZM50 50 72 28 61 45ZM50 50 72 72 55 61ZM50 50 28 72 39 55Z" fill="#8ba3cf" />
-      <path d="M50 7 43 46 50 42 57 46ZM93 50 54 43 58 50 54 57ZM50 93 57 54 50 58 43 54ZM7 50 46 57 42 50 46 43Z" fill="#17347f" />
-      <path d="M50 7 53 24 47 24Z" fill="#ff7a45" />
-      <circle cx="50" cy="50" r="10" fill="#ffffff" stroke="#dbe6fa" strokeWidth={2} />
-      <circle cx="50" cy="50" r="4" fill="#2f5cff" />
-    </svg>
   )
 }
