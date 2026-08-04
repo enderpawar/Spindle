@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320">
+  <g data-part="rotating-disc" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="160" cy="160" r="151" fill="#ffffff" stroke="#2f5cff" stroke-width="1.50" stroke-opacity="0.12"/>
+    <circle cx="160" cy="160" r="139" fill="none" stroke="#2f5cff" stroke-width="1" stroke-opacity="0.12"/>
+    <g fill="none" stroke="#2f5cff" stroke-width="1.50">
+      <path d="M160 141 C157 126 157 108 160 86 C163 108 163 126 160 141 Z"/>
+      <path d="M160 141 C157 126 157 108 160 86 C163 108 163 126 160 141 Z" transform="rotate(90 160 160)"/>
+      <path d="M160 141 C157 126 157 108 160 86 C163 108 163 126 160 141 Z" transform="rotate(180 160 160)"/>
+      <path d="M160 141 C157 126 157 108 160 86 C163 108 163 126 160 141 Z" transform="rotate(270 160 160)"/>
+    </g>
+    <g fill="none" stroke="#2f5cff" stroke-width="1.25" stroke-opacity="0.55">
+      <path d="M160 141 C158 128 158 114 160 98 C162 114 162 128 160 141 Z" transform="rotate(45 160 160)"/>
+      <path d="M160 141 C158 128 158 114 160 98 C162 114 162 128 160 141 Z" transform="rotate(135 160 160)"/>
+      <path d="M160 141 C158 128 158 114 160 98 C162 114 162 128 160 141 Z" transform="rotate(225 160 160)"/>
+      <path d="M160 141 C158 128 158 114 160 98 C162 114 162 128 160 141 Z" transform="rotate(315 160 160)"/>
+    </g>
+    <circle cx="160" cy="160" r="10" fill="#ffffff" stroke="#2f5cff" stroke-width="1.50"/>
+    <circle cx="160" cy="160" r="2.50" fill="#2f5cff" fill-opacity="0.55"/>
+    <g data-part="ring-labels" fill="#2f5cff" font-family="inherit" font-size="10" font-weight="600" text-anchor="middle" dominant-baseline="middle" letter-spacing="0.35">
+      <text x="160" y="48">N</text>
+      <text x="239.20" y="80.80" fill-opacity="0.55">NE</text>
+      <text x="272" y="160">E</text>
+      <text x="239.20" y="239.20" fill-opacity="0.55">SE</text>
+      <text x="160" y="272">S</text>
+      <text x="80.80" y="239.20" fill-opacity="0.55">SW</text>
+      <text x="48" y="160">W</text>
+      <text x="80.80" y="80.80" fill-opacity="0.55">NW</text>
+    </g>
+  </g>
+  <g data-part="fixed-indicator" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M153 10 L160 23 L167 10 Z" fill="#FF7A45"/>
+  </g>
+</svg>

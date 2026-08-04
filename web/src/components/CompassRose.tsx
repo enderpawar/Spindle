@@ -204,77 +204,37 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         userSelect: 'none',
       }}
     >
-      {/* 회전 방위환 — 종이 해도형 8방위 접힌 로즈 (docs/design/ocean-compass light-a) */}
+      {/* 회전 방위환 — 단일색 미니멀 로즈 (docs/design/ocean-compass min-b).
+          색은 #2f5cff 하나로 두고 명암은 불투명도 단계로만 만든다 — 두 파랑을 맞붙이면
+          접힌 면이 얼룩처럼 보인다. 주황은 회전부에 넣지 않는다(원판과 함께 돌면
+          북쪽이 아닌 곳을 가리키게 된다). */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
-          <defs>
-          <path id="spindle-compass-light-a-minor" d="M160 9V16M174.54 9.72L173.86 16.69M188.94 11.85L187.58 18.72M203.06 15.38L201.03 22.08M216.78 20.27L214.1 26.74M229.95 26.47L226.66 32.65M242.46 33.91L238.59 39.73"/>
-          <path id="spindle-compass-light-a-mid" d="M160 9V20M189.45 11.9L187.31 22.69M217.73 20.66L213.52 30.82M243.88 34.86L237.77 44.01"/>
-          <path id="spindle-compass-light-a-major" d="M160 8V25"/>
-          <path id="spindle-compass-light-a-cardinal-dark" d="M160 66L160 160L137 135Z"/>
-          <path id="spindle-compass-light-a-cardinal-light" d="M160 66L183 135L160 160Z"/>
-          <path id="spindle-compass-light-a-ordinal-dark" d="M160 89L160 160L145 143Z"/>
-          <path id="spindle-compass-light-a-ordinal-light" d="M160 89L175 143L160 160Z"/>
-          </defs>
-          <circle cx="160" cy="160" r="153" fill="#ffffff" stroke="#17347f" strokeWidth="1.5"/>
-          <circle cx="160" cy="160" r="147" fill="#f3f7ff" stroke="#8ba3cf" strokeWidth="1"/>
-          <circle cx="160" cy="160" r="137" fill="#ffffff" stroke="#17347f" strokeWidth="1"/>
-          <circle cx="160" cy="160" r="132" fill="none" stroke="#dbe6fa" strokeWidth="1"/>
-          <g fill="none" stroke="#3a4c78" strokeWidth="0.85" strokeLinecap="round">
-          <use href="#spindle-compass-light-a-minor"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(45 160 160)"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(90 160 160)"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(135 160 160)"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(180 160 160)"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(225 160 160)"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(270 160 160)"/>
-          <use href="#spindle-compass-light-a-minor" transform="rotate(315 160 160)"/>
+          <g strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="160" cy="160" r="151" fill="#f3f7ff" stroke="#2f5cff" strokeWidth="1.50" strokeOpacity="0.12"/>
+            <circle cx="160" cy="160" r="139" fill="#ffffff" stroke="#2f5cff" strokeWidth="1" strokeOpacity="0.12"/>
+            <g fill="#2f5cff" fillOpacity="0.55">
+            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z"/>
+            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z" transform="rotate(90 160 160)"/>
+            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z" transform="rotate(180 160 160)"/>
+            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z" transform="rotate(270 160 160)"/>
+            </g>
+            <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeOpacity="0.55">
+            <path d="M160 66 L160 76" transform="rotate(45 160 160)"/>
+            <path d="M160 66 L160 76" transform="rotate(135 160 160)"/>
+            <path d="M160 66 L160 76" transform="rotate(225 160 160)"/>
+            <path d="M160 66 L160 76" transform="rotate(315 160 160)"/>
+            </g>
+            <circle cx="160" cy="160" r="9" fill="#ffffff" stroke="#2f5cff" strokeWidth="1.50" strokeOpacity="0.55"/>
+            <circle cx="160" cy="160" r="2.50" fill="#2f5cff"/>
           </g>
-          <g fill="none" stroke="#17347f" strokeWidth="1.15" strokeLinecap="round">
-          <use href="#spindle-compass-light-a-mid"/>
-          <use href="#spindle-compass-light-a-mid" transform="rotate(90 160 160)"/>
-          <use href="#spindle-compass-light-a-mid" transform="rotate(180 160 160)"/>
-          <use href="#spindle-compass-light-a-mid" transform="rotate(270 160 160)"/>
-          </g>
-          <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeLinecap="round">
-          <use href="#spindle-compass-light-a-major"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(45 160 160)"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(90 160 160)"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(135 160 160)"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(180 160 160)"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(225 160 160)"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(270 160 160)"/>
-          <use href="#spindle-compass-light-a-major" transform="rotate(315 160 160)"/>
-          </g>
-          <g fill="none" stroke="#3ca8df" strokeWidth="1" strokeLinecap="round">
-          <path d="M92 147Q109 137 126 147T160 147T194 147T228 147"/>
-          <path d="M96 169Q112 159 128 169T160 169T192 169T224 169"/>
-          <path d="M109 192Q122 184 135 192T161 192T187 192T213 192"/>
-          </g>
-          <g stroke="#17347f" strokeWidth="1" strokeLinejoin="round">
-          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f"/>
-          <use href="#spindle-compass-light-a-cardinal-light" fill="#3ca8df"/>
-          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(90 160 160)"/>
-          <use href="#spindle-compass-light-a-cardinal-light" fill="#3a4c78" transform="rotate(90 160 160)"/>
-          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(180 160 160)"/>
-          <use href="#spindle-compass-light-a-cardinal-light" fill="#3ca8df" transform="rotate(180 160 160)"/>
-          <use href="#spindle-compass-light-a-cardinal-dark" fill="#17347f" transform="rotate(270 160 160)"/>
-          <use href="#spindle-compass-light-a-cardinal-light" fill="#3a4c78" transform="rotate(270 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(45 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-light" fill="#3a4c78" transform="rotate(45 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(135 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-light" fill="#3ca8df" transform="rotate(135 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(225 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-light" fill="#3a4c78" transform="rotate(225 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-dark" fill="#17347f" transform="rotate(315 160 160)"/>
-          <use href="#spindle-compass-light-a-ordinal-light" fill="#3ca8df" transform="rotate(315 160 160)"/>
-          </g>
-          <path d="M160 66L160 103L151 93Z" fill="#FF7A45" stroke="#17347f" strokeWidth="1" strokeLinejoin="round"/>
-          <circle cx="160" cy="160" r="13" fill="#ffffff" stroke="#17347f" strokeWidth="1.5"/>
-          <circle cx="160" cy="160" r="5" fill="#1e4fd8"/>
 
           {/* 방위 라벨 — 위치는 원판을 따라 돌고 글자는 apply()에서 역회전시켜 항상 정립한다 */}
-          <g fill="#17347f" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fontFamily: 'inherit', letterSpacing: '0.45px' }}>
+          <g
+            fill="#2f5cff"
+            textAnchor="middle"
+            style={{ fontSize: 10, fontWeight: 600, fontFamily: 'inherit', letterSpacing: '0.35px' }}
+          >
             {RING_LABELS.map((label, i) => {
               const [lx, ly] = polar(LABEL_RADIUS, i * 45)
               return (
@@ -286,7 +246,7 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
                   x={lx}
                   y={ly}
                   dominantBaseline="middle"
-                  fill={i === 0 ? '#FF7A45' : undefined}
+                  fillOpacity={i % 2 === 0 ? 1 : 0.55}
                 >
                   {label}
                 </text>
@@ -302,8 +262,9 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         aria-hidden
         style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}
       >
-        <path d="M160 2L149 17L154 29L160 25L166 29L171 17Z" fill="#FF7A45" stroke="#ffffff" strokeWidth="2" strokeLinejoin="round"/>
-        <path d="M160 25V38" fill="none" stroke="#FF7A45" strokeWidth="3" strokeLinecap="round"/>
+        <g strokeLinecap="round" strokeLinejoin="round">
+            <path d="M153 10 L160 23 L167 10 Z" fill="#FF7A45"/>
+        </g>
       </svg>
     </div>
   )
