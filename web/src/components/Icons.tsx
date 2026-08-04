@@ -66,15 +66,22 @@ export function NavSettingsIcon({ size = 24 }: NavIconProps) {
   )
 }
 
-/** 스핀 FAB — 바람개비형 8방위 별. 파란 원형 버튼 위 흰색으로 얹힌다. */
+/**
+ * 스핀 FAB — 앱 아이콘(`public/pwa-icon.svg`)의 마크를 테마 색으로 옮긴 것.
+ * 앱 아이콘: 남색 배경 + 흰 4방위 별 + 주황 중심점 + 십자 눈금.
+ * 여기서는 파란 FAB 위에 얹히므로 배경을 빼고 별·눈금을 흰색, 중심점만 주황 강조로 남긴다.
+ */
 export function NavSpinIcon({ size = 28 }: NavIconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
+      <path d="M256 96l42 118 118 42-118 42-42 118-42-118-118-42 118-42z" fill="currentColor" />
       <path
-        d="M12 1L14.03 7.43L13.79 9.35L19.78 4.22L16.67 10.21L15.14 11.39L23 12L16.57 14.03L14.65 13.79L19.78 19.78L13.79 16.67L12.61 15.14L12 23L9.97 16.57L10.21 14.65L4.22 19.78L7.33 13.79L8.86 12.61L1 12L7.43 9.97L9.35 10.21L4.22 4.22L10.21 7.33L11.39 8.86ZM12 10.6a1.4 1.4 0 1 0 0 2.8 1.4 1.4 0 1 0 0-2.8Z"
-        fill="currentColor"
-        fillRule="evenodd"
+        d="M256 128v50M256 334v50M128 256h50M334 256h50"
+        stroke="currentColor"
+        strokeWidth={18}
+        strokeLinecap="round"
       />
+      <circle cx="256" cy="256" r="28" fill="#FF7A45" />
     </svg>
   )
 }
@@ -122,21 +129,20 @@ export function SpotPinShape({ color }: { color: string }) {
 }
 
 /**
- * 8방위 나침반 로즈 — 스핀 원판 중앙에 얹는 대표 그래픽.
- * 긴 날 4개는 진한 잉크, 짧은 날 4개는 흐린 블루 (2톤 대비가 형태의 핵심).
+ * 스핀 원판 중앙 허브 — 회전하지 않는 고정 나침반 (assets/icons/compass-hub-b.svg).
+ * 앱 아이콘의 4방위 별과 형제가 되도록 긴 날 4 + 짧은 날 4의 로즈로 그린다.
+ * 북쪽 끝만 브랜드 주황으로 찍어 12시가 "가리키는 곳"임을 형태로 알린다.
+ * 회전 중심은 (50,50) — 원판 라벨과 겹치지 않도록 중앙에 불투명 흰 면을 둔다.
  */
-export function CompassRoseArt({ size = 120 }: { size?: number }) {
+export function CompassHubArt() {
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" aria-hidden>
-      <path
-        d="M93.94 26.06 57.88 52.22 67.78 62.12ZM93.94 93.94 67.78 57.88 57.88 67.78ZM26.06 93.94 62.12 67.78 52.22 57.88ZM26.06 26.06 52.22 62.12 62.12 52.22Z"
-        fill="#8ba3cf"
-      />
-      <path
-        d="M60 3 52 56 68 56ZM117 60 64 52 64 68ZM60 117 68 64 52 64ZM3 60 56 68 56 52Z"
-        fill="#17347f"
-      />
-      <circle cx="60" cy="60" r="9" fill="#ffffff" stroke="#dbe6fa" strokeWidth={2} />
+    <svg viewBox="0 0 100 100" aria-hidden>
+      <circle cx="50" cy="50" r="42" fill="#ffffff" stroke="#dbe6fa" strokeWidth={2} />
+      <path d="M50 50 28 28 45 39ZM50 50 72 28 61 45ZM50 50 72 72 55 61ZM50 50 28 72 39 55Z" fill="#8ba3cf" />
+      <path d="M50 7 43 46 50 42 57 46ZM93 50 54 43 58 50 54 57ZM50 93 57 54 50 58 43 54ZM7 50 46 57 42 50 46 43Z" fill="#17347f" />
+      <path d="M50 7 53 24 47 24Z" fill="#ff7a45" />
+      <circle cx="50" cy="50" r="10" fill="#ffffff" stroke="#dbe6fa" strokeWidth={2} />
+      <circle cx="50" cy="50" r="4" fill="#2f5cff" />
     </svg>
   )
 }

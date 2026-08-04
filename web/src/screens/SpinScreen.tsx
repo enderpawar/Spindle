@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CompassRose } from '../components/CompassRose'
+import { CompassHubArt } from '../components/Icons'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
@@ -158,22 +159,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             followHeading={fieldOn && !settled ? field.heading : null}
           />
           <div className={`spin-compass-hub${spinning ? ' is-spinning' : ''}`} aria-hidden>
-            <svg viewBox="0 0 100 100">
-              <defs>
-                <linearGradient id="hubNeedleNorth" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#49b8ff" />
-                  <stop offset="1" stopColor="#1e4fd8" />
-                </linearGradient>
-                <linearGradient id="hubNeedleSouth" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stopColor="#dbe8ff" />
-                  <stop offset="1" stopColor="#9eb8eb" />
-                </linearGradient>
-              </defs>
-              <path d="M50 13 L64 52 L50 47 L36 52 Z" fill="url(#hubNeedleNorth)" />
-              <path d="M50 87 L36 48 L50 53 L64 48 Z" fill="url(#hubNeedleSouth)" />
-              <circle cx="50" cy="50" r="13" fill="#fff" stroke="#2f5cff" strokeWidth="3" />
-              <path d="M50 41 L52.6 47.4 L59.5 48 L54.2 52.4 L55.8 59 L50 55.4 L44.2 59 L45.8 52.4 L40.5 48 L47.4 47.4 Z" fill="#2f5cff" />
-            </svg>
+            <CompassHubArt />
           </div>
           {theme && purpose === 'single' && !busy && (
             <div className="spin-theme-disc-mark" style={{ '--theme-color': theme.color } as React.CSSProperties}>

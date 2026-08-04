@@ -227,18 +227,6 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
           <circle cx="160" cy="160" r="120" fill="none" stroke="var(--l-line)" strokeWidth="1" />
           <circle cx="160" cy="160" r="62" fill="rgba(47,92,255,.03)" stroke="var(--l-line)" strokeWidth="1" />
 
-          {/* 8방위 로즈 — 원판 중앙(assets/icons/compass-rose.svg). 원판과 함께 회전한다. */}
-          <g transform="translate(100 100) scale(0.5)" aria-hidden>
-            <path
-              d="M93.94 26.06 57.88 52.22 67.78 62.12ZM93.94 93.94 67.78 57.88 57.88 67.78ZM26.06 93.94 62.12 67.78 52.22 57.88ZM26.06 26.06 52.22 62.12 62.12 52.22Z"
-              fill="#8ba3cf"
-            />
-            <path
-              d="M60 3 52 56 68 56ZM117 60 64 52 64 68ZM60 117 68 64 52 64ZM3 60 56 68 56 52Z"
-              fill="#17347f"
-            />
-            <circle cx="60" cy="60" r="9" fill="#ffffff" stroke="#dbe6fa" strokeWidth="2" />
-          </g>
 
           {DIRECTIONS.map((dir, i) => {
             const angle = i * 45
