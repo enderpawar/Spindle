@@ -68,20 +68,15 @@ export function NavSettingsIcon({ size = 24 }: NavIconProps) {
 
 /**
  * 스핀 FAB — 앱 아이콘(`public/pwa-icon.svg`)의 마크를 테마 색으로 옮긴 것.
- * 앱 아이콘: 남색 배경 + 흰 4방위 별 + 주황 중심점 + 십자 눈금.
- * 여기서는 파란 FAB 위에 얹히므로 배경을 빼고 별·눈금을 흰색, 중심점만 주황 강조로 남긴다.
+ * 앱 아이콘: 심해 배경 + 흰 4방위 별 + 산호색 중심점 + 청록 파도.
+ * 여기서는 파란 FAB 위에 얹히므로 배경을 빼고 별·파도·중심점만 남긴다.
  */
 export function NavSpinIcon({ size = 28 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
-      <path d="M256 96l42 118 118 42-118 42-42 118-42-118-118-42 118-42z" fill="currentColor" />
-      <path
-        d="M256 128v50M256 334v50M128 256h50M334 256h50"
-        stroke="currentColor"
-        strokeWidth={18}
-        strokeLinecap="round"
-      />
-      <circle cx="256" cy="256" r="28" fill="#FF7A45" />
+      <path d="M256 105 295 217 407 256 295 295 256 407 217 295 105 256 217 217 256 105Z" fill="currentColor" />
+      <path d="M92 312c76 89 185 116 328 17" fill="none" stroke="#8BEFF7" strokeWidth={32} strokeLinecap="round" />
+      <circle cx="256" cy="256" r="24" fill="#FF835C" />
     </svg>
   )
 }

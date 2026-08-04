@@ -47,6 +47,62 @@ function SketchArt({ variant }: { variant: number }) {
   )
 }
 
+type HomeQuickKind = 'spots' | 'stamp' | 'travel' | 'festival'
+
+/** 홈 바로가기 — 부산 바다를 항해하는 도구로 통일한 듀오톤 아이콘 */
+function HomeQuickIcon({ kind }: { kind: HomeQuickKind }) {
+  const common = {
+    width: 30,
+    height: 30,
+    viewBox: '0 0 32 32',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+
+  if (kind === 'spots') {
+    return (
+      <svg {...common}>
+        <path className="home-quick-icon-fill" d="M16 3.75a8 8 0 0 0-8 8c0 6 8 14.5 8 14.5s8-8.5 8-14.5a8 8 0 0 0-8-8Z" />
+        <path d="M12.2 12.4c1.5-1.7 2.8-2.4 4.2-2.1 1.2.2 2.2 1.1 3.4.7" />
+        <path className="home-quick-icon-accent" d="M11.5 15.6c1.5-1.3 3-1.7 4.4-1.2 1.1.4 2 .9 3.2.5" />
+        <path d="M9.2 27.4c2 .8 4.3 1.2 6.8 1.2 2.6 0 4.9-.4 6.8-1.2" />
+      </svg>
+    )
+  }
+
+  if (kind === 'stamp') {
+    return (
+      <svg {...common}>
+        <path className="home-quick-icon-fill" d="M16 4.2c1.6 0 2.2 2 3.6 2.5 1.4.6 3.2-.5 4.3.6 1 1-.1 2.9.5 4.3.6 1.4 2.5 2 2.5 3.6s-2 2.2-2.5 3.6c-.6 1.4.5 3.2-.5 4.3-1.1 1-2.9-.1-4.3.5-1.4.5-2 2.5-3.6 2.5s-2.2-2-3.6-2.5c-1.4-.6-3.2.5-4.3-.5-1-1.1.1-2.9-.5-4.3-.5-1.4-2.5-2-2.5-3.6s2-2.2 2.5-3.6c.6-1.4-.5-3.2.5-4.3 1.1-1.1 2.9 0 4.3-.6 1.4-.5 2-2.5 3.6-2.5Z" />
+        <path className="home-quick-icon-accent" d="m16 10 1.7 3.6 3.9.5-2.9 2.7.8 3.9-3.5-1.9-3.5 1.9.8-3.9-2.9-2.7 3.9-.5L16 10Z" />
+      </svg>
+    )
+  }
+
+  if (kind === 'travel') {
+    return (
+      <svg {...common}>
+        <path className="home-quick-icon-accent" d="M17.3 8.4 27 5.5l-8.2 6.1M14.7 8.4 5 5.5l8.2 6.1" />
+        <path className="home-quick-icon-fill" d="m13.2 9.8-2.6 15.5h10.8L18.8 9.8h-5.6Z" />
+        <path d="M9.3 25.3h13.4M12.2 16.5h7.6M14.1 4.1h3.8v5.7h-3.8z" />
+        <path className="home-quick-icon-accent" d="M12.3 28c2.5-1.1 5-1.1 7.5 0" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg {...common}>
+      <circle className="home-quick-icon-fill" cx="16" cy="15" r="3.2" />
+      <path d="M16 9V3.2M11.8 10.8 8 7M20.2 10.8 24 7M10 15H5M22 15h5" />
+      <path className="home-quick-icon-accent" d="m16 15-5.2 5.2M16 15l5.2 5.2M7 26c2.9-2 5.8-2 8.7 0 2.9 2 5.8 2 9 0" />
+    </svg>
+  )
+}
+
 export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenTheme, onOpenFestival, onNavigate }: Props) {
   const visited = useVisited()
   const progress = stampProgress(visited)
@@ -55,46 +111,23 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
   const quickMenu = [
     {
       label: '명소',
-      bg: 'var(--l-soft)',
+      kind: 'spots' as const,
       onClick: () => onNavigate('spots'),
-      icon: (
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2} strokeLinecap="round" aria-hidden>
-          <path d="M12 2 C8 2 5 5 5 9 c0 5 7 13 7 13 s7-8 7-13 c0-4-3-7-7-7 z" />
-          <circle cx="12" cy="9" r="2.4" />
-        </svg>
-      ),
     },
     {
       label: '도장깨기',
-      bg: 'var(--l-soft)',
+      kind: 'stamp' as const,
       onClick: () => onNavigate('stamp'),
-      icon: (
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2} aria-hidden>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M8 12 l3 3 5-6" />
-        </svg>
-      ),
     },
     {
       label: '여행모드',
-      bg: '#fff2ec',
+      kind: 'travel' as const,
       onClick: onOpenDeparture,
-      icon: (
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--l-orange)" strokeWidth={2} strokeLinecap="round" aria-hidden>
-          <path d="M4 20 L20 20 M6 20 L6 10 L18 10 L18 20 M9 10 L12 4 L15 10" />
-        </svg>
-      ),
     },
     {
       label: '축제',
-      bg: 'var(--l-soft)',
+      kind: 'festival' as const,
       onClick: onOpenFestival,
-      icon: (
-        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2} strokeLinecap="round" aria-hidden>
-          <rect x="3" y="5" width="18" height="16" rx="2.5" />
-          <path d="M3 9 h18 M8 3 v4 M16 3 v4" />
-        </svg>
-      ),
     },
   ]
 
@@ -123,8 +156,6 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
       <div className="home-scroll no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         {/* 히어로 배너 */}
         <div className="home-hero" data-guide="spin">
-          <div aria-hidden style={{ position: 'absolute', top: -30, right: -30, width: 150, height: 150, borderRadius: '50%', background: 'rgba(255,255,255,.1)' }} />
-          <div aria-hidden style={{ position: 'absolute', bottom: -40, right: 60, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,.08)' }} />
           <div className="home-hero-copy">
             <div style={{ fontSize: 13, fontWeight: 700, color: '#cfe0ff' }}>붐비는 해변 말고,</div>
             <div className="home-hero-title">
@@ -159,7 +190,9 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
               onClick={item.onClick}
               className="home-quick-button motion-card motion-card-enter"
             >
-              <div className="home-quick-icon" style={{ background: item.bg }}>{item.icon}</div>
+              <div className={`home-quick-icon home-quick-icon--${item.kind}`}>
+                <HomeQuickIcon kind={item.kind} />
+              </div>
               <span className="home-quick-label">{item.label}</span>
             </button>
           ))}
