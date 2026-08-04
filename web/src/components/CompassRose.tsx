@@ -1,13 +1,7 @@
-import { useEffect, useImperativeHandle, useRef, type PointerEvent, type Ref } from 'react'
+import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { DIRECTIONS } from '../mock/pois'
 
-export interface CompassRoseHandle {
-  /** 보조 "돌리기" 버튼용 — 무작위 초기 각속도로 스핀 */
-  spin: () => void
-}
-
 interface Props {
-  ref?: Ref<CompassRoseHandle>
   disabled?: boolean
   onSpinningChange?: (spinning: boolean) => void
   /** 매 프레임 현재 방위각(0=북, 시계방향) — 라이브 방위 표시용 */
@@ -37,7 +31,7 @@ const arcPath = (r: number, a1: number, a2: number) => {
   return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
 }
 
-export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
+export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
   const following = followHeading !== null
   // 현장 모드에서는 드래그·플릭·버튼 스핀을 모두 막는다 — 방위의 출처는 기기뿐이다.
   const locked = disabled || following
@@ -102,14 +96,12 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
     }, duration + 50)
   }
 
-  useImperativeHandle(ref, () => ({
-    spin: () => {
-      if (locked || spinning.current || dragging.current) return
-      cancelAnimationFrame(raf.current)
-      clearTimeout(fallback.current)
-      startInertia(1.6 + Math.random() * 1.2)
-    },
-  }))
+  const spinFromKeyboard = () => {
+    if (locked || spinning.current || dragging.current) return
+    cancelAnimationFrame(raf.current)
+    clearTimeout(fallback.current)
+    startInertia(1.6 + Math.random() * 1.2)
+  }
 
   useEffect(
     () => () => {
@@ -176,6 +168,12 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
     if (Math.abs(v) >= FLING_THRESHOLD) startInertia(v)
   }
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    spinFromKeyboard()
+  }
+
   return (
     <div
       ref={wrapRef}
@@ -183,6 +181,11 @@ export function CompassRose({ ref, disabled, onSpinningChange, onHeading, onSett
       onPointerMove={handleMove}
       onPointerUp={handleUp}
       onPointerCancel={handleUp}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={locked ? -1 : 0}
+      aria-label={following ? '기기 나침반 방향을 표시하는 원판' : '나침반 원판을 돌려 방향 정하기'}
+      aria-disabled={locked || undefined}
       style={{
         position: 'relative',
         width: '100%',

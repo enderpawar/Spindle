@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CompassRose, type CompassRoseHandle } from '../components/CompassRose'
+import { CompassRose } from '../components/CompassRose'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
@@ -31,10 +31,9 @@ interface Props {
 
 /**
  * 스핀 탭 — 밤바다 몰입 화면.
- * 여행 모드는 원판 드래그·`돌리기` 버튼으로, 현장 모드는 실제 기기 방위로 방향을 정한다.
+ * 여행 모드는 원판을 직접 드래그해, 현장 모드는 실제 기기 방위로 방향을 정한다.
  */
 export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate, theme, themeStep, themeTarget, onOpenTheme, onClearTheme, purpose, onPurposeChange, purposeNotice, onFieldOriginChange }: Props) {
-  const rose = useRef<CompassRoseHandle>(null)
   const [spinning, setSpinning] = useState(false)
   const [settled, setSettled] = useState(false)
   const [dirIndex, setDirIndex] = useState(0)
@@ -78,21 +77,40 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', zIndex: 2 }}>
         <span style={{ fontSize: 19, fontWeight: 900, letterSpacing: -0.4, color: 'var(--l-ink)' }}>스핀</span>
         {fieldOn ? (
-          <span style={{ minHeight: 44, padding: '8px 0 8px 12px', color: 'var(--l-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', flex: 'none' }} />
-            내 위치 기준 · 나침반
-          </span>
-        ) : (
           <button
-            onClick={onOpenDeparture}
-            style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}
+            type="button"
+            onClick={field.disable}
+            aria-label="나침반 현장 모드 종료"
+            style={{ minHeight: 44, border: 0, background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
           >
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', flex: 'none' }} />
-            {departure.name} 기준
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
-              <path d="M7 10 l5 5 5-5" />
-            </svg>
+            내 위치 기준 · 나침반
           </button>
+        ) : (
+          <div className="spin-header-actions">
+            <button
+              type="button"
+              className="spin-compass-mode-button"
+              onClick={() => void field.enable()}
+              disabled={field.status === 'requesting'}
+              aria-label={field.status === 'requesting' ? '나침반 준비 중' : '내 위치 나침반 모드 시작'}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" aria-hidden>
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M15.5 8.5 13 13l-4.5 2.5L11 11z" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+            <button
+              onClick={onOpenDeparture}
+              className="spin-departure-button"
+            >
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', flex: 'none' }} />
+              {departure.name} 기준
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
+                <path d="M7 10 l5 5 5-5" />
+              </svg>
+            </button>
+          </div>
         )}
       </header>
 
@@ -133,7 +151,6 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             }}
           />
           <CompassRose
-            ref={rose}
             disabled={settled}
             onSpinningChange={setSpinning}
             onHeading={handleHeading}
@@ -166,9 +183,9 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
         </div>
       </div>
 
-      {/* 하단 컨트롤 — 내브 높이만큼 여백 (스핀 중에는 페이드아웃) */}
+      {/* 하단에는 이동시간 카드만 남기고, 스핀 실행은 원판 직접 조작으로 일원화한다. */}
       <div className="spin-controls">
-        <div style={{ opacity: busy ? 0 : 1, pointerEvents: busy ? 'none' : 'auto', transition: 'opacity .25s ease', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ pointerEvents: busy ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {theme && purpose === 'single' && (
             <div className="spin-theme-control">
               <div>
@@ -182,41 +199,6 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           <DialSlider minutes={dial} onChange={onDialChange} />
 
           {field.notice && <p className="spin-field-notice" role="status">{field.notice}</p>}
-
-          {fieldOn ? (
-            <>
-              <button
-                className="btn btn-blue"
-                style={{ height: 58, fontSize: 17 }}
-                onClick={() => field.heading !== null && handleSettle(field.heading)}
-                disabled={field.heading === null}
-              >
-                이 방향으로 결정
-              </button>
-              <button type="button" className="spin-field-toggle" onClick={field.disable}>
-                여행 모드로 전환
-              </button>
-            </>
-          ) : (
-            <>
-              <button className="btn btn-blue" style={{ height: 58, fontSize: 17 }} onClick={() => rose.current?.spin()}>
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
-                  <path d="M4 12 a8 8 0 1 1 2.6 5.9" />
-                  <path d="M4 19 v-4 h4" />
-                </svg>
-                {purpose === 'course' ? '코스 돌리기' : '돌리기'}
-              </button>
-              {/* 현장 모드 진입 — iOS 권한 프롬프트가 뜨도록 사용자 제스처 안에서 요청한다 */}
-              <button
-                type="button"
-                className="spin-field-toggle"
-                onClick={() => void field.enable()}
-                disabled={field.status === 'requesting'}
-              >
-                {field.status === 'requesting' ? '나침반 준비 중…' : '내 위치에서 돌리기 (나침반)'}
-              </button>
-            </>
-          )}
         </div>
       </div>
 
