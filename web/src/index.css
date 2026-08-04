@@ -2343,7 +2343,7 @@ button:disabled,
 }
 
 /* ─── 인트로 스플래시 (앱 콜드 스타트 로딩 연출) ─── */
-/* 라이트 배경에서 PWA 앱 아이콘이 중앙에 페이드인되며 떠오르고, "Spindle" 워드마크가 뒤이어 상승.
+/* 라이트 배경에서 투명 브랜드 마크가 중앙에 페이드인되며 떠오르고, "Spindle" 워드마크가 뒤이어 상승.
    앱 홈(라이트 테마)과 같은 팔레트라 스플래시가 화면으로 자연스럽게 녹아든다. */
 .intro {
   position: fixed;
@@ -2383,7 +2383,7 @@ button:disabled,
   }
 }
 
-/* 히어로 — 앱 아이콘 + 워드마크 (세로 정렬) */
+/* 히어로 — 브랜드 마크 + 워드마크 (세로 정렬) */
 .intro-hero {
   position: relative;
   z-index: 2;
@@ -2400,13 +2400,14 @@ button:disabled,
   transform: translateY(-22px) scale(0.96);
 }
 
-/* 앱 아이콘 — 중앙에서 페이드인 + 위로 떠오름 */
+/* 브랜드 마크 — 투명 캔버스를 유지해 배경 위에 사각 경계가 생기지 않게 한다. */
 .intro-appicon {
-  width: 122px;
-  height: 122px;
-  border-radius: 27px;
-  filter: drop-shadow(0 16px 34px rgba(30, 70, 165, 0.22));
-  animation: introAppIn 0.9s cubic-bezier(0.2, 0.75, 0.25, 1) 0.1s both;
+  display: block;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  background: transparent;
+  animation: introAppIn 0.9s cubic-bezier(0.2, 0.75, 0.25, 1) 0.1s backwards;
 }
 @keyframes introAppIn {
   0% {
@@ -2425,7 +2426,7 @@ button:disabled,
   font-weight: 800;
   letter-spacing: 0.3px;
   color: var(--l-ink);
-  animation: introRise 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s both;
+  animation: introRise 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s backwards;
 }
 @keyframes introRise {
   from {
