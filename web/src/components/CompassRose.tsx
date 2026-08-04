@@ -216,22 +216,18 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
             <circle cx="160" cy="160" r="151" fill="#f3f7ff" stroke="#2f5cff" strokeWidth="1.5" strokeOpacity="0.12" />
             <circle cx="160" cy="160" r="139" fill="#ffffff" stroke="#2f5cff" strokeWidth="1" strokeOpacity="0.12" />
 
-            {/* 4방위 날 — 아웃라인만 그려 중앙 별이 주인공이 되게 한다 */}
-            <g fill="none" stroke="#2f5cff" strokeWidth="1.5" strokeOpacity="0.55">
-              {[0, 90, 180, 270].map((deg) => (
-                <path
-                  key={deg}
-                  d="M160 56 C164 88 167 119 166 145 L160 154 L154 145 C153 119 156 88 160 56 Z"
-                  transform={`rotate(${deg} 160 160)`}
-                />
-              ))}
-            </g>
-
-            {/* 중앙 별 — 앱 아이콘(pwa-icon.svg)과 같은 4방위 별 마크 */}
+            {/*
+              4방위 날 — 각 면이 이등변 삼각형. 꼭짓점은 반지름 104(라벨 112 안쪽),
+              밑변은 반지름 18에서 반폭 16. 네 개를 한 path의 서브패스로 묶어 단일 도형으로 둔다.
+            */}
             <path
-              d="M160 130 L167.88 152.13 L190 160 L167.88 167.88 L160 190 L152.13 167.88 L130 160 L152.13 152.13 Z"
-              fill="#2f5cff"
+              d="M160 56 L144 142 L176 142 Z M264 160 L178 144 L178 176 Z M160 264 L176 178 L144 178 Z M56 160 L142 176 L142 144 Z"
+              fill="#17347f"
             />
+
+            {/* 중앙 허브 — 네이비 원 + 흰 링 + 주황 점. 주황은 회전축이라 어디도 가리키지 않는다. */}
+            <circle cx="160" cy="160" r="24" fill="#17347f" stroke="#ffffff" strokeWidth="4" />
+            <circle cx="160" cy="160" r="8" fill="#FF7A45" />
 
             {/* 대각 4방위 — 짧은 눈금으로만 암시 */}
             <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeOpacity="0.55">
