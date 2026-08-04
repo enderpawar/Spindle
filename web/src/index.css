@@ -2772,6 +2772,23 @@ button.is-pressing:not(:disabled) {
   text-shadow: 0 1px 3px #fff, 0 0 8px #fff;
 }
 
+/* 별도 푸터 공간을 만들지 않고 지도 위에 출처를 띄운다.
+   하단 내비게이션과 지도 제공자 표기를 피해 왼쪽 위쪽에 고정한다. */
+.spots-source-overlay {
+  position: absolute;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  left: 10px;
+  z-index: 10;
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, .78);
+  box-shadow: 0 3px 12px -7px rgba(20, 50, 110, .45);
+  pointer-events: none;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
 .map-congestion-pin,
 .map-good-pin {
   position: absolute;
