@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * 앱 콜드 스타트 인트로 스플래시 (약 3.2초).
- * 라이트 테마 배경에서 PWA 앱 아이콘이 중앙에 페이드인되며 위로 떠오르고,
+ * 라이트 테마 배경에서 투명 배경의 브랜드 마크가 중앙에 페이드인되며 위로 떠오르고,
  * 이어 "Spindle" 워드마크가 아래에서 올라온다. 로딩이 끝나면 하단의 파란 물결이
  * 화면을 채우며 앱 홈(라이트)으로 자연스럽게 디졸브한다.
  * 화면 아무 곳이나 탭하면 즉시 건너뛴다. prefers-reduced-motion이면 짧은 페이드만.
@@ -51,7 +51,7 @@ export function IntroScreen({ onDone }: { onDone: () => void }) {
       onClick={skip}
     >
       <div className="intro-hero">
-        <img className="intro-appicon" src="/pwa-icon-512.png" alt="" draggable={false} />
+        <img className="intro-appicon" src="/brand-mark-192.png" alt="" draggable={false} />
         <span className="intro-logo">Spindle</span>
       </div>
 

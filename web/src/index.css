@@ -127,6 +127,21 @@ button {
   view-transition-name: spindle-nav;
 }
 
+/* 가운데 스핀 버튼은 바깥으로 돌출하되 레이아웃 높이는 일반 탭과 맞춘다.
+   시각적 콘텐츠는 유지하면서 내비게이션 상단을 낮춰 홈 콘텐츠를 덜 가린다. */
+.nav-spin-slot {
+  display: flex;
+  height: 44px;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transform: translateY(-30px);
+}
+
+.nav-spin-slot > * {
+  flex: none;
+}
+
 /* 지원 브라우저에서는 View Transition 스냅샷만으로 전환한다.
    (아래 screenEnter* CSS 폴백은 @supports not (view-transition-name) 로 미지원 브라우저에만 적용 —
    VT 종료 직후 라이브 DOM 진입 애니메이션이 재발화하며 화면이 한 번 더 깜빡이던 문제를 없앤다) */
@@ -968,6 +983,51 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   text-align: center;
 }
 
+.spin-header-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.spin-compass-mode-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--l-primary);
+  cursor: pointer;
+}
+
+.spin-compass-mode-button:disabled {
+  color: var(--l-ink-3);
+  cursor: default;
+}
+
+.spin-departure-button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 8px 6px;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--l-ink-3);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
 .spin-compass-stage {
   z-index: 1;
   display: grid;
@@ -985,8 +1045,8 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 .spin-controls {
   position: relative;
   z-index: 2;
-  min-height: 150px;
-  padding: 0 24px calc(104px + env(safe-area-inset-bottom));
+  flex: none;
+  padding: 0 24px calc(80px + env(safe-area-inset-bottom));
 }
 
 @media (max-height: 700px) {
@@ -1003,9 +1063,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
     width: min(58vw, 220px);
   }
 
-  .spin-controls {
-    min-height: 138px;
-  }
 }
 
 @media (max-height: 600px) {
@@ -2343,7 +2400,7 @@ button:disabled,
 }
 
 /* ─── 인트로 스플래시 (앱 콜드 스타트 로딩 연출) ─── */
-/* 라이트 배경에서 PWA 앱 아이콘이 중앙에 페이드인되며 떠오르고, "Spindle" 워드마크가 뒤이어 상승.
+/* 라이트 배경에서 투명 브랜드 마크가 중앙에 페이드인되며 떠오르고, "Spindle" 워드마크가 뒤이어 상승.
    앱 홈(라이트 테마)과 같은 팔레트라 스플래시가 화면으로 자연스럽게 녹아든다. */
 .intro {
   position: fixed;
@@ -2383,7 +2440,7 @@ button:disabled,
   }
 }
 
-/* 히어로 — 앱 아이콘 + 워드마크 (세로 정렬) */
+/* 히어로 — 브랜드 마크 + 워드마크 (세로 정렬) */
 .intro-hero {
   position: relative;
   z-index: 2;
@@ -2400,13 +2457,14 @@ button:disabled,
   transform: translateY(-22px) scale(0.96);
 }
 
-/* 앱 아이콘 — 중앙에서 페이드인 + 위로 떠오름 */
+/* 브랜드 마크 — 투명 캔버스를 유지해 배경 위에 사각 경계가 생기지 않게 한다. */
 .intro-appicon {
-  width: 122px;
-  height: 122px;
-  border-radius: 27px;
-  filter: drop-shadow(0 16px 34px rgba(30, 70, 165, 0.22));
-  animation: introAppIn 0.9s cubic-bezier(0.2, 0.75, 0.25, 1) 0.1s both;
+  display: block;
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  background: transparent;
+  animation: introAppIn 0.9s cubic-bezier(0.2, 0.75, 0.25, 1) 0.1s backwards;
 }
 @keyframes introAppIn {
   0% {
@@ -2425,7 +2483,7 @@ button:disabled,
   font-weight: 800;
   letter-spacing: 0.3px;
   color: var(--l-ink);
-  animation: introRise 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s both;
+  animation: introRise 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.5s backwards;
 }
 @keyframes introRise {
   from {
@@ -2915,22 +2973,7 @@ button.is-pressing:not(:disabled) {
   z-index: 2;
 }
 
-/* 현장 모드 진입·복귀 보조 버튼과 센서 실패 안내 */
-.spin-field-toggle {
-  min-height: 44px;
-  padding: 0 16px;
-  border: 1.5px solid var(--l-line);
-  border-radius: 16px;
-  background: #fff;
-  color: var(--l-primary);
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 850;
-  cursor: pointer;
-}
-
-.spin-field-toggle:disabled { color: var(--l-ink-3); cursor: default; }
-
+/* 센서 권한·취득 실패 안내 */
 .spin-field-notice {
   margin: 0;
   padding: 10px 13px;
