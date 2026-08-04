@@ -1,4 +1,11 @@
 import type { ReactNode } from 'react'
+import {
+  NavHomeIcon,
+  NavSettingsIcon,
+  NavSpinIcon,
+  NavSpotsIcon,
+  NavStampIcon,
+} from './Icons'
 
 export type NavTab = 'home' | 'spots' | 'spin' | 'stamp' | 'settings'
 
@@ -6,6 +13,7 @@ const ACTIVE = '#1e4fd8'
 const INACTIVE = '#9db3d8'
 
 function Item({ label, active, icon, onClick }: { label: string; active: boolean; icon: ReactNode; onClick: () => void }) {
+  const tone = active ? ACTIVE : INACTIVE
   return (
     <button
       className={`nav-item${active ? ' is-active' : ''}`}
@@ -13,7 +21,7 @@ function Item({ label, active, icon, onClick }: { label: string; active: boolean
       aria-current={active ? 'page' : undefined}
       style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '2px 8px', minWidth: 44 }}
     >
-      <span className="nav-icon" key={active ? 'active' : 'idle'}>{icon}</span>
+      <span className="nav-icon" key={active ? 'active' : 'idle'} style={{ color: tone, display: 'inline-flex' }}>{icon}</span>
       <span style={{ fontSize: 11, fontWeight: active ? 800 : 700, color: active ? ACTIVE : INACTIVE }}>{label}</span>
     </button>
   )
@@ -44,9 +52,7 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         active={active === 'home'}
         onClick={() => onNavigate('home')}
         icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill={active === 'home' ? ACTIVE : 'none'} stroke={c('home')} strokeWidth={2} strokeLinejoin="round" aria-hidden>
-            <path d="M4 11 L12 4 L20 11 V20 H14 V14 H10 V20 H4 Z" />
-          </svg>
+          <NavHomeIcon />
         }
       />
       <Item
@@ -54,10 +60,7 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         active={active === 'spots'}
         onClick={() => onNavigate('spots')}
         icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={c('spots')} strokeWidth={2} strokeLinecap="round" aria-hidden>
-            <path d="M12 21 C8.5 17.5 5 13.6 5 9.5 a7 7 0 0 1 14 0 c0 4.1-3.5 8-7 11.5 z" />
-            <circle cx="12" cy="9.5" r="2.4" />
-          </svg>
+          <NavSpotsIcon />
         }
       />
       <div className="nav-spin-slot">
@@ -75,13 +78,10 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
             background: 'var(--l-primary)',
             display: 'grid',
             placeItems: 'center',
+            color: '#fff',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.2} strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="12" r="9" />
-            <polygon points="16 8 13.4 13.4 8 16 10.6 10.6" fill="#fff" />
-            <circle cx="12" cy="12" r="1" fill="var(--l-primary)" stroke="none" />
-          </svg>
+          <NavSpinIcon />
         </button>
         <span style={{ fontSize: 11, fontWeight: 800, color: c('spin') }}>스핀</span>
       </div>
@@ -90,10 +90,7 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         active={active === 'stamp'}
         onClick={() => onNavigate('stamp')}
         icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={c('stamp')} strokeWidth={2} aria-hidden>
-            <circle cx="12" cy="12" r="9" />
-            <path d="M8 12 l3 3 5-6" />
-          </svg>
+          <NavStampIcon />
         }
       />
       <Item
@@ -101,10 +98,7 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         active={active === 'settings'}
         onClick={() => onNavigate('settings')}
         icon={
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={c('settings')} strokeWidth={2} strokeLinecap="round" aria-hidden>
-            <circle cx="12" cy="12" r="3.2" />
-            <path d="M12 3 v2.4 M12 18.6 V21 M3 12 h2.4 M18.6 12 H21 M5.6 5.6 l1.7 1.7 M16.7 16.7 l1.7 1.7 M18.4 5.6 l-1.7 1.7 M7.3 16.7 l-1.7 1.7" />
-          </svg>
+          <NavSettingsIcon />
         }
       />
     </nav>

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { MapPoiPreview } from '../components/MapPoiPreview'
 import { directionOf, type Poi } from '../mock/pois'
 import { CLOSED_PIN_OPACITY, mapPinLabel, type MapViewProps } from './LocalMapView'
+import { CuratedPinShape, SpotPinShape } from '../components/Icons'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMapsNs, KakaoPolyline } from './kakaoLoader'
 
 interface PoiOverlayHost {
@@ -78,15 +79,15 @@ function PoiPin({ poi, selected, busy, good, closed, order, showLabel, onPick, o
           }}
           aria-hidden
         >
-          <path d="M15 1 C7.3 1 1.5 6.9 1.5 14.4 C1.5 24 12 33.5 15 36.6 C18 33.5 28.5 24 28.5 14.4 C28.5 6.9 22.7 1 15 1 Z" fill={color} stroke="#fff" strokeWidth={2.4} />
           {inCourse ? (
-            <text x="15" y="19.4" textAnchor="middle" fontSize="15" fontWeight="900" fill="#fff">
-              {order}
-            </text>
-          ) : poi.tier === 3 ? (
-            <path d="M15 8.6 L16.7 12.9 L21 14.6 L16.7 16.3 L15 20.6 L13.3 16.3 L9 14.6 L13.3 12.9 Z" fill="#fff" />
+            <>
+              <path d="M15 1.5A13.5 13.5 0 0 0 1.5 15c0 9.35 9.6 18.69 13.5 21.5 3.9-2.81 13.5-12.15 13.5-21.5A13.5 13.5 0 0 0 15 1.5Z" fill={color} stroke="#fff" strokeWidth={2.2} />
+              <text x="15" y="20" textAnchor="middle" fontSize="15" fontWeight="900" fill="#fff">
+                {order}
+              </text>
+            </>
           ) : (
-            <circle cx="15" cy="14.4" r="4.6" fill="#fff" />
+            <CuratedPinShape color={color} />
           )}
         </svg>
         {busy && (
@@ -153,8 +154,7 @@ function ExtraSpotPin({ spot, selected, busy, good, closed, showLabel, onPick, o
         }}
       >
         <svg className="map-extra-spot__pin" viewBox="0 0 18 23" aria-hidden="true">
-          <path d="M9 1.25a7.75 7.75 0 0 0-7.75 7.75c0 5.15 5.45 10.35 7.75 12.55 2.3-2.2 7.75-7.4 7.75-12.55A7.75 7.75 0 0 0 9 1.25Z" />
-          <circle cx="9" cy="9" r="2.65" />
+          <SpotPinShape color={color} />
         </svg>
         {busy && <span className="map-congestion-pin map-extra-spot__status" aria-hidden="true">!</span>}
         {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
