@@ -74,13 +74,25 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
             borderRadius: '50%',
             border: 'none',
             cursor: 'pointer',
-            background: '#fff',
-            boxShadow: '0 6px 16px -6px rgba(20,50,140,.45), inset 0 0 0 1px #dbe6fa',
+            background: 'var(--l-primary)',
+            boxShadow: '0 8px 18px -8px rgba(20,50,140,.55)',
             display: 'grid',
             placeItems: 'center',
           }}
         >
-          <img src="/brand-mark-192.png" alt="" width={36} height={36} />
+          {/* 파란 배지 위에서 로고(파란 그라디언트)가 묻히지 않도록 흰 원을 깔고 얹는다 */}
+          <span
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: '50%',
+              background: '#fff',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <img src="/brand-mark-192.png" alt="" width={32} height={32} />
+          </span>
         </button>
         <span style={{ fontSize: 11, fontWeight: 800, color: c('spin') }}>스핀</span>
       </div>

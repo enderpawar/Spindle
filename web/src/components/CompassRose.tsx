@@ -212,43 +212,49 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
           북쪽이 아닌 곳을 가리키게 된다). */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
-          <g strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="160" cy="160" r="151" fill="#f3f7ff" stroke="#2f5cff" strokeWidth="1.5" strokeOpacity="0.12" />
-            <circle cx="160" cy="160" r="139" fill="#ffffff" stroke="#2f5cff" strokeWidth="1" strokeOpacity="0.12" />
+          <circle cx="160" cy="160" r="150" fill="#f7f9ff" stroke="#c9d8f5" strokeWidth="1.5" />
 
-            {/*
-              4방위 날 — 각 면이 이등변 삼각형. 꼭짓점은 반지름 104(라벨 112 안쪽),
-              밑변은 반지름 16에서 반폭 24. 밑변 끝점이 중심에서 28.8이라 허브(r=30) 아래로
-              완전히 들어가 이음매가 보이지 않는다. 네 개를 한 path의 서브패스로 묶는다.
-            */}
-            <path
-              d="M160 56 L136 144 L184 144 Z M264 160 L176 136 L176 184 Z M160 264 L184 176 L136 176 Z M56 160 L144 184 L144 136 Z"
-              fill="#2f5cff"
-            />
-
-            {/*
-              중앙 허브 — Spindle 로고(brand-mark-192.png). 홈 헤더가 쓰는 것과 같은 마크다.
-              로고 자체가 원형 물결 링을 갖고 있어 별도 허브 원을 겹치지 않는다. 뒤의 흰 원은
-              날 밑동(중심에서 28.8)을 가려 이음매를 감추는 용도다.
-            */}
-            <circle cx="160" cy="160" r="30" fill="#ffffff" />
-            <image href="/brand-mark-192.png" x="132" y="132" width="56" height="56" />
-
-            {/* 대각 4방위 — 짧은 눈금으로만 암시 */}
-            <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeOpacity="0.55">
-              {[45, 135, 225, 315].map((deg) => (
-                <path key={deg} d="M160 66 L160 76" transform={`rotate(${deg} 160 160)`} />
-              ))}
-            </g>
+          {/* 눈금 링 — 5°마다 짧은 눈금, 45°(8방위)마다 길고 진한 눈금 */}
+          <g stroke="#2f5cff" strokeLinecap="round">
+            {Array.from({ length: 72 }, (_, i) => {
+              const deg = i * 5
+              const major = deg % 45 === 0
+              return (
+                <line
+                  key={deg}
+                  x1="160"
+                  y1={major ? 124 : 130}
+                  x2="160"
+                  y2="137"
+                  strokeWidth={major ? 2 : 1}
+                  strokeOpacity={major ? 0.55 : 0.3}
+                  transform={`rotate(${deg} 160 160)`}
+                />
+              )
+            })}
           </g>
 
-          {/* 방위 라벨 — 위치는 원판을 따라 돌고 글자는 apply()에서 역회전시켜 항상 정립한다 */}
-          <g
-            fill="#2f5cff"
-            textAnchor="middle"
-            style={{ fontSize: 10, fontWeight: 600, fontFamily: 'inherit', letterSpacing: '0.35px' }}
-          >
+          {/*
+            4방위 날 — 각 날을 중앙 능선에서 좌우로 갈라 종이를 접은 듯한 2톤으로 만든다.
+            같은 #2f5cff를 불투명도로만 나눠 색은 하나로 유지한다.
+            꼭짓점 반지름 105, 밑변 반지름 14에 반폭 26.
+          */}
+          {[0, 90, 180, 270].map((deg) => (
+            <g key={deg} transform={`rotate(${deg} 160 160)`}>
+              <path d="M160 55 L134 146 L160 146 Z" fill="#2f5cff" fillOpacity="0.5" />
+              <path d="M160 55 L186 146 L160 146 Z" fill="#2f5cff" />
+            </g>
+          ))}
+
+          {/* 중앙 보스 — 흰 원 위에 Spindle 로고(brand-mark-192.png). 날 밑동을 가린다. */}
+          <circle cx="160" cy="160" r="35" fill="#eef3ff" />
+          <circle cx="160" cy="160" r="30" fill="#ffffff" stroke="#dbe6fa" strokeWidth="1" />
+          <image href="/brand-mark-192.png" x="139" y="139" width="42" height="42" />
+
+          {/* 방위 라벨 — 주방위는 크고 진하게, 대각은 작고 옅게. 글자는 apply()에서 역회전해 정립한다 */}
+          <g textAnchor="middle" style={{ fontFamily: 'inherit' }}>
             {RING_LABELS.map((label, i) => {
+              const cardinal = i % 2 === 0
               const [lx, ly] = polar(LABEL_RADIUS, i * 45)
               return (
                 <text
@@ -259,7 +265,8 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
                   x={lx}
                   y={ly}
                   dominantBaseline="middle"
-                  fillOpacity={i % 2 === 0 ? 1 : 0.55}
+                  fill={cardinal ? '#17347f' : '#8ba3cf'}
+                  style={{ fontSize: cardinal ? 21 : 11, fontWeight: cardinal ? 800 : 700 }}
                 >
                   {label}
                 </text>
