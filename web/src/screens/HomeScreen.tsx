@@ -49,7 +49,7 @@ function SketchArt({ variant }: { variant: number }) {
 
 type HomeQuickKind = 'spots' | 'stamp' | 'travel' | 'festival'
 
-/** 홈 바로가기 — 부산 바다를 항해하는 도구로 통일한 듀오톤 아이콘 */
+/** 홈 바로가기 — 부산 해변에서 만나는 표식으로 통일한 듀오톤 아이콘 */
 function HomeQuickIcon({ kind }: { kind: HomeQuickKind }) {
   const common = {
     width: 30,
@@ -77,8 +77,9 @@ function HomeQuickIcon({ kind }: { kind: HomeQuickKind }) {
   if (kind === 'stamp') {
     return (
       <svg {...common}>
-        <path className="home-quick-icon-fill" d="M16 4.2c1.6 0 2.2 2 3.6 2.5 1.4.6 3.2-.5 4.3.6 1 1-.1 2.9.5 4.3.6 1.4 2.5 2 2.5 3.6s-2 2.2-2.5 3.6c-.6 1.4.5 3.2-.5 4.3-1.1 1-2.9-.1-4.3.5-1.4.5-2 2.5-3.6 2.5s-2.2-2-3.6-2.5c-1.4-.6-3.2.5-4.3-.5-1-1.1.1-2.9-.5-4.3-.5-1.4-2.5-2-2.5-3.6s2-2.2 2.5-3.6c.6-1.4-.5-3.2.5-4.3 1.1-1.1 2.9 0 4.3-.6 1.4-.5 2-2.5 3.6-2.5Z" />
-        <path className="home-quick-icon-accent" d="m16 10 1.7 3.6 3.9.5-2.9 2.7.8 3.9-3.5-1.9-3.5 1.9.8-3.9-2.9-2.7 3.9-.5L16 10Z" />
+        <path className="home-quick-icon-fill" d="M7.2 23.5C4.5 18.8 5.4 11 10.1 7.2 12 5.7 14 5 16 5s4 .7 5.9 2.2c4.7 3.8 5.6 11.6 2.9 16.3H7.2Z" />
+        <path d="M16 6.2v16.4M10.9 8.2l2.5 14.4M21.1 8.2l-2.5 14.4M7.5 23.5h17" />
+        <path className="home-quick-icon-accent" d="m16 12.1 1.1 2.2 2.4.4-1.8 1.7.4 2.4-2.1-1.1-2.1 1.1.4-2.4-1.8-1.7 2.4-.4 1.1-2.2Z" />
       </svg>
     )
   }

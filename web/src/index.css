@@ -343,20 +343,20 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   margin: 8px 16px 0;
   padding: 20px 22px;
   overflow: hidden;
-  border: 1px solid rgba(140, 224, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.74);
   border-radius: 26px;
-  background-color: #07377c;
-  background-image: url('/home-hero-ocean.webp');
-  background-position: 54% center;
+  background-color: #3ca8df;
+  background-image: url('/home-hero-beach.webp');
+  background-position: 51% center;
   background-size: cover;
-  box-shadow: 0 18px 34px -24px rgba(2, 34, 91, 0.9);
+  box-shadow: 0 18px 34px -24px rgba(27, 100, 151, 0.68);
 }
 
 .home-hero::before {
   position: absolute;
   z-index: 0;
   inset: 0;
-  background: linear-gradient(90deg, rgba(3, 28, 79, 0.44) 0%, rgba(3, 35, 91, 0.16) 48%, rgba(3, 45, 102, 0) 74%);
+  background: linear-gradient(90deg, rgba(13, 91, 171, 0.86) 0%, rgba(15, 112, 190, 0.66) 43%, rgba(26, 144, 204, 0.14) 70%, rgba(255, 255, 255, 0) 82%);
   content: '';
 }
 
@@ -368,7 +368,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   width: 208px;
   height: 208px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(116, 230, 255, 0.18), rgba(23, 112, 220, 0) 67%);
+  background: radial-gradient(circle, rgba(255, 225, 167, 0.22), rgba(255, 255, 255, 0) 68%);
   content: '';
 }
 
