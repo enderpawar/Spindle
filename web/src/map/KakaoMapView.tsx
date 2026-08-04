@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPoiPreview } from '../components/MapPoiPreview'
 import { directionOf, type Poi } from '../mock/pois'
-import type { MapViewProps } from './LocalMapView'
+import { CLOSED_PIN_OPACITY, mapPinLabel, type MapViewProps } from './LocalMapView'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMapsNs, KakaoPolyline } from './kakaoLoader'
 
 interface PoiOverlayHost {
@@ -31,6 +31,8 @@ interface PoiPinProps {
   selected: boolean
   busy: boolean
   good: boolean
+  /** 운영 중단·운영시간 외 — 핀을 흐리게 그린다 */
+  closed: boolean
   order?: number
   showLabel: boolean
   onPick: (id: string | null) => void
@@ -38,7 +40,7 @@ interface PoiPinProps {
   showPreview: boolean
 }
 
-function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
+function PoiPin({ poi, selected, busy, good, closed, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
   const color = directionOf(poi.direction).color
   const inCourse = order !== undefined
   const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 22 : 16
@@ -51,7 +53,7 @@ function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen, s
           event.stopPropagation()
           onPick(poi.id)
         }}
-        aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : good ? `${poi.name}, 오늘 가기 좋아요` : poi.name}
+        aria-label={mapPinLabel(poi.name, closed, busy, good)}
         style={{
           position: 'absolute',
           left: 0,
@@ -61,6 +63,7 @@ function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen, s
           background: 'none',
           cursor: 'pointer',
           pointerEvents: 'auto',
+          opacity: closed ? CLOSED_PIN_OPACITY : 1,
         }}
       >
         <svg
@@ -123,11 +126,12 @@ function PoiPin({ poi, selected, busy, good, order, showLabel, onPick, onOpen, s
   )
 }
 
-function ExtraSpotPin({ spot, selected, busy, good, showLabel, onPick, onOpen, showPreview }: {
+function ExtraSpotPin({ spot, selected, busy, good, closed, showLabel, onPick, onOpen, showPreview }: {
   spot: ExtraSpot
   selected: boolean
   busy: boolean
   good: boolean
+  closed: boolean
   showLabel: boolean
   onPick: (id: string | null) => void
   onOpen?: (poi: Poi) => void
@@ -140,7 +144,8 @@ function ExtraSpotPin({ spot, selected, busy, good, showLabel, onPick, onOpen, s
       <button
         className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
         type="button"
-        aria-label={busy ? `${spot.name}, 오늘 혼잡 예상` : good ? `${spot.name}, 오늘 가기 좋아요` : spot.name}
+        style={closed ? { opacity: CLOSED_PIN_OPACITY } : undefined}
+        aria-label={mapPinLabel(spot.name, closed, busy, good)}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation()
@@ -190,6 +195,7 @@ export function KakaoMapView({
   selectedId,
   busyPoiIds,
   goodPoiIds,
+  closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
   onOpen,
@@ -578,6 +584,7 @@ export function KakaoMapView({
             selected={poiId === selectedId}
             busy={busyPoiIds?.has(poiId) ?? false}
             good={goodPoiIds?.has(poiId) ?? false}
+            closed={closedPoiIds?.has(poiId) ?? false}
             order={orderNum.get(poiId)}
             showLabel={level <= 5}
             onPick={onPick}
@@ -597,6 +604,7 @@ export function KakaoMapView({
             selected={spotId === selectedId}
             busy={busyPoiIds?.has(spotId) ?? false}
             good={goodPoiIds?.has(spotId) ?? false}
+            closed={closedPoiIds?.has(spotId) ?? false}
             showLabel={level <= 4}
             onPick={onPick}
             onOpen={onOpen}

@@ -1,49 +1,92 @@
 import { describe, expect, it } from "vitest";
 import {
-  ARRIVAL_MARGIN_MIN,
-  TIGHT_SCORE,
+  CLOSED_NOTICE,
+  OFF_HOURS_NOTICE,
   evaluateOperation,
+  findClosureEvidence,
   formatHm,
   isAlwaysOpen,
-  parseCloseMinutes,
   parseClosedWeekdays,
+  parseHourRange,
 } from "./operation";
 
-/** 2026-08-03(월) 기준 시각 — 요일 판정이 걸린 테스트는 이 날짜를 쓴다 */
+/** 2026-08-03(월) */
 const MONDAY = (hour: number, minute = 0) => new Date(2026, 7, 3, hour, minute);
 /** 2026-08-04(화) */
 const TUESDAY = (hour: number, minute = 0) => new Date(2026, 7, 4, hour, minute);
 
-describe("이용시간 파싱", () => {
-  it("단일 구간의 마감 시각을 읽는다", () => {
-    expect(parseCloseMinutes("09:00~18:00")).toBe(18 * 60);
-    expect(parseCloseMinutes("09:00 ~ 18:00")).toBe(18 * 60);
-    expect(parseCloseMinutes("10:00-21:30")).toBe(21 * 60 + 30);
-    expect(parseCloseMinutes("9시~18시")).toBe(18 * 60);
+describe("운영 중단 판정", () => {
+  it("중단·중지·종료 표현을 잡는다", () => {
+    expect(findClosureEvidence({ usetime: "운영 중단" })).toBe("운영 중단");
+    expect(findClosureEvidence({ usetime: "현재 운영을 중단하였습니다" })).not.toBeNull();
+    expect(findClosureEvidence({ restdate: "영업 중지" })).not.toBeNull();
+    expect(findClosureEvidence({ overview: "2025년부로 운영 종료되었습니다" })).not.toBeNull();
   });
 
-  it("입장 마감이 있으면 그 시각을 우선한다", () => {
-    expect(parseCloseMinutes("09:00~18:00 (입장마감 17:30)")).toBe(17 * 60 + 30);
-    expect(parseCloseMinutes("09:00~18:00, 마지막 입장 17:00")).toBe(17 * 60);
+  it("기약 없는 휴관·휴업을 잡는다", () => {
+    expect(findClosureEvidence({ restdate: "임시 휴관" })).not.toBeNull();
+    expect(findClosureEvidence({ usetime: "코로나19로 인해 잠정 휴업" })).not.toBeNull();
+    expect(findClosureEvidence({ restdate: "무기한 휴관" })).not.toBeNull();
   });
 
-  it("계절별로 마감이 다르면 판단을 보류한다 (보수적 통과)", () => {
-    expect(parseCloseMinutes("동절기 09:00~17:00 / 하절기 09:00~18:00")).toBeNull();
+  it("폐업·폐관·철거를 잡는다", () => {
+    expect(findClosureEvidence({ overview: "폐업한 시설입니다" })).not.toBeNull();
+    expect(findClosureEvidence({ usetime: "폐관" })).not.toBeNull();
+    expect(findClosureEvidence({ overview: "건물이 철거되어 관람할 수 없습니다" })).not.toBeNull();
   });
 
-  it("같은 마감이 여러 번 적혀 있으면 그 값을 쓴다", () => {
-    expect(parseCloseMinutes("평일 09:00~18:00, 주말 10:00~18:00")).toBe(18 * 60);
+  it("소개(overview)에만 적힌 중단 공지도 잡는다", () => {
+    const status = evaluateOperation(
+      {
+        usetime: "09:00~18:00",
+        restdate: "연중무휴",
+        overview: "리모델링으로 인해 운영이 중단되었습니다.",
+      },
+      TUESDAY(13),
+    );
+    expect(status.kind).toBe("closed");
+    expect(status.notice).toBe(CLOSED_NOTICE);
   });
 
-  it("읽을 수 없는 값은 null", () => {
-    expect(parseCloseMinutes(undefined)).toBeNull();
-    expect(parseCloseMinutes("상시개방")).toBeNull();
-    expect(parseCloseMinutes("일출~일몰")).toBeNull();
-    expect(parseCloseMinutes("22:00~02:00")).toBeNull(); // 자정 넘김 — 판단 보류
+  it("하루 마감 시각을 뜻하는 종료 표기는 중단이 아니다", () => {
+    expect(findClosureEvidence({ usetime: "운영종료 18:00" })).toBeNull();
+    expect(findClosureEvidence({ usetime: "09:00~18:00 (운영 종료 18시)" })).toBeNull();
+  });
+
+  it("정기 휴무는 중단이 아니다", () => {
+    expect(findClosureEvidence({ restdate: "매주 월요일 휴관" })).toBeNull();
+    expect(findClosureEvidence({ restdate: "1월 1일, 설날, 추석" })).toBeNull();
+    expect(findClosureEvidence({ restdate: "연중무휴" })).toBeNull();
   });
 });
 
-describe("휴무일 파싱", () => {
+describe("이용시간 파싱", () => {
+  it("단일 구간을 읽는다", () => {
+    expect(parseHourRange("09:00~18:00")).toEqual({ open: 9 * 60, close: 18 * 60 });
+    expect(parseHourRange("10:00 - 21:30")).toEqual({ open: 10 * 60, close: 21 * 60 + 30 });
+    expect(parseHourRange("9시~18시")).toEqual({ open: 9 * 60, close: 18 * 60 });
+  });
+
+  it("같은 구간이 여러 번 적혀 있으면 그 구간을 쓴다", () => {
+    expect(parseHourRange("평일 09:00~18:00, 주말 09:00~18:00")).toEqual({
+      open: 9 * 60,
+      close: 18 * 60,
+    });
+  });
+
+  it("구간이 서로 다르게 여럿이면 판단을 보류한다", () => {
+    expect(parseHourRange("동절기 09:00~17:00 / 하절기 09:00~18:00")).toBeNull();
+    expect(parseHourRange("평일 09:00~18:00, 주말 10:00~20:00")).toBeNull();
+  });
+
+  it("읽을 수 없는 값은 null", () => {
+    expect(parseHourRange(undefined)).toBeNull();
+    expect(parseHourRange("상시개방")).toBeNull();
+    expect(parseHourRange("22:00~02:00")).toBeNull(); // 자정 넘김 — 판단 보류
+  });
+});
+
+describe("휴무일·상시개방 파싱", () => {
   it("정기 휴무 요일을 읽는다", () => {
     expect([...parseClosedWeekdays("매주 월요일")]).toEqual(["월"]);
     expect([...parseClosedWeekdays("매주 월요일 휴관(공휴일인 경우 다음날)")]).toEqual(["월"]);
@@ -53,130 +96,67 @@ describe("휴무일 파싱", () => {
   it("연중무휴·없음은 휴무 없음으로 본다", () => {
     expect(parseClosedWeekdays("연중무휴").size).toBe(0);
     expect(parseClosedWeekdays("없음").size).toBe(0);
-    expect(parseClosedWeekdays("연중무휴(매주 월요일 시설 점검)").size).toBe(0);
   });
 
-  it("요일이 없는 특정일 휴무는 읽어내지 않는다 (보수적 통과)", () => {
+  it("요일이 없는 특정일 휴무는 읽어내지 않는다", () => {
     expect(parseClosedWeekdays("1월 1일, 설날, 추석").size).toBe(0);
     expect(parseClosedWeekdays(undefined).size).toBe(0);
   });
-});
 
-describe("상시 개방 판정", () => {
-  it("상시개방·24시간 표기를 인식한다", () => {
+  it("상시개방·24시간·일출~일몰을 인식한다", () => {
     expect(isAlwaysOpen({ usetime: "상시개방" })).toBe(true);
     expect(isAlwaysOpen({ usetime: "24시간" })).toBe(true);
+    expect(isAlwaysOpen({ usetime: "일출~일몰" })).toBe(true);
     expect(isAlwaysOpen({ usetime: "09:00~18:00" })).toBe(false);
-    expect(isAlwaysOpen(undefined)).toBe(false);
   });
 });
 
-describe("운영 상태 평가", () => {
-  it("정보가 없으면 보수적으로 통과시킨다", () => {
-    expect(evaluateOperation({ info: undefined, travelMinutes: 20 })).toMatchObject({
-      kind: "unknown",
-      score: 1,
-    });
-    expect(evaluateOperation({ info: {}, travelMinutes: 20 })).toMatchObject({
-      kind: "unknown",
-      score: 1,
-    });
+describe("현재 시각 기준 운영시간 판정", () => {
+  const info = { usetime: "09:00~18:00", restdate: "매주 월요일" };
+
+  it("운영시간 안이면 통과", () => {
+    expect(evaluateOperation(info, TUESDAY(13))).toMatchObject({ kind: "open", score: 1 });
   });
 
-  it("계절별 표기처럼 모호한 이용시간도 통과시킨다", () => {
-    const status = evaluateOperation({
-      info: { usetime: "동절기 09:00~17:00 / 하절기 09:00~18:00" },
-      travelMinutes: 20,
-      now: TUESDAY(16, 50),
-    });
-    expect(status.kind).toBe("unknown");
-    expect(status.score).toBe(1);
-    expect(status.line).toBeUndefined();
-  });
-
-  it("오늘이 휴무일이면 후보에서 제외한다", () => {
-    const status = evaluateOperation({
-      info: { usetime: "09:00~18:00", restdate: "매주 월요일" },
-      travelMinutes: 10,
-      now: MONDAY(10),
-    });
-    expect(status.kind).toBe("closedToday");
+  it("개장 전이면 제외", () => {
+    const status = evaluateOperation(info, TUESDAY(8, 30));
+    expect(status.kind).toBe("offHours");
     expect(status.score).toBe(0);
-    expect(status.line).toBe("오늘은 쉬는 날이에요");
+    expect(status.notice).toBe(OFF_HOURS_NOTICE);
   });
 
-  it("휴무 요일이 아니면 정상 평가한다", () => {
-    const status = evaluateOperation({
-      info: { usetime: "09:00~18:00", restdate: "매주 월요일" },
-      travelMinutes: 10,
-      now: TUESDAY(10),
-    });
-    expect(status.kind).toBe("open");
-    expect(status.score).toBe(1);
+  it("마감 이후면 제외", () => {
+    expect(evaluateOperation(info, TUESDAY(18, 0)).kind).toBe("offHours"); // 마감 정각은 이미 끝
+    expect(evaluateOperation(info, TUESDAY(21, 0)).kind).toBe("offHours");
   });
 
-  it("도착이 마감 이후면 제외한다", () => {
-    // 17:30 + 이동 30분 + 마진 10분 = 18:10 > 18:00
-    const status = evaluateOperation({
-      info: { usetime: "09:00~18:00" },
-      travelMinutes: 30,
-      now: TUESDAY(17, 30),
-    });
-    expect(status.kind).toBe("tooLate");
+  it("개장 정각·마감 1분 전은 통과", () => {
+    expect(evaluateOperation(info, TUESDAY(9, 0)).kind).toBe("open");
+    expect(evaluateOperation(info, TUESDAY(17, 59)).kind).toBe("open");
+  });
+
+  it("오늘이 정기 휴무 요일이면 시간과 무관하게 제외", () => {
+    const status = evaluateOperation(info, MONDAY(13));
+    expect(status.kind).toBe("offHours");
     expect(status.score).toBe(0);
-    expect(status.line).toContain("18:00 마감");
-    expect(status.line).toContain("늦어요");
   });
 
-  it("머무를 시간이 30분도 안 남으면 감점하되 제외하지는 않는다", () => {
-    // 17:00 + 25 + 10 = 17:35 → 25분 남음
-    const status = evaluateOperation({
-      info: { usetime: "09:00~18:00" },
-      travelMinutes: 25,
-      now: TUESDAY(17, 0),
-    });
-    expect(status.kind).toBe("tight");
-    expect(status.score).toBe(TIGHT_SCORE);
-    expect(status.line).toContain("아슬해요");
+  it("상시개방은 한밤중에도 통과", () => {
+    expect(evaluateOperation({ usetime: "상시개방" }, TUESDAY(3)).kind).toBe("open");
   });
 
-  it("여유 있게 도착하면 만점", () => {
-    const status = evaluateOperation({
-      info: { usetime: "09:00~18:00" },
-      travelMinutes: 20,
-      now: TUESDAY(13, 0),
-    });
-    expect(status).toMatchObject({ kind: "open", score: 1, closeMinutes: 18 * 60 });
-    expect(status.line).toBe("오늘 18:00 마감 · 지금 출발해도 여유 있어요");
+  it("이용시간을 읽지 못하면 보수적으로 통과", () => {
+    expect(evaluateOperation(undefined, TUESDAY(3))).toMatchObject({ kind: "open", score: 1 });
+    expect(evaluateOperation({}, TUESDAY(3)).kind).toBe("open");
+    expect(
+      evaluateOperation({ usetime: "동절기 09:00~17:00 / 하절기 09:00~18:00" }, TUESDAY(23)).kind,
+    ).toBe("open");
   });
 
-  it("안전 마진이 실제로 판정을 바꾼다", () => {
-    // 마진이 없으면 17:25 도착(5분 남음)으로 통과했을 경계 — 마진 10분이 마감 밖으로 민다
-    const status = evaluateOperation({
-      info: { usetime: "09:00~17:30" },
-      travelMinutes: 25,
-      now: TUESDAY(17, 0),
-    });
-    expect(status.kind).toBe("tooLate");
-    expect(ARRIVAL_MARGIN_MIN).toBe(10);
-  });
-
-  it("상시 개방은 시간과 무관하게 통과한다", () => {
-    const status = evaluateOperation({
-      info: { usetime: "상시개방" },
-      travelMinutes: 40,
-      now: TUESDAY(23, 30),
-    });
-    expect(status).toMatchObject({ kind: "alwaysOpen", score: 1 });
-  });
-
-  it("자정을 넘겨 도착하면 마감 이후로 본다", () => {
-    const status = evaluateOperation({
-      info: { usetime: "09:00~18:00" },
-      travelMinutes: 40,
-      now: TUESDAY(23, 50),
-    });
-    expect(status.kind).toBe("tooLate");
+  it("운영 중단이 운영시간 판정보다 우선한다", () => {
+    const status = evaluateOperation({ usetime: "09:00~18:00", restdate: "임시 휴관" }, TUESDAY(13));
+    expect(status.kind).toBe("closed");
+    expect(status.notice).toBe(CLOSED_NOTICE);
   });
 });
 

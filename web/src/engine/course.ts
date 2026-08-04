@@ -60,8 +60,8 @@ export interface BuildCourseInput {
   first: RankedCandidate;
   expansion: ExpansionLevel;
   expansionReason?: string;
-  /** 운영 상태가 확실히 휴무·마감 후 도착이면 0. 파싱 실패/미조회는 1로 보수 통과. */
-  operationScoreOf?: (contentId: string, travelMinutes: number) => number;
+  /** 운영 중단이 확인되면 0. 근거 없음/미조회는 1로 보수 통과. */
+  operationScoreOf?: (contentId: string) => number;
   /**
    * 분산 가중치 주입 — 기본은 curation.ts의 contentId 표(dispersionWeight).
    * 정적 큐레이션 풀처럼 티어를 다른 곳에서 관리하면 단일 추천과 동일하게 이 훅으로 주입한다.
@@ -90,14 +90,12 @@ function courseCandidate(
   halfWidth: number,
   estimate: TravelEstimator,
 ): RankedCandidate | null {
+  const operationScore = input.operationScoreOf?.(poi.contentId) ?? 1;
+  if (operationScore <= 0) return null;
+
   const bearing = bearingDeg(input.origin, poi.point);
   const direction = directionScore(bearing, sectorCenter, halfWidth);
   if (direction === 0) return null;
-
-  // 운영 상태는 도착 시각으로 판정하므로 이동시간을 먼저 구한다.
-  const travel = estimate(input.origin, poi.point);
-  const operationScore = input.operationScoreOf?.(poi.contentId, travel.minutes) ?? 1;
-  if (operationScore <= 0) return null;
 
   const dispersion = input.dispersionWeightOf?.(poi.contentId) ?? dispersionWeight(poi.contentId);
   const score = direction * operationScore * dispersion;
@@ -107,7 +105,7 @@ function courseCandidate(
     poi,
     score,
     bearing,
-    travel,
+    travel: estimate(input.origin, poi.point),
     tier: tierOf(poi.contentId),
   };
 }

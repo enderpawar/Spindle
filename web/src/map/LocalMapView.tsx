@@ -28,6 +28,8 @@ export interface MapViewProps {
   busyPoiIds?: ReadonlySet<string>
   /** 당일 혼잡 예측이 낮아 가기 좋은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
   goodPoiIds?: ReadonlySet<string>
+  /** 운영 중단·운영시간 외로 확인된 POI id — 핀을 흐리게 그린다 (선택·열기는 그대로 가능). */
+  closedPoiIds?: ReadonlySet<string>
   /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로 표시. Poi 형태라 프리뷰도 재사용한다. */
   extraSpots?: ReadonlyArray<Poi>
   /** 핀 탭(id) 또는 빈 바다 탭(null) */
@@ -80,6 +82,20 @@ const SEA_MARGIN = 1500
 const CANVAS_DPR_MAX = 1.5
 const EMPTY_EXTRA_SPOTS: NonNullable<MapViewProps['extraSpots']> = []
 
+/**
+ * 운영 중단·운영시간 외 핀의 투명도. 지우거나 숨기지 않는다 —
+ * 그 장소가 거기 있다는 사실은 그대로 보여주되 지금은 선택지가 아님을 조용히 알린다.
+ */
+export const CLOSED_PIN_OPACITY = 0.38
+
+/** 핀 접근성 라벨 — 운영 안내가 혼잡 안내보다 우선한다. */
+export function mapPinLabel(name: string, closed: boolean, busy: boolean, good: boolean): string {
+  if (closed) return `${name}, 지금 갈 수 없어요`
+  if (busy) return `${name}, 오늘 혼잡 예상`
+  if (good) return `${name}, 오늘 가기 좋아요`
+  return name
+}
+
 function ease(t: number) {
   return 1 - Math.pow(1 - t, 3)
 }
@@ -98,6 +114,7 @@ export function LocalMapView({
   selectedId,
   busyPoiIds,
   goodPoiIds,
+  closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
   onOpen,
@@ -606,6 +623,7 @@ export function LocalMapView({
           const selected = spot.id === selectedId
           const busy = busyPoiIds?.has(spot.id) ?? false
           const good = goodPoiIds?.has(spot.id) ?? false
+          const closed = closedPoiIds?.has(spot.id) ?? false
           const color = directionOf(spot.direction).color
           return (
             <div
@@ -616,6 +634,7 @@ export function LocalMapView({
                 top: 0,
                 transform: `translate3d(${s.x}px,${s.y}px,0)`,
                 zIndex: 1,
+                opacity: closed ? CLOSED_PIN_OPACITY : 1,
                 pointerEvents: 'none',
                 willChange: 'transform',
               }}
@@ -623,7 +642,7 @@ export function LocalMapView({
               <button
                 className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
                 type="button"
-                aria-label={busy ? `${spot.name}, 오늘 혼잡 예상` : good ? `${spot.name}, 오늘 가기 좋아요` : spot.name}
+                aria-label={mapPinLabel(spot.name, closed, busy, good)}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation()
@@ -650,6 +669,7 @@ export function LocalMapView({
           const sel = poi.id === selectedId
           const busy = busyPoiIds?.has(poi.id) ?? false
           const good = goodPoiIds?.has(poi.id) ?? false
+          const closed = closedPoiIds?.has(poi.id) ?? false
           const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
           const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 22 : 16
@@ -662,6 +682,7 @@ export function LocalMapView({
                 top: 0,
                 transform: `translate3d(${s.x}px,${s.y}px,0)`,
                 zIndex: sel ? 6 : busy ? 4 : poi.tier === 1 ? 3 : 2,
+                opacity: closed ? CLOSED_PIN_OPACITY : 1,
                 pointerEvents: 'none',
                 willChange: 'transform',
               }}
@@ -672,7 +693,7 @@ export function LocalMapView({
                   e.stopPropagation()
                   onPick(poi.id)
                 }}
-                aria-label={busy ? `${poi.name}, 오늘 혼잡 예상` : good ? `${poi.name}, 오늘 가기 좋아요` : poi.name}
+                aria-label={mapPinLabel(poi.name, closed, busy, good)}
                 style={{
                   position: 'absolute',
                   left: 0,

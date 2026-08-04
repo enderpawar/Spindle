@@ -37,7 +37,8 @@ description: TourAPI(KorService2·관광지 집중률 예측) 호출 코드를 �
 
 - 응답은 **메모리/세션 범위**에만 보관. localStorage·IndexedDB·서버 DB·빌드 시점 정적 파일화 전부 금지.
 - 세션 시작 시 4개 구 `areaBasedList2`를 실시간 호출, 상세·이미지·축제는 결과 표시 시점에 추가 호출 — 이렇게 해야 운영계정 호출 이력이 자연스럽게 쌓인다.
-- 운영 상태 축(SPEC 4.0)을 위해 세션 시작 목록 호출 직후 큐레이션 POI의 `detailIntro2`를 1회/POI로 예열한다(`primeOperationInfo`, 동시 3). 목록이 알려준 `contentTypeId`가 있을 때만 호출해 `detailCommon2`를 추가로 태우지 않으며, 원문은 세션 메모리 색인에만 둔다. 예열 실패는 무시한다 — 모르는 POI는 1.0 보수 통과라 추천이 막히지 않는다.
+- 운영 상태 축(SPEC 4.0)을 위해 세션 시작 목록 호출 직후 큐레이션 POI의 `detailIntro2`를 1회/POI로 예열한다(`primeOperationInfo`, 동시 3). 목록이 알려준 `contentTypeId`가 있을 때만 호출해 `detailCommon2`를 추가로 태우지 않으며, 원문(`usetime`·`restdate`·`overview`)은 세션 메모리 색인에만 둔다. 예열 실패는 무시한다 — 모르는 POI는 1.0 보수 통과라 추천이 막히지 않는다.
+- 운영 중단 공지가 `overview`에만 적힌 POI가 있어 상세 조회(`detailCommon2`) 결과도 같은 색인에 병합한다. 색인은 세대 번호를 올려 구독자(명소 지도)에게 알리며, 어떤 경우에도 localStorage·IndexedDB·SW 캐시에 남기지 않는다.
 - service worker가 API 응답을 캐싱하지 않도록 fetch 핸들러에서 API 경로는 network-only로 처리한다 (오프라인 셸은 정적 자산만).
 
 ## 에러·데이터 품질 처리

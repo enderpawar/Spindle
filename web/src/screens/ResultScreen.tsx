@@ -51,8 +51,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [fullDetailError, setFullDetailError] = useState(false)
   const [operation, setOperation] = useState<OperationStatus | null>(null)
 
-  // 운영 상태 한 줄 — 이미 세션 캐시에 있는 detailIntro2 원문을 재사용한다(추가 호출 없음).
-  // 마감 시각은 TourAPI 값이라 단정하고, 도착은 존-교량 모델 근사라 "지금 출발하면"으로 적는다.
+  // 운영 중단·운영시간 외 안내 — 이미 세션 캐시에 있는 상세 원문을 재사용한다(추가 호출 없음).
   useEffect(() => {
     let alive = true
     setOperation(null)
@@ -60,19 +59,16 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       .then((d) => {
         if (!alive) return
         setOperation(
-          evaluateOperation({
-            info: { usetime: d.usetime, restdate: d.restdate },
-            travelMinutes: poi.walkMinutes,
-          }),
+          evaluateOperation({ usetime: d.usetime, restdate: d.restdate, overview: d.overview }),
         )
       })
       .catch(() => {
-        /* 상세 실패는 기존 에러 UI가 다룬다 — 운영 한 줄만 생략 */
+        /* 상세 실패는 기존 에러 UI가 다룬다 — 운영 안내만 생략 */
       })
     return () => {
       alive = false
     }
-  }, [poi.contentId, poi.walkMinutes])
+  }, [poi.contentId])
 
   // 목 단계: 상세 API(Phase 3 detailCommon2) 로딩을 흉내 낸 스켈레톤
   useEffect(() => {
@@ -327,16 +323,10 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
                 {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분 · 근사치
               </div>
-              {operation?.line && (
-                <div
-                  style={{
-                    marginTop: 4,
-                    fontSize: 13,
-                    fontWeight: operation.score < 1 ? 800 : 700,
-                    color: 'var(--l-ink-3)',
-                  }}
-                >
-                  {operation.line}
+              {operation?.notice && (
+                <div className="operation-notice" role="status">
+                  <span className="operation-notice__mark" aria-hidden="true">!</span>
+                  {operation.notice}
                 </div>
               )}
               <CuratedCopy contentId={poi.contentId} className="result-curation-copy" />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import {
   fetchOldTownCongestionCached,
   localYyyymmdd,
@@ -6,13 +6,20 @@ import {
   matchComfortablePois,
   type CongestionForecast,
 } from '../api/congestion'
-import { fetchPoiCardDetailCached, firstSentence } from '../api/details'
+import {
+  fetchPoiCardDetailCached,
+  firstSentence,
+  getOperationInfo,
+  getOperationInfoVersion,
+  subscribeOperationInfo,
+} from '../api/details'
 import { fetchExtraSpots, toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { MapView } from '../map/MapView'
+import { evaluateOperation } from '../engine/operation'
 import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 
 const FILTERS = ['전체', '중구', '동구', '서구', '영도구']
@@ -38,7 +45,7 @@ function CongestionBadge() {
   )
 }
 
-function PoiCardBody({ poi, busy, good, summary }: { poi: Poi; busy: boolean; good: boolean; summary?: string }) {
+function PoiCardBody({ poi, busy, good, summary, notice }: { poi: Poi; busy: boolean; good: boolean; summary?: string; notice?: string }) {
   const dir = directionOf(poi.direction)
   return (
     <>
@@ -49,8 +56,14 @@ function PoiCardBody({ poi, busy, good, summary }: { poi: Poi; busy: boolean; go
       <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
         {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
       </div>
-      {busy && <CongestionBadge />}
-      {!busy && good && <GoodToGoBadge />}
+      {notice && (
+        <div className="operation-notice" role="status">
+          <span className="operation-notice__mark" aria-hidden="true">!</span>
+          {notice}
+        </div>
+      )}
+      {!notice && busy && <CongestionBadge />}
+      {!notice && !busy && good && <GoodToGoBadge />}
       <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {summary ?? poi.story}
       </div>
@@ -165,6 +178,21 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   )
   const busyPoiIds = useMemo(() => new Set(busyByPoi.keys()), [busyByPoi])
   const goodPoiIds = useMemo(() => new Set(goodByPoi.keys()), [goodByPoi])
+
+  // 운영 원문은 세션 시작 예열·상세 조회로 나중에 채워지므로 세대 번호를 구독해 핀을 다시 그린다.
+  // 아직 모르는 POI는 보수적 통과라 평상시 핀 그대로다.
+  const operationVersion = useSyncExternalStore(subscribeOperationInfo, getOperationInfoVersion)
+  const closedNoticeByPoi = useMemo(() => {
+    void operationVersion
+    const notices = new Map<string, string>()
+    for (const poi of [...list, ...extraDisplayPois]) {
+      if (!poi.contentId) continue
+      const status = evaluateOperation(getOperationInfo(poi.contentId))
+      if (status.score === 0 && status.notice) notices.set(poi.id, status.notice)
+    }
+    return notices
+  }, [extraDisplayPois, list, operationVersion])
+  const closedPoiIds = useMemo(() => new Set(closedNoticeByPoi.keys()), [closedNoticeByPoi])
   const selectedExtraPoi = useMemo(
     () => extraDisplayPois.find((poi) => poi.id === selectedId) ?? null,
     [extraDisplayPois, selectedId],
@@ -270,6 +298,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             selectedId={selectedId}
             busyPoiIds={busyPoiIds}
             goodPoiIds={goodPoiIds}
+            closedPoiIds={closedPoiIds}
             extraSpots={extraDisplayPois}
             onPick={pick}
             onOpen={onSelect}
@@ -327,6 +356,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   busy={busyByPoi.has(selectedPoi.id)}
                   good={goodByPoi.has(selectedPoi.id)}
                   summary={spotSummary?.id === selectedPoi.id ? spotSummary.text : undefined}
+                  notice={closedNoticeByPoi.get(selectedPoi.id)}
                 />
                 <button className="btn btn-blue spot-sheet__cta" onClick={() => onSelect(selectedPoi)}>
                   자세히 보기
@@ -349,6 +379,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             const dir = directionOf(poi.direction)
             const busy = busyByPoi.has(poi.id)
             const good = goodByPoi.has(poi.id)
+            const notice = closedNoticeByPoi.get(poi.id)
             return (
               <button
                 key={poi.id}
@@ -369,8 +400,14 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                   <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                     {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
                   </div>
-                  {busy && <CongestionBadge />}
-                  {!busy && good && <GoodToGoBadge />}
+                  {notice && (
+                    <div className="operation-notice" role="status">
+                      <span className="operation-notice__mark" aria-hidden="true">!</span>
+                      {notice}
+                    </div>
+                  )}
+                  {!notice && busy && <CongestionBadge />}
+                  {!notice && !busy && good && <GoodToGoBadge />}
                   <div style={{ marginTop: 4, fontSize: 11.5, lineHeight: 1.45, fontWeight: 500, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{poi.story}</div>
                 </div>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2.4} strokeLinecap="round" aria-hidden>

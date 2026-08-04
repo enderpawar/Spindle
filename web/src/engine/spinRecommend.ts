@@ -51,12 +51,13 @@ export function dispersionWeightOf(contentId: string): number {
 export const CURATED_CONTENT_IDS: readonly string[] = POI_POOL.map((p) => p.contentId)
 
 /**
- * 운영 상태 축 — 세션에 쌓인 detailIntro2 원문으로 산정한다 (SPEC 4장 네 번째 요소).
+ * 운영 상태 축 — 세션에 쌓인 TourAPI 원문으로 산정한다 (SPEC 4장 네 번째 요소).
+ * 운영을 중단했거나 지금이 운영시간 밖이면 0점이 되어 스핀 대상에서 빠진다.
  * 아직 모르는 POI는 `evaluateOperation`이 1.0으로 보수 통과시키므로, 예열 전에도
  * 추천은 그대로 동작하고 데이터가 채워질수록 정확해진다.
  */
-export function operationScoreOf(contentId: string, travelMinutes: number): number {
-  return evaluateOperation({ info: getOperationInfo(contentId), travelMinutes }).score
+export function operationScoreOf(contentId: string): number {
+  return evaluateOperation(getOperationInfo(contentId)).score
 }
 
 export function toGeo(d: Departure): GeoPoint {

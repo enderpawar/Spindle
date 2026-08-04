@@ -36,7 +36,7 @@ function poiAt(id: string, bearing: number, meters: number): EnginePoi {
 }
 
 describe("운영 상태 점수가 추천 산식에 반영된다", () => {
-  const pois = [poiAt("open", 0, 300), poiAt("closed", 2, 300)];
+  const pois = [poiAt("open", 0, 300), poiAt("shut", 2, 300)];
 
   it("운영 점수 0인 POI는 후보에서 빠진다", () => {
     const result = recommend({
@@ -45,47 +45,27 @@ describe("운영 상태 점수가 추천 산식에 반영된다", () => {
       budgetMinutes: 40,
       pois,
       rng: seededRng(42),
-      operationScoreOf: (contentId) => (contentId === "closed" ? 0 : 1),
+      operationScoreOf: (contentId) => (contentId === "shut" ? 0 : 1),
     });
 
     const ids = [result.picked, ...result.alternates].map((c) => c?.poi.contentId);
     expect(ids).toContain("open");
-    expect(ids).not.toContain("closed");
+    expect(ids).not.toContain("shut");
   });
 
-  it("훅에 보정 이동시간이 함께 전달된다 (도착 시각 판정의 전제)", () => {
-    const seen: { contentId: string; travelMinutes: number }[] = [];
-    recommend({
-      origin: NAMPO,
-      heading: 0,
-      budgetMinutes: 40,
-      pois,
-      rng: seededRng(42),
-      operationScoreOf: (contentId, travelMinutes) => {
-        seen.push({ contentId, travelMinutes });
-        return 1;
-      },
-    });
-
-    expect(seen).toHaveLength(2);
-    for (const call of seen) expect(call.travelMinutes).toBeGreaterThan(0);
-  });
-
-  it("감점(아슬함)은 제외가 아니라 순위 하락으로 나타난다", () => {
+  it("모든 후보가 닫혀 있으면 그 방위에서 후보가 나오지 않는다", () => {
     const result = recommend({
       origin: NAMPO,
       heading: 0,
       budgetMinutes: 40,
       pois,
       rng: seededRng(42),
-      // 티어 가중이 결과를 흔들지 않도록 분산 가중치는 동일하게 고정한다.
-      dispersionWeightOf: () => 1,
-      operationScoreOf: (contentId) => (contentId === "closed" ? 0.55 : 1),
+      operationScoreOf: () => 0,
     });
 
-    const ranked = [result.picked, ...result.alternates];
-    expect(ranked).toHaveLength(2);
-    expect(ranked[0]?.poi.contentId).toBe("open");
+    // 전 방위로 넓혀도 전부 0점이면 추천 없음 — 상위 화면의 폴백이 받는다.
+    expect(result.picked).toBeUndefined();
+    expect(result.alternates).toHaveLength(0);
   });
 });
 
@@ -95,17 +75,22 @@ describe("세션에 쌓인 운영 원문이 엔진 훅까지 닿는다", () => {
   });
 
   it("아직 모르는 POI는 1.0으로 보수 통과한다", () => {
-    expect(operationScoreOf("unknown-poi", 15)).toBe(1);
+    expect(operationScoreOf("unknown-poi")).toBe(1);
   });
 
-  it("오늘 휴무로 확인된 POI는 0점이 된다", () => {
+  it("운영을 중단한 POI는 0점이 된다", () => {
+    operationInfo.set("shut-down", { usetime: "09:00~18:00", restdate: "임시 휴관" });
+    expect(operationScoreOf("shut-down")).toBe(0);
+  });
+
+  it("오늘이 정기 휴무 요일이면 0점이 된다", () => {
     const weekday = ["일", "월", "화", "수", "목", "금", "토"][new Date().getDay()];
     operationInfo.set("closed-today", { usetime: "09:00~18:00", restdate: `매주 ${weekday}요일` });
-    expect(operationScoreOf("closed-today", 15)).toBe(0);
+    expect(operationScoreOf("closed-today")).toBe(0);
   });
 
-  it("상시 개방으로 확인된 POI는 시간과 무관하게 통과한다", () => {
+  it("상시 개방으로 확인된 POI는 시각과 무관하게 통과한다", () => {
     operationInfo.set("always", { usetime: "상시개방" });
-    expect(operationScoreOf("always", 240)).toBe(1);
+    expect(operationScoreOf("always")).toBe(1);
   });
 });

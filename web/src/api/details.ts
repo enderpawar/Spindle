@@ -349,7 +349,10 @@ function detailFromCommon(common: DetailCommonItem, imageUrl: string | null): Po
 async function fetchCardDetail(contentId: string, fetchImpl: FetchLike): Promise<PoiDetail> {
   const common = await fetchCommonCached(contentId, fetchImpl);
   const imageUrl = await fetchRepresentativeImageCached(contentId, common, fetchImpl).catch(() => null);
-  return detailFromCommon(common, imageUrl);
+  const detail = detailFromCommon(common, imageUrl);
+  // 소개에 적힌 운영 중단 공지를 놓치지 않도록 경량 조회에서도 원문을 남긴다.
+  if (detail.overview) rememberOperationInfo(contentId, { overview: detail.overview });
+  return detail;
 }
 
 async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<PoiDetail> {
@@ -400,7 +403,10 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
   );
 
   // 운영 상태 축(engine/operation.ts)이 다음 스핀에서 쓸 수 있도록 원문을 세션에 남긴다.
-  if (introResult.status === "fulfilled") rememberOperationInfo(contentId, { usetime, restdate });
+  // 중단 공지가 소개에만 적힌 POI가 있어 overview도 함께 넘긴다.
+  if (introResult.status === "fulfilled") {
+    rememberOperationInfo(contentId, { usetime, restdate, overview: base.overview });
+  }
 
   return {
     ...base,
@@ -418,9 +424,44 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
 // (절대 원칙 3 — 영속화 금지).
 const operationInfoIndex = new Map<string, OperationInfo>();
 
+// 색인은 배경 예열·상세 조회로 나중에 채워진다. 명소 지도가 그때 핀을 다시 그릴 수 있도록
+// 버전 번호를 올려 알린다 (useSyncExternalStore용 — 값이 아니라 세대만 노출).
+let operationVersion = 0;
+const operationListeners = new Set<() => void>();
+
+export function subscribeOperationInfo(listener: () => void): () => void {
+  operationListeners.add(listener);
+  return () => operationListeners.delete(listener);
+}
+
+export function getOperationInfoVersion(): number {
+  return operationVersion;
+}
+
+function notifyOperationChange(): void {
+  operationVersion += 1;
+  for (const listener of operationListeners) listener();
+}
+
 function rememberOperationInfo(contentId: string, info: OperationInfo): void {
-  // 이용시간·휴무 정보가 아예 없는 POI도 기록해 둔다 — 재조회를 막고, 엔진에서는 unknown이 된다.
-  operationInfoIndex.set(contentId, info);
+  // 이용시간(detailIntro2)과 소개(detailCommon2)는 서로 다른 호출로 도착하므로 병합한다.
+  // 이용시간·휴무가 아예 없는 POI도 기록해 둔다 — 재조회를 막고, 엔진에서는 보수적 통과가 된다.
+  const previous = operationInfoIndex.get(contentId);
+  const next: OperationInfo = {
+    usetime: info.usetime ?? previous?.usetime,
+    restdate: info.restdate ?? previous?.restdate,
+    overview: info.overview ?? previous?.overview,
+  };
+  if (
+    previous &&
+    previous.usetime === next.usetime &&
+    previous.restdate === next.restdate &&
+    previous.overview === next.overview
+  ) {
+    return; // 값이 그대로면 구독자를 깨우지 않는다
+  }
+  operationInfoIndex.set(contentId, next);
+  notifyOperationChange();
 }
 
 /** 지금까지 알아낸 이용시간·휴무 원문 (모르면 undefined → 엔진은 보수적으로 통과시킨다) */

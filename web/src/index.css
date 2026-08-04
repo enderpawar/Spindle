@@ -2844,6 +2844,33 @@ button.is-pressing:not(:disabled) {
   cursor: pointer;
 }
 
+/* 운영 중단·운영시간 외 안내 — 결과/명소 상세 카드에서 장소명 바로 아래 */
+.operation-notice {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: #a9462d;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.operation-notice__mark {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--l-orange);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .congestion-badge {
   display: inline-flex;
   min-height: 24px;
