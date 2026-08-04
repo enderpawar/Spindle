@@ -7,8 +7,10 @@
  * 계산한다 — 즉 출발점·다이얼이 결과를 실제로 바꾼다(기존 목 추천은 둘 다 무시했다).
  * 좌표는 전부 단말 내에서만 소비하고 네트워크로 나가지 않는다 (절대 원칙 1).
  */
+import { getOperationInfo } from '../api/details'
 import { TIER_WEIGHT, type Tier as CurationTier } from './curation'
 import { haversineMeters, type GeoPoint } from './geo'
+import { evaluateOperation } from './operation'
 import { recommend as scoreRecommend, type DialMinutes, type EnginePoi } from './recommend'
 import {
   poisByTheme,
@@ -43,6 +45,18 @@ export const ENGINE_POIS: readonly EnginePoi[] = POI_POOL.map((p) => ({
 export function dispersionWeightOf(contentId: string): number {
   const poi = POI_BY_CONTENT_ID.get(contentId)
   return TIER_WEIGHT[poi ? TIER_KEY[poi.tier] : 'T2']
+}
+
+/** 큐레이션 POI의 contentId 목록 — 세션 시작 시 운영 원문 예열 대상 (App.tsx) */
+export const CURATED_CONTENT_IDS: readonly string[] = POI_POOL.map((p) => p.contentId)
+
+/**
+ * 운영 상태 축 — 세션에 쌓인 detailIntro2 원문으로 산정한다 (SPEC 4장 네 번째 요소).
+ * 아직 모르는 POI는 `evaluateOperation`이 1.0으로 보수 통과시키므로, 예열 전에도
+ * 추천은 그대로 동작하고 데이터가 채워질수록 정확해진다.
+ */
+export function operationScoreOf(contentId: string, travelMinutes: number): number {
+  return evaluateOperation({ info: getOperationInfo(contentId), travelMinutes }).score
 }
 
 export function toGeo(d: Departure): GeoPoint {
@@ -84,6 +98,7 @@ export function recommendFromSpin(input: SpinRecommendInput): Recommendation {
       rng,
       prevContentId: input.prevContentId,
       dispersionWeightOf,
+      operationScoreOf,
     })
 
   let result = run(input.budgetMinutes)

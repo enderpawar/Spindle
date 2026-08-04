@@ -7,6 +7,7 @@ import { SourceLine } from '../components/SourceLine'
 import { StampNotice } from '../components/StampNotice'
 import { CuratedCopy } from '../components/CuratedCopy'
 import { copyOf } from '../engine/curation'
+import { evaluateOperation, type OperationStatus } from '../engine/operation'
 import { kakaoMapSearchUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
@@ -48,6 +49,30 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [fullDetail, setFullDetail] = useState<PoiDetail | null>(null)
   const [fullDetailLoading, setFullDetailLoading] = useState(false)
   const [fullDetailError, setFullDetailError] = useState(false)
+  const [operation, setOperation] = useState<OperationStatus | null>(null)
+
+  // 운영 상태 한 줄 — 이미 세션 캐시에 있는 detailIntro2 원문을 재사용한다(추가 호출 없음).
+  // 마감 시각은 TourAPI 값이라 단정하고, 도착은 존-교량 모델 근사라 "지금 출발하면"으로 적는다.
+  useEffect(() => {
+    let alive = true
+    setOperation(null)
+    fetchPoiDetailCached(poi.contentId)
+      .then((d) => {
+        if (!alive) return
+        setOperation(
+          evaluateOperation({
+            info: { usetime: d.usetime, restdate: d.restdate },
+            travelMinutes: poi.walkMinutes,
+          }),
+        )
+      })
+      .catch(() => {
+        /* 상세 실패는 기존 에러 UI가 다룬다 — 운영 한 줄만 생략 */
+      })
+    return () => {
+      alive = false
+    }
+  }, [poi.contentId, poi.walkMinutes])
 
   // 목 단계: 상세 API(Phase 3 detailCommon2) 로딩을 흉내 낸 스켈레톤
   useEffect(() => {
@@ -302,6 +327,18 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
               <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
                 {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분 · 근사치
               </div>
+              {operation?.line && (
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontSize: 13,
+                    fontWeight: operation.score < 1 ? 800 : 700,
+                    color: 'var(--l-ink-3)',
+                  }}
+                >
+                  {operation.line}
+                </div>
+              )}
               <CuratedCopy contentId={poi.contentId} className="result-curation-copy" />
 
               {/* 주소와 운영·휴무 원문 표는 [자세히 보기] 시트에 유지한다. */}

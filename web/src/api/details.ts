@@ -3,6 +3,7 @@
  * 프록시 경유·세션 메모리 캐시만 사용 (tourapi 스킬 규약, 절대 원칙 3).
  * 이용시간·쉬는날은 자유 텍스트 → 파싱은 engine/operation.ts, 실패 시 원문 노출.
  */
+import type { OperationInfo } from "../engine/operation";
 import {
   API_BASE,
   TourApiError,
@@ -398,6 +399,9 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
     imageResult.status === "fulfilled" ? imageResult.value : null,
   );
 
+  // 운영 상태 축(engine/operation.ts)이 다음 스핀에서 쓸 수 있도록 원문을 세션에 남긴다.
+  if (introResult.status === "fulfilled") rememberOperationInfo(contentId, { usetime, restdate });
+
   return {
     ...base,
     usetime,
@@ -405,6 +409,65 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
     visitFacts,
     visitFactsStatus: introResult.status === "fulfilled" ? "ready" : "error",
   };
+}
+
+// ── 운영 상태 원문의 세션 메모리 색인 ──
+// 추천 엔진의 운영 상태 축은 동기 함수라 네트워크를 기다릴 수 없다. 그래서 detailIntro2로
+// 알게 된 이용시간·휴무일 원문을 여기 모아두고, 엔진은 "지금까지 알아낸 것"만 사용한다
+// (모르는 POI는 1.0 보수적 통과 — tourapi 스킬 규약). 메모리 전용이라 탭을 닫으면 사라진다
+// (절대 원칙 3 — 영속화 금지).
+const operationInfoIndex = new Map<string, OperationInfo>();
+
+function rememberOperationInfo(contentId: string, info: OperationInfo): void {
+  // 이용시간·휴무 정보가 아예 없는 POI도 기록해 둔다 — 재조회를 막고, 엔진에서는 unknown이 된다.
+  operationInfoIndex.set(contentId, info);
+}
+
+/** 지금까지 알아낸 이용시간·휴무 원문 (모르면 undefined → 엔진은 보수적으로 통과시킨다) */
+export function getOperationInfo(contentId: string): OperationInfo | undefined {
+  return operationInfoIndex.get(contentId);
+}
+
+/**
+ * 큐레이션 POI의 운영 원문을 배경에서 미리 채운다 (detailIntro2 1회/POI).
+ *
+ * 세션 시작 목록 호출이 이미 알려준 contentTypeId가 있을 때만 호출한다 — 배경 예열 때문에
+ * detailCommon2까지 추가로 태우지는 않는다. 모르는 POI는 결과 카드가 상세를 부를 때 채워진다.
+ * 실패는 조용히 넘긴다 (예열은 추천 동작의 전제가 아니다).
+ */
+export async function primeOperationInfo(
+  contentIds: readonly string[],
+  fetchImpl: FetchLike = fetch,
+  concurrency = 3,
+): Promise<void> {
+  const queue = contentIds.filter((id) => !operationInfoIndex.has(id));
+  let cursor = 0;
+
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const index = cursor++;
+      if (index >= queue.length) return;
+      const contentId = queue[index];
+      const contentTypeId = getKnownContentTypeId(contentId);
+      if (!contentTypeId) continue;
+      try {
+        const body = await callTourApi<ListBody<DetailIntroItem>>(
+          "detailIntro2",
+          { contentId, contentTypeId },
+          fetchImpl,
+        );
+        const facts = visitFactsFromIntro(contentTypeId, extractItems(body)[0]);
+        rememberOperationInfo(contentId, {
+          usetime: facts.find((fact) => fact.key === "hours")?.value,
+          restdate: facts.find((fact) => fact.key === "closed")?.value,
+        });
+      } catch {
+        /* 예열 실패는 무시 — 결과 시점 상세 호출이 다시 채운다 */
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
 }
 
 // 세션 범위 메모리 캐시 — 영속화 금지 (절대 원칙 3). 실패 Promise는 제거해 재시도 가능.
@@ -460,6 +523,7 @@ export function clearDetailCache(): void {
   commonCache.clear();
   representativeImageCache.clear();
   galleryImageCache.clear();
+  operationInfoIndex.clear();
 }
 
 /**

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { fetchPoiCardDetailCached, fetchPoiDetailCached } from './api/details'
+import { fetchPoiCardDetailCached, fetchPoiDetailCached, primeOperationInfo } from './api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
-import { recommendFromSpin } from './engine/spinRecommend'
+import { CURATED_CONTENT_IDS, recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, buildCourseFromSpin, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
@@ -78,6 +78,10 @@ function App() {
         .then((regions) => {
           const total = regions.reduce((sum, r) => sum + r.pois.length, 0)
           console.info(`[Spindle] 세션 시작 POI 실시간 로드: ${total}곳 (${regions.length}개 구)`)
+          // 목록 호출이 contentTypeId를 알려준 뒤에야 detailIntro2를 1회/POI로 부를 수 있다.
+          // 운영 상태 축(SPEC 4장)이 첫 스핀부터 실제 이용시간·휴무를 반영하도록 배경에서 예열한다.
+          // 실패해도 추천은 보수적 통과로 그대로 동작한다.
+          void primeOperationInfo(CURATED_CONTENT_IDS).catch(() => {})
         })
         .catch(() => {
           /* 목록 로드 실패는 추천에 영향 없음 — 결과 시점 상세 호출에서 별도 에러 UI 처리 */

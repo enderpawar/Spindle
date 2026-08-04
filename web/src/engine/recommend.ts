@@ -63,8 +63,11 @@ export interface RecommendInput {
   rng: Rng;
   /** 직전 당첨 POI — 같은 세션 연속 당첨 방지로 임시 제외 */
   prevContentId?: string;
-  /** 운영 상태 점수 (Phase 3에서 detailIntro2 연동) — 기본 1.0 보수 통과 */
-  operationScoreOf?: (contentId: string) => number;
+  /**
+   * 운영 상태 점수 — `engine/operation.ts`가 detailIntro2 원문으로 산정한다.
+   * 도착 시각 판정이 필요하므로 보정 이동시간을 함께 받는다. 기본 1.0 보수 통과.
+   */
+  operationScoreOf?: (contentId: string, travelMinutes: number) => number;
   /**
    * 분산 가중치 주입 — 기본은 curation.ts의 contentId 표(dispersionWeight).
    * 정적 큐레이션 풀처럼 티어를 다른 곳에서 관리하면 이 훅으로 주입한다.
@@ -106,7 +109,8 @@ function rankCandidates(
     if (direction === 0) continue;
     const travel = travelMinutes(input.origin, poi.point);
     if (!withinDial(travel, input.budgetMinutes)) continue; // 접근 가능성 0 → 제외
-    const score = direction * 1 * operationScoreOf(poi.contentId) * dispersionWeightOf(poi.contentId);
+    const score =
+      direction * 1 * operationScoreOf(poi.contentId, travel.minutes) * dispersionWeightOf(poi.contentId);
     if (score <= 0) continue;
     ranked.push({ poi, score, bearing, travel, tier: tierOf(poi.contentId) });
   }

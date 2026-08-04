@@ -19,6 +19,7 @@ import {
   ENGINE_POIS,
   POI_BY_CONTENT_ID,
   dispersionWeightOf,
+  operationScoreOf,
   toGeo,
 } from './spinRecommend'
 import { travelMinutes, type TravelEstimate } from './zones'
@@ -57,8 +58,8 @@ export interface BuildCourseFromAnchorInput {
   anchor: Poi
   /** 단일 추천에서 방위 확장 등이 있었으면 그 사유를 코스 화면에도 유지 (docs/course.md §3) */
   noteReason?: string
-  /** 운영 상태 점수 훅 (Phase 3 detailIntro2 연동 시). 미지정이면 전부 통과(1). */
-  operationScoreOf?: (contentId: string) => number
+  /** 운영 상태 점수 훅 — 미지정이면 단일 추천과 같은 세션 기반 판정(engine/operation)을 쓴다. */
+  operationScoreOf?: (contentId: string, travelMinutes: number) => number
   /** 코스 모드는 출발점→장소 방위로 다시 계산하지 않고 스핀 확정각을 유지한다. */
   headingDeg?: number
 }
@@ -94,7 +95,7 @@ export function buildCourseFromAnchor(input: BuildCourseFromAnchorInput): AppCou
     pois: ENGINE_POIS,
     first,
     expansion: 'none',
-    operationScoreOf: input.operationScoreOf,
+    operationScoreOf: input.operationScoreOf ?? operationScoreOf,
     dispersionWeightOf,
   })
 
