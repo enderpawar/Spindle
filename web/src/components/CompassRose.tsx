@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
-import { DIRECTIONS } from '../mock/pois'
+import { directionFromHeading } from '../mock/pois'
 
 interface Props {
   disabled?: boolean
@@ -19,17 +19,16 @@ const FLING_THRESHOLD = 0.25 // deg/ms — 이 미만의 릴리즈는 스핀으�
 const STOP_THRESHOLD = 0.02 // deg/ms — 정지 판정
 const DECAY_TAU = 480 // ms — 감속 시정수 (초속 1.8deg/ms 기준 약 2.5바퀴)
 const MAX_VELOCITY = 3.2
+/** 방위 라벨이 놓이는 반지름 — 역회전 계산과 렌더가 같은 값을 써야 한다 */
+const LABEL_RADIUS = 82
+/** 해도 방위환 라벨 — 8방위 스냅과 일치하는 약어 + 방위각 (docs/design/ocean-compass) */
+const RING_LABELS = ['N 000', 'NE 045', 'E 090', 'SE 135', 'S 180', 'SW 225', 'W 270', 'NW 315']
 
 const polar = (r: number, deg: number) => {
   const rad = (deg * Math.PI) / 180
   return [160 + r * Math.sin(rad), 160 - r * Math.cos(rad)] as const
 }
 
-const arcPath = (r: number, a1: number, a2: number) => {
-  const [x1, y1] = polar(r, a1)
-  const [x2, y2] = polar(r, a2)
-  return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
-}
 
 export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
   const following = followHeading !== null
@@ -45,12 +44,28 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
   const samples = useRef<{ t: number; r: number }[]>([])
   const spinning = useRef(false)
   const fallback = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // 매 프레임 setState를 피하려고 DOM을 직접 갱신한다 (원판 transform과 같은 방식).
+  const labelRefs = useRef<(SVGTextElement | null)[]>([])
+  const readoutRef = useRef<SVGTextElement>(null)
 
   const headingOf = (rot: number) => ((-rot % 360) + 360) % 360
 
   const apply = () => {
     if (discRef.current) discRef.current.style.transform = `rotate(${rotation.current}deg)`
-    onHeading?.(headingOf(rotation.current))
+    const heading = headingOf(rotation.current)
+
+    // 원판이 돌아도 글자는 항상 정립시킨다 — 회전만 맡기면 아래쪽 라벨이 뒤집혀 읽히지 않는다.
+    for (let i = 0; i < labelRefs.current.length; i += 1) {
+      const el = labelRefs.current[i]
+      if (!el) continue
+      const [lx, ly] = polar(LABEL_RADIUS, i * 45)
+      el.setAttribute('transform', `rotate(${-rotation.current} ${lx} ${ly})`)
+    }
+    if (readoutRef.current) {
+      readoutRef.current.textContent = `${directionFromHeading(heading).label} ${String(Math.round(heading) % 360).padStart(3, '0')}°`
+    }
+
+    onHeading?.(heading)
   }
 
   const setSpinning = (value: boolean) => {
@@ -195,69 +210,98 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         userSelect: 'none',
       }}
     >
-      {/* 고정 바늘 — 원판 위 12시 방향, 여기가 "가리키는 곳" */}
-      <svg
-        aria-hidden
-        viewBox="0 0 40 26"
-        style={{ position: 'absolute', top: '-2.5%', left: '50%', width: '11%', transform: 'translateX(-50%)', zIndex: 3, filter: 'drop-shadow(0 4px 10px rgba(255,122,69,.55))' }}
-      >
-        <path d="M20 26 L8 4 Q20 -4 32 4 Z" fill="var(--accent)" />
-        <path d="M20 26 L8 4 Q20 -4 32 4 Z" fill="url(#needleShine)" opacity=".35" />
-        <defs>
-          <linearGradient id="needleShine" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#fff" />
-            <stop offset="1" stopColor="#fff" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-      </svg>
-
-      {/* 회전 원판 */}
+      {/* 회전 방위환 — 해도 눈금형 (docs/design/ocean-compass proto-2) */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
-          <defs>
-            <radialGradient id="discFace" cx="50%" cy="38%" r="75%">
-              <stop offset="0" stopColor="rgba(47,92,255,.08)" />
-              <stop offset="0.55" stopColor="rgba(47,92,255,.03)" />
-              <stop offset="1" stopColor="rgba(47,92,255,0)" />
-            </radialGradient>
-          </defs>
+          <circle cx="160" cy="160" r="154" fill="#ffffff" stroke="#dbe6fa" strokeWidth="2" />
+          <circle cx="160" cy="160" r="143" fill="#ffffff" stroke="#17347f" strokeWidth="1.5" />
+          <circle cx="160" cy="160" r="127" fill="none" stroke="#8ba3cf" strokeWidth="1" />
+          <circle cx="160" cy="160" r="101" fill="#e8f0ff" stroke="#dbe6fa" strokeWidth="1.5" />
 
-          <circle cx="160" cy="160" r="154" fill="#ffffff" stroke="var(--l-line)" strokeWidth="1.5" />
-          <circle cx="160" cy="160" r="154" fill="url(#discFace)" />
-          <circle cx="160" cy="160" r="120" fill="none" stroke="var(--l-line)" strokeWidth="1" />
-          <circle cx="160" cy="160" r="62" fill="rgba(47,92,255,.03)" stroke="var(--l-line)" strokeWidth="1" />
+          {/* 10도 눈금 — 32방위 해도 로즈의 보조 눈금을 8방위 스핀용으로 줄인 것.
+              회전 중 속도감을 주되 8방위보다 정밀해 보이지 않도록 라벨은 달지 않는다. */}
+          <g stroke="#3a4c78" strokeLinecap="square">
+            {Array.from({ length: 36 }, (_, i) => {
+              const deg = i * 10
+              const major = deg % 90 === 0
+              const mid = deg % 30 === 0
+              return (
+                <line
+                  key={deg}
+                  x1="160"
+                  y1="17"
+                  x2="160"
+                  y2={major ? 34 : mid ? 29 : 25}
+                  strokeWidth={major ? 2.5 : 1}
+                  transform={`rotate(${deg} 160 160)`}
+                />
+              )
+            })}
+          </g>
 
+          {/* 8방위 스냅 지점 표시 */}
+          <g stroke="#2f5cff" strokeWidth="2" opacity="0.7">
+            {Array.from({ length: 8 }, (_, i) => (
+              <line key={i} x1="160" y1="42" x2="160" y2="59" transform={`rotate(${i * 45} 160 160)`} />
+            ))}
+          </g>
 
-          {DIRECTIONS.map((dir, i) => {
-            const angle = i * 45
-            const cardinal = i % 2 === 0
-            const [tx, ty] = polar(96, angle)
-            const [mx1, my1] = polar(146, angle)
-            const [mx2, my2] = polar(134, angle)
-            const [bx1, by1] = polar(146, angle + 22.5)
-            const [bx2, by2] = polar(140, angle + 22.5)
-            return (
-              <g key={dir.id}>
-                {/* 림 방위 색 아크 */}
-                <path d={arcPath(150, angle - 16, angle + 16)} stroke={dir.color} strokeWidth="7" fill="none" opacity="0.5" strokeLinecap="round" />
-                {/* 눈금 — 방위선(굵게) + 경계선(얇게) */}
-                <line x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="rgba(90,118,168,.5)" strokeWidth={cardinal ? 2.5 : 1.5} strokeLinecap="round" />
-                <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="rgba(139,163,207,.45)" strokeWidth="1" />
+          {/* 방위 라벨 — 위치는 원판을 따라 돌지만 글자는 apply()에서 역회전시켜 항상 정립한다 */}
+          <g fill="#17347f" textAnchor="middle" style={{ fontSize: 12, fontWeight: 800, fontFamily: 'inherit' }}>
+            {RING_LABELS.map((label, i) => {
+              const [lx, ly] = polar(LABEL_RADIUS, i * 45)
+              return (
                 <text
-                  x={tx}
-                  y={ty}
-                  textAnchor="middle"
+                  key={label}
+                  ref={(el) => {
+                    labelRefs.current[i] = el
+                  }}
+                  x={lx}
+                  y={ly}
                   dominantBaseline="central"
-                  transform={`rotate(${angle} ${tx} ${ty})`}
-                  style={{ fill: cardinal ? '#17347f' : '#8ba3cf', fontSize: cardinal ? 19 : 12, fontWeight: 800, fontFamily: 'inherit' }}
                 >
-                  {dir.label}
+                  {label}
                 </text>
-              </g>
-            )
-          })}
+              )
+            })}
+          </g>
+
+          {/* 북방 표시 — 고정 인덱스보다 약하게 둬서 "결과"와 경쟁하지 않게 한다 */}
+          <path d="M160 89 L151 109 L160 104 L169 109 Z" fill="#1e4fd8" />
         </svg>
       </div>
+
+      {/* 고정 인덱스와 선택값 — 회전하지 않는다. 화면 12시가 곧 알고리즘 입력 방위각이다. */}
+      <svg
+        viewBox="0 0 320 320"
+        aria-hidden
+        style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}
+      >
+        <path d="M143 5 H177 L169 18 H151 Z" fill="#ff7a45" />
+        <path d="M151 18 L160 39 L169 18 Z" fill="#ffb38f" stroke="#ff7a45" strokeWidth="2" />
+        <line x1="160" y1="39" x2="160" y2="69" stroke="#ff7a45" strokeWidth="2.5" />
+        <line x1="151" y1="69" x2="169" y2="69" stroke="#ff7a45" strokeWidth="2.5" />
+
+        <path
+          d="M126 130 H194 Q208 130 208 144 V176 Q208 190 194 190 H126 Q112 190 112 176 V144 Q112 130 126 130 Z"
+          fill="#ffffff"
+          stroke="#2f5cff"
+          strokeWidth="2"
+        />
+        <text x="160" y="153" fill="#8ba3cf" textAnchor="middle" style={{ fontSize: 10, fontWeight: 750, fontFamily: 'inherit' }}>
+          선택 방위
+        </text>
+        <text
+          ref={readoutRef}
+          x="160"
+          y="175"
+          fill="#17347f"
+          textAnchor="middle"
+          style={{ fontSize: 18, fontWeight: 850, fontFamily: 'inherit' }}
+        >
+          북 000°
+        </text>
+      </svg>
     </div>
   )
 }

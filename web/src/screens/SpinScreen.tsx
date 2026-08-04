@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CompassRose } from '../components/CompassRose'
-import { CompassHubArt } from '../components/Icons'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
@@ -158,9 +157,6 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             onSettle={handleSettle}
             followHeading={fieldOn && !settled ? field.heading : null}
           />
-          <div className={`spin-compass-hub${spinning ? ' is-spinning' : ''}`} aria-hidden>
-            <CompassHubArt />
-          </div>
           {theme && purpose === 'single' && !busy && (
             <div className="spin-theme-disc-mark" style={{ '--theme-color': theme.color } as React.CSSProperties}>
               {theme.label} 디스크
