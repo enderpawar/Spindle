@@ -4,8 +4,8 @@ import { CuratedCopy } from '../components/CuratedCopy'
 import { COPY_BY_CONTENT_ID, copyOf } from './curation'
 
 describe('추천 한 줄 큐레이션', () => {
-  it('35곳 모두 40자 이내 자체 카피를 가진다', () => {
-    expect(COPY_BY_CONTENT_ID.size).toBe(35)
+  it('49곳 모두 40자 이내 자체 카피를 가진다', () => {
+    expect(COPY_BY_CONTENT_ID.size).toBe(49)
     for (const copy of COPY_BY_CONTENT_ID.values()) {
       expect(copy.trim()).not.toBe('')
       expect([...copy].length).toBeLessThanOrEqual(40)

@@ -25,12 +25,18 @@ function rect(latMin: number, latMax: number, lngMin: number, lngMax: number): G
 }
 
 // TODO(zones.md): 임시 사각형 구획 — 확정 다각형으로 교체
+// 2026-08-03: Z2 동단·Z5 동단/북단을 실제 POI 좌표에 맞춰 넓혔다. 좁은 사각형 탓에
+// 큐레이션 POI가 존 밖(connected=false)으로 떨어져 "하루" 다이얼에서만 나오던 문제 —
+// 송도해상케이블카(T1)·송도 구름산책로·구덕문화공원·구덕민속예술관이 여기 걸려 있었다.
+// 겹치는 구간은 배열 순서상 앞 존이 이긴다 (zoneOf가 첫 일치를 반환).
 export const ZONES: readonly ZoneDef[] = [
   { id: "Z1", name: "남포·광복", polygon: rect(35.09, 35.108, 129.02, 129.042) },
-  { id: "Z2", name: "부산역·초량", polygon: rect(35.108, 35.13, 129.028, 129.055) },
+  // 동단 129.055 → 129.063: 좌천동·범일동(부산진시장·자성대)까지 (zones.md Z2 "포함 지역")
+  { id: "Z2", name: "부산역·초량", polygon: rect(35.108, 35.137, 129.028, 129.063) },
   { id: "Z3", name: "영도 서부", polygon: rect(35.065, 35.098, 129.032, 129.058) },
   { id: "Z4", name: "영도 동부", polygon: rect(35.045, 35.098, 129.058, 129.11) },
-  { id: "Z5", name: "서구(송도·아미)", polygon: rect(35.05, 35.108, 128.99, 129.02) },
+  // 동단 129.02 → 129.026(충무동·암남동 해안), 북단 35.108 → 35.127(대신동·구덕)
+  { id: "Z5", name: "서구(송도·아미)", polygon: rect(35.05, 35.127, 128.99, 129.026) },
 ];
 
 export function zoneOf(p: GeoPoint): ZoneId | null {
@@ -98,6 +104,17 @@ export const CONNECTIONS: readonly Connection[] = [
     stations: [
       { lat: 35.0916, lng: 129.0451 },
       { lat: 35.0527, lng: 129.0846 },
+    ],
+  },
+  {
+    // zones.md "존 간 연결" 표에 확정돼 있으나 코드에 없던 행 — 이게 없으면 Z5 POI가
+    // 어느 출발점에서도 connected=false가 되어 "하루" 다이얼에만 나온다 (zones.md Z5 근거 4).
+    // 시내버스 노선번호가 미확인이라 충무동~송도 해안도로 도보 경로로만 잡는다 (보수적).
+    pair: ["Z1", "Z5"],
+    kind: "bridge",
+    waypoints: [
+      { lat: 35.0965, lng: 129.0245 }, // 충무동로터리
+      { lat: 35.077, lng: 129.018 }, // 송도해수욕장 입구
     ],
   },
 ];

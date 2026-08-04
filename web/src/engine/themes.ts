@@ -109,6 +109,7 @@ const CATEGORY_THEMES: Record<string, ThemeId[]> = {
   해안: ['sea'],
   해변: ['sea'],
   공원: ['history'],
+  사찰: ['history'],
 }
 
 // category만으로 담기 어려운 큐레이션 태그 (야시장·먹자골목·노을·체험 등)
@@ -118,6 +119,21 @@ const POI_EXTRA_THEMES: Record<string, ThemeId[]> = {
   'choryang-market': ['food'],
   'samjin-eomuk': ['food'],
   'huinnyeoul-tunnel': ['night'],
+  // 2026-08-03 보강분
+  'gukje-market': ['food'],
+  'gukje-food-alley': ['food'],
+  'busanjin-market': ['food'],
+  'namhang-market': ['food'],
+  'gongdong-fish-market': ['food'],
+  'yongdusan-jagalchi': ['food', 'night'],
+  'yongdusan-park': ['night'],
+  'kimminbu-view': ['night'],
+  'cheonmasan-view': ['night'],
+  'nuribaragi-view': ['night'],
+  'taejongdae': ['sea'],
+  'plaza-75': ['sea'],
+  'amir-park': ['sea'],
+  'songdo-skywalk-bridge': ['sea'],
 }
 
 export function themesOf(poi: Poi): ThemeId[] {

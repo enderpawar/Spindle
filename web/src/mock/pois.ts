@@ -174,6 +174,194 @@ export const POI_POOL: Poi[] = [
     walkMinutes: 5, open: { known: false, text: '점포별 상이' },
     story: '“오이소, 보이소” 부산을 대표하는 수산시장. 바다 내음이 진동해요.',
   },
+
+  // ── 2026-08-03 보강 (34곳) ────────────────────────────────────────────────
+  // 두 갈래를 함께 채웠다.
+  //  1) docs/curation.md 큐레이션 표에 있으나 코드에 빠져 있던 20곳
+  //  2) TourAPI에 areacode·sigungucode가 빈 문자열이라 areaBasedList2로는 조회 자체가
+  //     불가능한 14곳 (태종대·용두산공원·국립해양박물관·임시수도기념관 등) —
+  //     searchKeyword2 전국 검색으로만 나온다. 정적 풀에 넣지 않으면 앱에서 영영 안 보인다.
+  // 좌표·구는 contentId로 detailCommon2를 실호출해 확인 (2026-08-03).
+  // 방위·티어·스토리는 위 21곳과 동일하게 자체 큐레이션 값이다 (TourAPI overview 미사용).
+  // 'curation.md 미수록 14곳'은 같은 날짜로 curation.md 표에도 행을 추가했다.
+  // 북 — 중구 원도심 (용두산·대청동)
+  {
+    id: 'yongdusan-park', contentId: '126121', name: '용두산공원', category: '공원', district: '중구', direction: 'N', tier: 1, lat: 35.1004, lon: 129.0327,
+    walkMinutes: 12, open: { known: true, text: '상시 개방' },
+    story: '원도심 한복판에 솟은 언덕. 계단을 오르면 부산항이 펼쳐져요.',
+  },
+  {
+    id: 'modern-history-annex', contentId: '2784363', name: '부산근현대역사관 별관', category: '근현대', district: '중구', direction: 'N', tier: 2, lat: 35.1027, lon: 129.0312,
+    walkMinutes: 12, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '오래된 건물 안에서 도시의 시간을 천천히 읽는 곳.',
+  },
+  {
+    id: 'democracy-park', contentId: '127149', name: '민주공원', category: '공원', district: '중구', direction: 'N', tier: 3, lat: 35.1094, lon: 129.0281,
+    walkMinutes: 24, open: { known: true, text: '상시 개방' },
+    story: '도시의 기억과 북항 풍경이 함께 머무는 언덕.',
+  },
+  {
+    id: 'waegwan-site', contentId: '1942348', name: '관수옥과 초량왜관 터', category: '근현대', district: '중구', direction: 'N', tier: 3, lat: 35.1005, lon: 129.0327,
+    walkMinutes: 12, open: { known: true, text: '상시 개방' },
+    story: '초량왜관의 흔적을 따라 오래된 부산을 상상하는 자리.',
+  },
+  {
+    id: 'baeksan-memorial', contentId: '130153', name: '백산기념관', category: '근현대', district: '중구', direction: 'N', tier: 3, lat: 35.1019, lon: 129.0346,
+    walkMinutes: 16, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '독립운동 자금을 대던 백산상회 자리. 조용한 골목에 선 작은 기념관.',
+  },
+  // 북동 — 동구 산복도로·좌천·범일
+  {
+    id: 'namseon-warehouse', contentId: '1942299', name: '남선창고터', category: '근현대', district: '동구', direction: 'NE', tier: 3, lat: 35.1168, lon: 129.0395,
+    walkMinutes: 46, open: { known: true, text: '상시 개방' },
+    story: '부산역 뒤편에 남은 항구 도시의 첫 기억.',
+  },
+  {
+    id: 'stairs-168', contentId: '1942337', name: '168계단', category: '산복도로', district: '동구', direction: 'NE', tier: 2, lat: 35.1171, lon: 129.0353,
+    walkMinutes: 43, open: { known: true, text: '상시 개방' },
+    story: '산복도로와 부두를 잇는 가파른 계단. 모노레일로 오를 수도 있어요.',
+  },
+  {
+    id: 'kimminbu-view', contentId: '1942245', name: '김민부전망대', category: '전망', district: '동구', direction: 'NE', tier: 3, lat: 35.1177, lon: 129.0353,
+    walkMinutes: 44, open: { known: true, text: '상시 개방' },
+    story: '168계단 위에서 북항과 원도심을 마주 보는 작은 전망대.',
+  },
+  {
+    id: 'janggiryeo-center', contentId: '1945293', name: '장기려기념 더 나눔센터', category: '전시', district: '동구', direction: 'NE', tier: 3, lat: 35.1186, lon: 129.0327,
+    walkMinutes: 45, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '한 의사의 나눔 정신을 동네 안에서 만나는 공간.',
+  },
+  {
+    id: 'ilsin-school', contentId: '1608673', name: '부산진일신여학교', category: '근현대', district: '동구', direction: 'NE', tier: 3, lat: 35.1349, lon: 129.0529,
+    walkMinutes: 91, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '근대 교육과 독립운동의 기억이 고요히 남은 교정.',
+  },
+  {
+    id: 'busanjin-market', contentId: '132189', name: '부산진시장', category: '시장', district: '동구', direction: 'NE', tier: 2, lat: 35.1362, lon: 129.0588,
+    walkMinutes: 99, open: { known: false, text: '점포별 상이' },
+    story: '세월을 품은 상가 사이로 부산의 생활이 흐르는 시장.',
+  },
+  {
+    id: 'busanjin-fortress', contentId: '126830', name: '부산진성공원', category: '공원', district: '동구', direction: 'NE', tier: 3, lat: 35.1359, lon: 129.0611,
+    walkMinutes: 101, open: { known: true, text: '상시 개방' },
+    story: '자성대 언덕에 남은 옛 성터. 도심 속에서 조선의 흔적을 만나요.',
+  },
+  {
+    id: 'tongsinsa-museum', contentId: '1756065', name: '조선통신사역사관', category: '전시', district: '동구', direction: 'NE', tier: 3, lat: 35.1357, lon: 129.0621,
+    walkMinutes: 102, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '조선에서 일본으로 떠난 사절단의 길을 따라가는 전시관.',
+  },
+  // 동 — 중구 남측 해안
+  {
+    id: 'jagalchi-cruise', contentId: '3064821', name: '자갈치 크루즈', category: '해안', district: '중구', direction: 'E', tier: 2, lat: 35.0967, lon: 129.0317,
+    walkMinutes: 10, open: { known: false, text: '운항 시간은 지도에서 확인' },
+    story: '자갈치 앞바다에서 원도심의 윤곽을 새로 보는 시간.',
+  },
+  // 남동 — 영도 안쪽 (봉래·대평)
+  {
+    id: 'repair-shipyard-road', contentId: '1942253', name: '수리조선소길', category: '산업·예술', district: '영도구', direction: 'SE', tier: 3, lat: 35.0924, lon: 129.0335,
+    walkMinutes: 18, open: { known: true, text: '상시 개방' },
+    story: '배를 고치던 손길과 산업의 시간이 남아 있는 길.',
+  },
+  {
+    id: 'namhang-market', contentId: '1942298', name: '남항시장', category: '시장', district: '영도구', direction: 'SE', tier: 3, lat: 35.0889, lon: 129.0423,
+    walkMinutes: 34, open: { known: false, text: '점포별 상이' },
+    story: '영도 초입에서 동네의 식탁과 일상을 만나는 시장.',
+  },
+  // 남 — 영도 남쪽·동쪽 해안 (흰여울·동삼·태종대)
+  {
+    id: 'jeoryeong-coast', contentId: '252561', name: '절영해안산책로', category: '해안', district: '영도구', direction: 'S', tier: 2, lat: 35.0812, lon: 129.0412,
+    walkMinutes: 45, open: { known: true, text: '상시 개방' },
+    story: '절벽 아래 파도와 나란히 오래 걸을 수 있는 해안길.',
+  },
+  {
+    id: 'taejongdae', contentId: '126658', name: '태종대', category: '자연', district: '영도구', direction: 'S', tier: 1, lat: 35.0597, lon: 129.0798,
+    walkMinutes: 126, open: { known: true, text: '상시 개방' },
+    story: '기암절벽과 바다가 맞닿은 영도 남단. 등대까지 숲길이 이어져요.',
+  },
+  {
+    id: 'gamji-beach', contentId: '2785289', name: '감지해변', category: '해변', district: '영도구', direction: 'S', tier: 3, lat: 35.0625, lon: 129.0765,
+    walkMinutes: 117, open: { known: true, text: '상시 개방' },
+    story: '태종대 곁에서 자갈과 파도 소리를 가까이 듣는 해변.',
+  },
+  {
+    id: 'taejongsa', contentId: '1608751', name: '태종사', category: '사찰', district: '영도구', direction: 'S', tier: 2, lat: 35.0560, lon: 129.0898,
+    walkMinutes: 144, open: { known: true, text: '상시 개방' },
+    story: '숲과 수국 사이에서 잠시 호흡을 고르는 조용한 절.',
+  },
+  {
+    id: 'maritime-museum', contentId: '1825843', name: '국립해양박물관', category: '전시', district: '영도구', direction: 'S', tier: 1, lat: 35.0785, lon: 129.0803,
+    walkMinutes: 104, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '바다를 주제로 한 국내 최대 박물관. 배와 항해의 이야기가 모여 있어요.',
+  },
+  {
+    id: 'amir-park', contentId: '2661446', name: '아미르공원', category: '공원', district: '영도구', direction: 'S', tier: 3, lat: 35.0772, lon: 129.0820,
+    walkMinutes: 108, open: { known: true, text: '상시 개방' },
+    story: '해양박물관 곁 바다를 낀 공원. 잔디밭 너머로 배가 지나가요.',
+  },
+  {
+    id: 'plaza-75', contentId: '252564', name: '75광장', category: '해안', district: '영도구', direction: 'S', tier: 3, lat: 35.0706, lon: 129.0580,
+    walkMinutes: 82, open: { known: true, text: '상시 개방' },
+    story: '영도 동쪽 바다로 열린 광장. 해안도로 끝에서 수평선을 마주해요.',
+  },
+  // 남서 — 서구 송도·암남 해안
+  {
+    id: 'songdo-bolle-road', contentId: '2784356', name: '송도해안볼레길', category: '해안', district: '서구', direction: 'SW', tier: 3, lat: 35.0672, lon: 129.0189,
+    walkMinutes: 69, open: { known: true, text: '상시 개방' },
+    story: '붐비는 해변을 벗어나 조용한 해안으로 이어지는 산책길.',
+  },
+  {
+    id: 'songdo-peninsula', contentId: '2614725', name: '송도반도 (부산 국가지질공원)', category: '자연', district: '서구', direction: 'SW', tier: 3, lat: 35.0660, lon: 129.0195,
+    walkMinutes: 71, open: { known: true, text: '상시 개방' },
+    story: '겹겹의 바위가 부산 바다의 오랜 시간을 들려주는 곳.',
+  },
+  {
+    id: 'songdo-skywalk-bridge', contentId: '2684738', name: '송도용궁구름다리', category: '해안', district: '서구', direction: 'SW', tier: 2, lat: 35.0619, lon: 129.0220,
+    walkMinutes: 79, open: { known: false, text: '운영시간은 지도에서 확인' },
+    story: '암남공원 절벽과 작은 섬을 잇는 구름다리. 발밑으로 파도가 부서져요.',
+  },
+  {
+    id: 'gongdong-fish-market', contentId: '1607655', name: '부산공동어시장', category: '시장', district: '서구', direction: 'SW', tier: 3, lat: 35.0887, lon: 129.0251,
+    walkMinutes: 21, open: { known: false, text: '점포별 상이' },
+    story: '새벽 경매 소리로 하루를 여는 국내 최대 산지 위판장.',
+  },
+  {
+    id: 'nuribaragi-view', contentId: '2788424', name: '누리바라기전망대', category: '전망', district: '서구', direction: 'SW', tier: 3, lat: 35.0908, lon: 129.0203,
+    walkMinutes: 20, open: { known: true, text: '상시 개방' },
+    story: '서구 언덕 끝에서 남항과 영도를 한 화면에 담는 전망대.',
+  },
+  // 서 — 서구 내륙 (대신·구덕·부민)
+  {
+    id: 'cheonmasan-view', contentId: '2721158', name: '천마산하늘전망대', category: '전망', district: '서구', direction: 'W', tier: 3, lat: 35.0936, lon: 129.0173,
+    walkMinutes: 19, open: { known: true, text: '상시 개방' },
+    story: '천마산 위에서 항구와 산복도로를 함께 내려다보는 자리.',
+  },
+  {
+    id: 'provisional-capital', contentId: '1608530', name: '임시수도기념관', category: '근현대', district: '서구', direction: 'W', tier: 2, lat: 35.1038, lon: 129.0176,
+    walkMinutes: 20, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
+    story: '한국전쟁 시절 대통령 관저로 쓰인 집. 피란수도 부산의 1000일이 남아 있어요.',
+  },
+  // 북서 — 중구 서쪽 시장 (부평·자갈치·국제시장)
+  {
+    id: 'gukje-market', contentId: '132191', name: '국제시장', category: '시장', district: '중구', direction: 'NW', tier: 1, lat: 35.1016, lon: 129.0286,
+    walkMinutes: 8, open: { known: false, text: '점포별 상이' },
+    story: '서로 다른 골목이 한 장면처럼 이어지는 오래된 시장.',
+  },
+  {
+    id: 'gukje-food-alley', contentId: '1018702', name: '국제시장 먹자골목', category: '시장', district: '중구', direction: 'NW', tier: 2, lat: 35.1011, lon: 129.0281,
+    walkMinutes: 6, open: { known: false, text: '점포별 상이' },
+    story: '시장 한복판에서 부산다운 한 끼를 고르는 골목.',
+  },
+  {
+    id: 'yongdusan-jagalchi', contentId: '1957694', name: '용두산 자갈치 관광특구', category: '거리', district: '중구', direction: 'NW', tier: 1, lat: 35.0967, lon: 129.0306,
+    walkMinutes: 8, open: { known: true, text: '상시 개방' },
+    story: '시장과 바다, 광복로가 한 걸음에 이어지는 원도심의 중심.',
+  },
+  {
+    id: 'art-street', contentId: '985921', name: '미술의거리', category: '거리', district: '중구', direction: 'NW', tier: 3, lat: 35.1006, lon: 129.0279,
+    walkMinutes: 5, open: { known: true, text: '상시 개방' },
+    story: '시장 곁 짧은 골목에서 일상의 작품을 만나는 길.',
+  },
 ]
 
 export interface Recommendation {
