@@ -67,13 +67,14 @@ export function NavSettingsIcon({ size = 24 }: NavIconProps) {
 }
 
 /**
- * 스핀 FAB — 앱 아이콘(`public/pwa-icon.svg`)의 마크를 테마 색으로 옮긴 것.
- * 앱 아이콘: 남색 배경 + 흰 4방위 별 + 주황 중심점 + 십자 눈금.
- * 여기서는 파란 FAB 위에 얹히므로 배경을 빼고 별·눈금을 흰색, 중심점만 주황 강조로 남긴다.
+ * 스핀 FAB — Spindle 로고 마크 그대로.
+ * 앱 아이콘(`public/pwa-icon.svg`)에서 바깥 남색 사각형만 걷어냈다:
+ * 주황 링 원 + 흰 4방위 별 + 주황 중심점 + 흰 십자 눈금. 원 안은 비워 파란 FAB이 비친다.
  */
 export function NavSpinIcon({ size = 28 }: NavIconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden>
+      <circle cx="256" cy="256" r="154" fill="none" stroke="#FF7A45" strokeWidth={18} />
       <path d="M256 96l42 118 118 42-118 42-42 118-42-118-118-42 118-42z" fill="currentColor" />
       <path
         d="M256 128v50M256 334v50M128 256h50M334 256h50"

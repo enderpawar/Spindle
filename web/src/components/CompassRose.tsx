@@ -218,16 +218,25 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
 
             {/*
               4방위 날 — 각 면이 이등변 삼각형. 꼭짓점은 반지름 104(라벨 112 안쪽),
-              밑변은 반지름 18에서 반폭 16. 네 개를 한 path의 서브패스로 묶어 단일 도형으로 둔다.
+              밑변은 반지름 16에서 반폭 24. 밑변 끝점이 중심에서 28.8이라 허브(r=30) 아래로
+              완전히 들어가 이음매가 보이지 않는다. 네 개를 한 path의 서브패스로 묶는다.
             */}
             <path
-              d="M160 56 L144 142 L176 142 Z M264 160 L178 144 L178 176 Z M160 264 L176 178 L144 178 Z M56 160 L142 176 L142 144 Z"
-              fill="#17347f"
+              d="M160 56 L136 144 L184 144 Z M264 160 L176 136 L176 184 Z M160 264 L184 176 L136 176 Z M56 160 L144 184 L144 136 Z"
+              fill="#2f5cff"
             />
 
-            {/* 중앙 허브 — 네이비 원 + 흰 링 + 주황 점. 주황은 회전축이라 어디도 가리키지 않는다. */}
-            <circle cx="160" cy="160" r="24" fill="#17347f" stroke="#ffffff" strokeWidth="4" />
-            <circle cx="160" cy="160" r="8" fill="#FF7A45" />
+            {/*
+              중앙 허브 — 테마 블루 원 + 흰 링 위에 Spindle 로고 마크(4방위 별)를 얹는다.
+              별 경로는 앱 아이콘(public/pwa-icon.svg)의 512 좌표계 원본이라, 원판의 320
+              좌표계 중심(160,160)으로 옮기고 0.14배로 줄여 반지름 22가 되게 맞춘다.
+              주황은 회전축의 중심점 하나뿐이라 어디도 가리키지 않는다.
+            */}
+            <circle cx="160" cy="160" r="30" fill="#2f5cff" stroke="#ffffff" strokeWidth="4" />
+            <g transform="translate(160 160) scale(0.14) translate(-256 -256)">
+              <path d="M256 96l42 118 118 42-118 42-42 118-42-118-118-42 118-42z" fill="#ffffff" />
+            </g>
+            <circle cx="160" cy="160" r="6" fill="#FF7A45" />
 
             {/* 대각 4방위 — 짧은 눈금으로만 암시 */}
             <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeOpacity="0.55">
