@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, primeOperationInfo } from './api/details'
-import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
+import { fetchOldTownFestivalsCached, peekOldTownFestivalsCache, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
-import { CURATED_CONTENT_IDS, recommendFromSpin } from './engine/spinRecommend'
+import { isFestivalOngoing } from './engine/festival'
+import { CURATED_CONTENT_IDS, countAccessibleCuratedPois, recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, buildCourseFromSpin, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
@@ -59,6 +60,7 @@ function App() {
   const [spinPurposeNotice, setSpinPurposeNotice] = useState<string | null>(null)
   const [courseFailureNotice, setCourseFailureNotice] = useState<string | null>(null)
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
+  const [poiWarmReady, setPoiWarmReady] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
 
   const goTo = (next: Screen) => {
@@ -77,6 +79,7 @@ function App() {
       fetchAllOldTownPois()
         .then((regions) => {
           const total = regions.reduce((sum, r) => sum + r.pois.length, 0)
+          setPoiWarmReady(true)
           console.info(`[Spindle] 세션 시작 POI 실시간 로드: ${total}곳 (${regions.length}개 구)`)
           // 목록 호출이 contentTypeId를 알려준 뒤에야 detailIntro2를 1회/POI로 부를 수 있다.
           // 운영 상태 축(SPEC 4장)이 첫 스핀부터 실제 이용시간·휴무를 반영하도록 배경에서 예열한다.
@@ -151,6 +154,12 @@ function App() {
     }
     setCourseFailureNotice(null)
     goTo('reveal')
+  }
+
+  /** 홈의 조건 CTA는 다이얼만 준비하고 기존 스핀 화면으로 이동한다. 스핀은 사용자 제스처 뒤에만 시작된다. */
+  const startSpin = (minutes?: 20 | 40) => {
+    if (minutes !== undefined) setDial(minutes)
+    goTo('spin')
   }
 
   /** 명소 탭·홈 추천 카드·테마 덱에서 특정 POI를 바로 열 때 — 결과 카드 재사용 */
@@ -345,13 +354,31 @@ function App() {
       )
     case 'festival':
       return <FestivalScreen onNavigate={navigate} onBack={() => goTo('home')} />
-    default:
+    default: {
+      const today = todayYyyymmdd()
+      const cachedFestivals = peekOldTownFestivalsCache(today)
+      const festivalOngoingCount = cachedFestivals
+        ? cachedFestivals.filter((festival) => isFestivalOngoing(festival, today)).length
+        : null
+      const candidateCount = poiWarmReady ? countAccessibleCuratedPois(departure, dial) : null
+
       return (
         <>
-          <HomeScreen departure={departure} onOpenDeparture={() => openDeparture('home')} onSelectPoi={openPoi} onOpenTheme={openTheme} onOpenFestival={() => goTo('festival')} onNavigate={navigate} />
+          <HomeScreen
+            departure={departure}
+            dial={dial}
+            candidateCount={candidateCount}
+            festivalOngoingCount={festivalOngoingCount}
+            onOpenDeparture={() => openDeparture('home')}
+            onStartSpin={startSpin}
+            onOpenTheme={openTheme}
+            onOpenFestival={() => goTo('festival')}
+            onNavigate={navigate}
+          />
           {homeGuideOpen && <HomeGuide onClose={() => setHomeGuideOpen(false)} />}
         </>
       )
+    }
     }
   })()
 

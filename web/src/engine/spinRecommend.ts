@@ -11,7 +11,13 @@ import { getOperationInfo } from '../api/details'
 import { TIER_WEIGHT, type Tier as CurationTier } from './curation'
 import { haversineMeters, type GeoPoint } from './geo'
 import { evaluateOperation } from './operation'
-import { recommend as scoreRecommend, type DialMinutes, type EnginePoi } from './recommend'
+import {
+  recommend as scoreRecommend,
+  withinDial,
+  type DialMinutes,
+  type EnginePoi,
+} from './recommend'
+import { travelMinutes } from './zones'
 import {
   poisByTheme,
   themeInfo,
@@ -62,6 +68,21 @@ export function operationScoreOf(contentId: string): number {
 
 export function toGeo(d: Departure): GeoPoint {
   return { lat: d.lat, lng: d.lon }
+}
+
+/**
+ * 현재 출발점과 이동시간 예산 안에 드는 큐레이션 후보 수.
+ * 홈의 사전 안내용 순수 집계이므로 방향·난수·운영상태·직전 결과는 적용하지 않는다.
+ */
+export function countAccessibleCuratedPois(
+  departure: Departure,
+  budgetMinutes: DialMinutes,
+): number {
+  const origin = toGeo(departure)
+  return ENGINE_POIS.reduce(
+    (count, poi) => count + (withinDial(travelMinutes(origin, poi.point), budgetMinutes) ? 1 : 0),
+    0,
+  )
 }
 
 export interface SpinRecommendInput {

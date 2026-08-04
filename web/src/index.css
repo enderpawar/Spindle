@@ -353,7 +353,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 }
 
 .home-hero-title {
-  margin-top: 2px;
+  margin: 2px 0 0;
   color: #fff;
   font-size: 21px;
   font-weight: 900;
@@ -483,121 +483,111 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   border: 2px dashed #c3d3ee;
 }
 
-.home-pick-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 14px;
-  padding: 0 20px 8px;
-}
-
-.home-pick-card {
-  width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.home-pick-image {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 14 / 9;
-  overflow: hidden;
-  border-radius: 20px;
-}
-
-.home-pick-title {
-  overflow: hidden;
-  color: var(--l-ink);
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-pick-meta {
-  margin-top: 6px;
-  overflow: hidden;
-  color: var(--l-ink-3);
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home-mission-card {
-  position: relative;
-  display: block;
+.home-spin-context {
   width: calc(100% - 32px);
-  min-height: 148px;
-  margin: 24px 16px 0;
-  padding: 18px 116px 18px 18px;
-  overflow: hidden;
-  border: 1px solid #d7e5ff;
-  border-radius: 20px;
-  background: #eef4ff;
-  color: var(--l-ink);
-  text-align: left;
-  cursor: pointer;
-}
-
-.home-mission-copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.home-mission-label {
-  color: var(--l-primary);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.home-mission-title {
-  display: -webkit-box;
-  margin-top: 5px;
+  margin: 18px 16px 0;
+  padding: 18px;
   overflow: hidden;
-  font-size: 17px;
+  border: 1px solid rgba(47, 92, 255, 0.1);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 28px -18px rgba(20, 40, 90, 0.38);
+}
+
+.home-spin-context-heading h2 {
+  margin: 0;
+  color: var(--l-ink);
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.35;
   letter-spacing: -0.3px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
-.home-mission-description {
-  display: -webkit-box;
-  margin-top: 5px;
-  overflow: hidden;
+.home-spin-context-heading p,
+.home-spin-candidate {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+  color: var(--l-ink-2);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.home-spin-candidate {
+  color: var(--l-primary-deep);
+}
+
+.home-spin-festival {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--l-line);
+  border-bottom: 1px solid var(--l-line);
+  background: transparent;
   color: var(--l-ink-2);
   font-size: 12.5px;
-  font-weight: 650;
+  font-weight: 750;
   line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  text-align: left;
+  cursor: pointer;
 }
 
-.home-mission-cta {
-  margin-top: 11px;
-  color: var(--l-primary-deep);
-  font-size: 13px;
+.home-spin-festival span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.home-spin-festival span:last-child {
+  flex: none;
+  color: var(--l-primary);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.home-spin-submit {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--l-primary);
+  color: #fff;
+  font-size: 15px;
   font-weight: 900;
   white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 10px 20px -12px rgba(30, 79, 216, 0.62);
 }
 
-.home-mission-mascot {
-  position: absolute;
-  right: 3px;
-  bottom: -10px;
-  width: 108px;
-  max-width: none;
-  pointer-events: none;
+.home-spin-quick {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.home-spin-quick button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 8px;
+  border: 1.5px solid var(--l-line);
+  border-radius: 14px;
+  background: var(--l-soft);
+  color: var(--l-primary-deep);
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 @media (max-width: 359px) {
@@ -668,41 +658,12 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
     gap: 8px;
   }
 
-  .home-pick-grid {
-    padding-inline: 16px;
-    gap: 16px 10px;
-  }
-
-  .home-pick-title {
-    font-size: 14px;
-  }
-
-  .home-mission-card {
+  .home-spin-context {
     width: calc(100% - 24px);
-    min-height: 146px;
     margin-inline: 12px;
-    padding: 16px 88px 16px 16px;
+    padding: 16px 14px;
   }
 
-  .home-mission-mascot {
-    right: -4px;
-    width: 86px;
-  }
-}
-
-@media (max-width: 299px) {
-  .home-pick-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .home-mission-card {
-    padding-right: 72px;
-  }
-
-  .home-mission-mascot {
-    right: -9px;
-    width: 76px;
-  }
 }
 
 /* ─── 설정 > 사용법 다시 보기: 실제 홈 위 인앱 코치마크 ─── */
