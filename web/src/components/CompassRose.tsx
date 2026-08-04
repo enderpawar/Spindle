@@ -204,29 +204,41 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         userSelect: 'none',
       }}
     >
-      {/* 회전 방위환 — 단일색 미니멀 로즈 (docs/design/ocean-compass min-b).
+      {/* 회전 방위환 — 중앙 별 + 4방위 로즈 (docs/design/ocean-compass star-b).
+          가운데 별은 앱 아이콘(pwa-icon.svg)의 4방위 별 마크와 같은 형태다 —
+          PWA 아이콘·홈 브랜드 마크·스핀 FAB이 모두 이 별을 공유한다.
           색은 #2f5cff 하나로 두고 명암은 불투명도 단계로만 만든다 — 두 파랑을 맞붙이면
           접힌 면이 얼룩처럼 보인다. 주황은 회전부에 넣지 않는다(원판과 함께 돌면
           북쪽이 아닌 곳을 가리키게 된다). */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
           <g strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="160" cy="160" r="151" fill="#f3f7ff" stroke="#2f5cff" strokeWidth="1.50" strokeOpacity="0.12"/>
-            <circle cx="160" cy="160" r="139" fill="#ffffff" stroke="#2f5cff" strokeWidth="1" strokeOpacity="0.12"/>
-            <g fill="#2f5cff" fillOpacity="0.55">
-            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z"/>
-            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z" transform="rotate(90 160 160)"/>
-            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z" transform="rotate(180 160 160)"/>
-            <path d="M160 143 C156 128 156 105 160 78 C164 105 164 128 160 143 Z" transform="rotate(270 160 160)"/>
+            <circle cx="160" cy="160" r="151" fill="#f3f7ff" stroke="#2f5cff" strokeWidth="1.5" strokeOpacity="0.12" />
+            <circle cx="160" cy="160" r="139" fill="#ffffff" stroke="#2f5cff" strokeWidth="1" strokeOpacity="0.12" />
+
+            {/* 4방위 날 — 아웃라인만 그려 중앙 별이 주인공이 되게 한다 */}
+            <g fill="none" stroke="#2f5cff" strokeWidth="1.5" strokeOpacity="0.55">
+              {[0, 90, 180, 270].map((deg) => (
+                <path
+                  key={deg}
+                  d="M160 56 C164 88 167 119 166 145 L160 154 L154 145 C153 119 156 88 160 56 Z"
+                  transform={`rotate(${deg} 160 160)`}
+                />
+              ))}
             </g>
+
+            {/* 중앙 별 — 앱 아이콘(pwa-icon.svg)과 같은 4방위 별 마크 */}
+            <path
+              d="M160 130 L167.88 152.13 L190 160 L167.88 167.88 L160 190 L152.13 167.88 L130 160 L152.13 152.13 Z"
+              fill="#2f5cff"
+            />
+
+            {/* 대각 4방위 — 짧은 눈금으로만 암시 */}
             <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeOpacity="0.55">
-            <path d="M160 66 L160 76" transform="rotate(45 160 160)"/>
-            <path d="M160 66 L160 76" transform="rotate(135 160 160)"/>
-            <path d="M160 66 L160 76" transform="rotate(225 160 160)"/>
-            <path d="M160 66 L160 76" transform="rotate(315 160 160)"/>
+              {[45, 135, 225, 315].map((deg) => (
+                <path key={deg} d="M160 66 L160 76" transform={`rotate(${deg} 160 160)`} />
+              ))}
             </g>
-            <circle cx="160" cy="160" r="9" fill="#ffffff" stroke="#2f5cff" strokeWidth="1.50" strokeOpacity="0.55"/>
-            <circle cx="160" cy="160" r="2.50" fill="#2f5cff"/>
           </g>
 
           {/* 방위 라벨 — 위치는 원판을 따라 돌고 글자는 apply()에서 역회전시켜 항상 정립한다 */}
