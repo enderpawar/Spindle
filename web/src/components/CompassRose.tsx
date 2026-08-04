@@ -227,16 +227,12 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
             />
 
             {/*
-              중앙 허브 — 테마 블루 원 + 흰 링 위에 Spindle 로고 마크(4방위 별)를 얹는다.
-              별 경로는 앱 아이콘(public/pwa-icon.svg)의 512 좌표계 원본이라, 원판의 320
-              좌표계 중심(160,160)으로 옮기고 0.14배로 줄여 반지름 22가 되게 맞춘다.
-              주황은 회전축의 중심점 하나뿐이라 어디도 가리키지 않는다.
+              중앙 허브 — Spindle 로고(brand-mark-192.png). 홈 헤더가 쓰는 것과 같은 마크다.
+              로고 자체가 원형 물결 링을 갖고 있어 별도 허브 원을 겹치지 않는다. 뒤의 흰 원은
+              날 밑동(중심에서 28.8)을 가려 이음매를 감추는 용도다.
             */}
-            <circle cx="160" cy="160" r="30" fill="#2f5cff" stroke="#ffffff" strokeWidth="4" />
-            <g transform="translate(160 160) scale(0.14) translate(-256 -256)">
-              <path d="M256 96l42 118 118 42-118 42-42 118-42-118-118-42 118-42z" fill="#ffffff" />
-            </g>
-            <circle cx="160" cy="160" r="6" fill="#FF7A45" />
+            <circle cx="160" cy="160" r="30" fill="#ffffff" />
+            <image href="/brand-mark-192.png" x="132" y="132" width="56" height="56" />
 
             {/* 대각 4방위 — 짧은 눈금으로만 암시 */}
             <g fill="none" stroke="#2f5cff" strokeWidth="2" strokeOpacity="0.55">

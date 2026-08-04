@@ -2352,7 +2352,8 @@ button:disabled,
 }
 
 .nav-item.is-active .nav-icon,
-.nav-fab.is-active > svg {
+.nav-fab.is-active > svg,
+.nav-fab.is-active > img {
   animation: navSelect 420ms var(--spring-pop) both;
 }
 

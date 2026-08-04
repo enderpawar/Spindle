@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import {
   NavHomeIcon,
   NavSettingsIcon,
-  NavSpinIcon,
   NavSpotsIcon,
   NavStampIcon,
 } from './Icons'
@@ -75,13 +74,13 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
             borderRadius: '50%',
             border: 'none',
             cursor: 'pointer',
-            background: 'var(--l-primary)',
+            background: '#fff',
+            boxShadow: '0 6px 16px -6px rgba(20,50,140,.45), inset 0 0 0 1px #dbe6fa',
             display: 'grid',
             placeItems: 'center',
-            color: '#fff',
           }}
         >
-          <NavSpinIcon />
+          <img src="/brand-mark-192.png" alt="" width={36} height={36} />
         </button>
         <span style={{ fontSize: 11, fontWeight: 800, color: c('spin') }}>스핀</span>
       </div>
