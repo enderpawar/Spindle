@@ -127,6 +127,21 @@ button {
   view-transition-name: spindle-nav;
 }
 
+/* 가운데 스핀 버튼은 바깥으로 돌출하되 레이아웃 높이는 일반 탭과 맞춘다.
+   시각적 콘텐츠는 유지하면서 내비게이션 상단을 낮춰 홈 콘텐츠를 덜 가린다. */
+.nav-spin-slot {
+  display: flex;
+  height: 44px;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  transform: translateY(-30px);
+}
+
+.nav-spin-slot > * {
+  flex: none;
+}
+
 /* 지원 브라우저에서는 View Transition 스냅샷만으로 전환한다.
    (아래 screenEnter* CSS 폴백은 @supports not (view-transition-name) 로 미지원 브라우저에만 적용 —
    VT 종료 직후 라이브 DOM 진입 애니메이션이 재발화하며 화면이 한 번 더 깜빡이던 문제를 없앤다) */

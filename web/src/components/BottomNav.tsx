@@ -60,7 +60,7 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
           </svg>
         }
       />
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, position: 'relative', top: -18 }}>
+      <div className="nav-spin-slot">
         <button
           onClick={() => onNavigate('spin')}
           aria-label="스핀"
