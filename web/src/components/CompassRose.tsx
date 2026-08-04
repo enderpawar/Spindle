@@ -246,11 +246,6 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
             </g>
           ))}
 
-          {/* 중앙 보스 — 흰 원 위에 Spindle 로고(brand-mark-192.png). 날 밑동을 가린다. */}
-          <circle cx="160" cy="160" r="35" fill="#eef3ff" />
-          <circle cx="160" cy="160" r="30" fill="#ffffff" stroke="#dbe6fa" strokeWidth="1" />
-          <image href="/brand-mark-192.png" x="139" y="139" width="42" height="42" />
-
           {/* 방위 라벨 — 주방위는 크고 진하게, 대각은 작고 옅게. 글자는 apply()에서 역회전해 정립한다 */}
           <g textAnchor="middle" style={{ fontFamily: 'inherit' }}>
             {RING_LABELS.map((label, i) => {
@@ -282,6 +277,14 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         aria-hidden
         style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}
       >
+        {/*
+          중앙 보스와 로고는 회전하지 않는다 — 원판만 돈다.
+          고정 레이어가 회전부 위에 그려지므로 날 밑동(중심에서 28.8)도 함께 가려진다.
+        */}
+        <circle cx="160" cy="160" r="35" fill="#eef3ff" />
+        <circle cx="160" cy="160" r="30" fill="#ffffff" stroke="#dbe6fa" strokeWidth="1" />
+        <image href="/brand-mark-192.png" x="139" y="139" width="42" height="42" />
+
         <g strokeLinecap="round" strokeLinejoin="round">
             <path d="M153 10 L160 23 L167 10 Z" fill="#FF7A45"/>
         </g>
