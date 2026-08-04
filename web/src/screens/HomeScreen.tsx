@@ -1,38 +1,56 @@
 import pointingImg from '../assets/poses/별이_pointing.webp'
+import winkImg from '../assets/poses/별이_wink.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
-import { HomeSpinContext } from '../components/HomeSpinContext'
+import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
+import { dailyMissionFor } from '../content/dailyMissions'
 import { useVisited } from '../lib/visited'
 import { THEMES, type ThemeId } from '../engine/themes'
-import type { Departure } from '../mock/pois'
+import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 import { stampProgress } from '../mock/stamps'
 
-export interface HomeScreenProps {
+interface Props {
   departure: Departure
-  dial: number
-  candidateCount: number | null
-  festivalOngoingCount: number | null
-  onStartSpin: (minutes?: 20 | 40) => void
   onOpenDeparture: () => void
+  onSelectPoi: (poi: Poi) => void
   onOpenTheme: (themeId: ThemeId) => void
   onOpenFestival: () => void
   onNavigate: (tab: NavTab) => void
 }
 
-export function HomeScreen({
-  departure,
-  dial,
-  candidateCount,
-  festivalOngoingCount,
-  onStartSpin,
-  onOpenDeparture,
-  onOpenTheme,
-  onOpenFestival,
-  onNavigate,
-}: HomeScreenProps) {
+// 오늘의 스핀 추천 — 숨은 명소(T3) 위주 픽 (목 단계 고정, Phase 2에서 추천 엔진 연동)
+const todayPicks = ['kangkangee', 'ibagu-skyway', 'color-village', 'dongsam-shell']
+  .map((id) => POI_POOL.find((p) => p.id === id))
+  .filter((p): p is Poi => Boolean(p))
+
+/** 카드 썸네일용 라인 스케치 (디자인 4a의 산·건물 아트) */
+function SketchArt({ variant }: { variant: number }) {
+  return (
+    <svg viewBox="0 0 196 126" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.4 }} aria-hidden>
+      <g fill="none" stroke="#bcd7f7" strokeWidth={2}>
+        {variant % 2 === 0 ? (
+          <>
+            <path d="M0 92 L40 68 L80 92 M40 68 L40 126" />
+            <rect x="120" y="66" width="18" height="60" />
+            <rect x="144" y="50" width="20" height="76" />
+          </>
+        ) : (
+          <>
+            <rect x="20" y="76" width="24" height="50" />
+            <rect x="48" y="60" width="24" height="66" />
+            <rect x="120" y="68" width="24" height="58" />
+          </>
+        )}
+      </g>
+    </svg>
+  )
+}
+
+export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenTheme, onOpenFestival, onNavigate }: Props) {
   const visited = useVisited()
   const progress = stampProgress(visited)
+  const mission = dailyMissionFor()
 
   const quickMenu = [
     {
@@ -109,13 +127,13 @@ export function HomeScreen({
           <div aria-hidden style={{ position: 'absolute', bottom: -40, right: 60, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,.08)' }} />
           <div className="home-hero-copy">
             <div style={{ fontSize: 13, fontWeight: 700, color: '#cfe0ff' }}>붐비는 해변 말고,</div>
-            <h1 className="home-hero-title">
+            <div className="home-hero-title">
               숨은 부산을
               <br />
               발견하세요
-            </h1>
+            </div>
             <button
-              onClick={() => onStartSpin()}
+              onClick={() => onNavigate('spin')}
               className="btn"
               style={{ marginTop: 12, padding: '10px 18px', borderRadius: 16, background: '#fff', color: 'var(--l-primary-deep)', fontSize: 14, boxShadow: '0 8px 18px -6px rgba(0,0,0,.3)' }}
             >
@@ -196,15 +214,51 @@ export function HomeScreen({
           </svg>
         </button>
 
-        <HomeSpinContext
-          departure={departure}
-          dial={dial}
-          candidateCount={candidateCount}
-          festivalOngoingCount={festivalOngoingCount}
-          onStartSpin={onStartSpin}
-          onOpenFestival={onOpenFestival}
-        />
-        <SourceLine style={{ margin: '14px 16px 4px' }} />
+        {/* 오늘의 스핀 추천 */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '18px 20px 12px' }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--l-ink)' }}>오늘의 스핀 추천</div>
+          <button onClick={() => onNavigate('spots')} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--l-ink-3)', padding: '6px 0' }}>
+            더보기 ›
+          </button>
+        </div>
+        <div className="home-pick-grid motion-card-list">
+          {todayPicks.map((poi, i) => {
+            const dir = directionOf(poi.direction)
+            return (
+              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card motion-card motion-card-enter">
+                <div className="home-pick-image" style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>
+                  <SketchArt variant={i} />
+                  <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
+                </div>
+                <div style={{ padding: '10px 2px 0' }}>
+                  <div className="home-pick-title">{poi.name}</div>
+                  <div className="home-pick-meta">
+                    {poi.category} · {poi.district}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 오늘의 한 칸 미션 */}
+        <button
+          type="button"
+          onClick={() => onNavigate('spin')}
+          className="home-mission-card motion-card motion-card-enter"
+        >
+          <span className="home-mission-copy">
+            <span className="home-mission-label">오늘의 한 칸 미션</span>
+            <strong className="home-mission-title">{mission.title}</strong>
+            <span className="home-mission-description">{mission.description}</span>
+            <span className="home-mission-cta">
+              스핀하러 가기 <span aria-hidden>›</span>
+            </span>
+          </span>
+          <img src={winkImg} alt="" className="home-mission-mascot" />
+        </button>
+
+        <SourceLine style={{ margin: '18px 20px 8px' }} />
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />

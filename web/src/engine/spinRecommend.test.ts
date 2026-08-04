@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { sectorOf } from './compass'
 import { seededRng } from './rng'
-import { countAccessibleCuratedPois, ENGINE_POIS, recommendFromSpin } from './spinRecommend'
+import { recommendFromSpin } from './spinRecommend'
 import { THEMES, themesOf } from './themes'
 import { DEPARTURES, DIAL_STEPS } from '../mock/pois'
 
@@ -97,19 +97,5 @@ describe('recommendFromSpin — 스핀 배선', () => {
     expect(rec.theme).toMatchObject({ id: 'food', step: 2, target: 3 })
     expect(rec.expandReason).toContain('먹거리')
     expect(rec.candidates.every((candidate) => themesOf(candidate).includes('food'))).toBe(true)
-  })
-})
-
-describe('countAccessibleCuratedPois — 홈 접근 가능 후보 집계', () => {
-  it('20분 <= 40분 <= 하루로 후보 수가 단조 증가하고 하루에는 전체 큐레이션 풀이 포함된다', () => {
-    for (const departure of DEPARTURES) {
-      const in20 = countAccessibleCuratedPois(departure, 20)
-      const in40 = countAccessibleCuratedPois(departure, 40)
-      const allDay = countAccessibleCuratedPois(departure, Infinity)
-
-      expect(in20, departure.id).toBeLessThanOrEqual(in40)
-      expect(in40, departure.id).toBeLessThanOrEqual(allDay)
-      expect(allDay, departure.id).toBe(ENGINE_POIS.length)
-    }
   })
 })

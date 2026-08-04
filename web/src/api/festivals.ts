@@ -64,8 +64,6 @@ async function fetchDistrictFestivals(
 
 // 세션 메모리 캐시 (날짜별). 실패 Promise는 제거해 재시도 가능.
 const cache = new Map<string, Promise<Festival[]>>()
-// 성공 완료 결과만 보관하는 읽기 전용 스냅샷. 진행 중·실패 상태는 넣지 않는다.
-const settledCache = new Map<string, readonly Festival[]>()
 
 /** 원도심·영도 4개 구의 축제를 병렬 조회 (세션 캐시 경유). */
 export function fetchOldTownFestivalsCached(
@@ -77,32 +75,16 @@ export function fetchOldTownFestivalsCached(
   const pending = Promise.all(
     OLD_TOWN_REGIONS.map((region) => fetchDistrictFestivals(region.code, eventStartDate, fetchImpl)),
   )
-    .then((lists) => {
-      const festivals = lists.flat()
-      // clear 뒤 늦게 끝난 이전 요청이 스냅샷을 되살리지 않도록 현재 Promise만 반영한다.
-      if (cache.get(eventStartDate) === pending) settledCache.set(eventStartDate, festivals)
-      return festivals
-    })
+    .then((lists) => lists.flat())
     .catch((err: unknown) => {
-      if (cache.get(eventStartDate) === pending) cache.delete(eventStartDate)
+      cache.delete(eventStartDate)
       throw err
     })
   cache.set(eventStartDate, pending)
   return pending
 }
 
-/**
- * 성공 완료된 축제 세션 스냅샷을 동기 조회한다.
- * 미요청·진행 중·실패 상태에서는 undefined이며, 이 함수 자체는 네트워크를 호출하지 않는다.
- */
-export function peekOldTownFestivalsCache(
-  eventStartDate: string,
-): readonly Festival[] | undefined {
-  return settledCache.get(eventStartDate)
-}
-
 /** 테스트용 */
 export function clearFestivalCache(): void {
   cache.clear()
-  settledCache.clear()
 }
