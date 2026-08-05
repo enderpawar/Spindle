@@ -1,4 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import { DIRECTIONS } from '../mock/pois'
 
 interface Props {
   disabled?: boolean
@@ -18,16 +19,17 @@ const FLING_THRESHOLD = 0.25 // deg/ms — 이 미만의 릴리즈는 스핀으�
 const STOP_THRESHOLD = 0.02 // deg/ms — 정지 판정
 const DECAY_TAU = 480 // ms — 감속 시정수 (초속 1.8deg/ms 기준 약 2.5바퀴)
 const MAX_VELOCITY = 3.2
-/** 방위 라벨이 놓이는 반지름 — 역회전 계산과 렌더가 같은 값을 써야 한다 */
-const LABEL_RADIUS = 112
-/** 방위환 라벨 — 8방위 스냅과 일치 (docs/design/ocean-compass light-a) */
-const RING_LABELS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
 
 const polar = (r: number, deg: number) => {
   const rad = (deg * Math.PI) / 180
   return [160 + r * Math.sin(rad), 160 - r * Math.cos(rad)] as const
 }
 
+const arcPath = (r: number, a1: number, a2: number) => {
+  const [x1, y1] = polar(r, a1)
+  const [x2, y2] = polar(r, a2)
+  return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
+}
 
 export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
   const following = followHeading !== null
@@ -43,23 +45,12 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
   const samples = useRef<{ t: number; r: number }[]>([])
   const spinning = useRef(false)
   const fallback = useRef<ReturnType<typeof setTimeout>>(undefined)
-  // 매 프레임 setState를 피하려고 DOM을 직접 갱신한다 (원판 transform과 같은 방식).
-  const labelRefs = useRef<(SVGTextElement | null)[]>([])
 
   const headingOf = (rot: number) => ((-rot % 360) + 360) % 360
 
   const apply = () => {
     if (discRef.current) discRef.current.style.transform = `rotate(${rotation.current}deg)`
-    const heading = headingOf(rotation.current)
-
-    // 원판이 돌아도 글자는 항상 정립시킨다 — 회전만 맡기면 아래쪽 라벨이 뒤집혀 읽히지 않는다.
-    for (let i = 0; i < labelRefs.current.length; i += 1) {
-      const el = labelRefs.current[i]
-      if (!el) continue
-      const [lx, ly] = polar(LABEL_RADIUS, i * 45)
-      el.setAttribute('transform', `rotate(${-rotation.current} ${lx} ${ly})`)
-    }
-    onHeading?.(heading)
+    onHeading?.(headingOf(rotation.current))
   }
 
   const setSpinning = (value: boolean) => {
@@ -204,94 +195,68 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
         userSelect: 'none',
       }}
     >
-      {/*
-        회전 원판 — 눈금 링·4방위 날·방위 라벨만 돈다.
-        중앙 보스와 로고, 12시 주황 인덱스는 아래 고정 레이어에 있다.
-        색은 #2f5cff 하나로 두고 명암은 불투명도로만 나눈다.
-      */}
+      {/* 고정 바늘 — 원판 위 12시 방향, 여기가 "가리키는 곳" */}
+      <svg
+        aria-hidden
+        viewBox="0 0 40 26"
+        style={{ position: 'absolute', top: '-2.5%', left: '50%', width: '11%', transform: 'translateX(-50%)', zIndex: 3, filter: 'drop-shadow(0 4px 10px rgba(255,122,69,.55))' }}
+      >
+        <path d="M20 26 L8 4 Q20 -4 32 4 Z" fill="var(--accent)" />
+        <path d="M20 26 L8 4 Q20 -4 32 4 Z" fill="url(#needleShine)" opacity=".35" />
+        <defs>
+          <linearGradient id="needleShine" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fff" />
+            <stop offset="1" stopColor="#fff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* 회전 원판 */}
       <div ref={discRef} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         <svg viewBox="0 0 320 320" style={{ width: '100%', height: '100%', display: 'block' }}>
-          <circle cx="160" cy="160" r="150" fill="#f7f9ff" stroke="#c9d8f5" strokeWidth="1.5" />
+          <defs>
+            <radialGradient id="discFace" cx="50%" cy="38%" r="75%">
+              <stop offset="0" stopColor="rgba(47,92,255,.08)" />
+              <stop offset="0.55" stopColor="rgba(47,92,255,.03)" />
+              <stop offset="1" stopColor="rgba(47,92,255,0)" />
+            </radialGradient>
+          </defs>
 
-          {/* 안쪽 링 — 방위 라벨과 눈금 띠를 가르는 얇은 경계 */}
-          <circle cx="160" cy="160" r="122" fill="none" stroke="#c9d8f5" strokeWidth="1" />
+          <circle cx="160" cy="160" r="154" fill="#ffffff" stroke="var(--l-line)" strokeWidth="1.5" />
+          <circle cx="160" cy="160" r="154" fill="url(#discFace)" />
+          <circle cx="160" cy="160" r="120" fill="none" stroke="var(--l-line)" strokeWidth="1" />
+          <circle cx="160" cy="160" r="62" fill="rgba(47,92,255,.03)" stroke="var(--l-line)" strokeWidth="1" />
 
-          {/* 방위 눈금 — 8방위에만. 촘촘한 보조 눈금은 8방위 스냅보다 정밀해 보여서 뺐다. */}
-          <g stroke="#2f5cff" strokeLinecap="round">
-            {Array.from({ length: 8 }, (_, i) => {
-              const deg = i * 45
-              const cardinal = i % 2 === 0
-              return (
-                <line
-                  key={deg}
-                  x1="160"
-                  y1="124"
-                  x2="160"
-                  y2={cardinal ? 138 : 133}
-                  strokeWidth={cardinal ? 2.5 : 1.5}
-                  strokeOpacity={cardinal ? 0.85 : 0.5}
-                  transform={`rotate(${deg} 160 160)`}
-                />
-              )
-            })}
-          </g>
-
-          {/*
-            4방위 날 — 각 날을 중앙 능선에서 좌우로 갈라 종이를 접은 듯한 2톤으로 만든다.
-            같은 #2f5cff를 불투명도로만 나눠 색은 하나로 유지한다.
-            꼭짓점 반지름 105, 밑변 반지름 14에 반폭 26.
-          */}
-          {[0, 90, 180, 270].map((deg) => (
-            <g key={deg} transform={`rotate(${deg} 160 160)`}>
-              <path d="M160 55 L134 146 L160 146 Z" fill="#2f5cff" fillOpacity="0.5" />
-              <path d="M160 55 L186 146 L160 146 Z" fill="#2f5cff" />
-            </g>
-          ))}
-
-          {/* 방위 라벨 — 주방위는 진하게, 대각은 옅게. 글자는 apply()에서 역회전해 항상 정립한다 */}
-          <g textAnchor="middle" style={{ fontFamily: 'inherit' }}>
-            {RING_LABELS.map((label, i) => {
-              const cardinal = i % 2 === 0
-              const [lx, ly] = polar(LABEL_RADIUS, i * 45)
-              return (
+          {DIRECTIONS.map((dir, i) => {
+            const angle = i * 45
+            const cardinal = i % 2 === 0
+            const [tx, ty] = polar(96, angle)
+            const [mx1, my1] = polar(146, angle)
+            const [mx2, my2] = polar(134, angle)
+            const [bx1, by1] = polar(146, angle + 22.5)
+            const [bx2, by2] = polar(140, angle + 22.5)
+            return (
+              <g key={dir.id}>
+                {/* 림 방위 색 아크 */}
+                <path d={arcPath(150, angle - 16, angle + 16)} stroke={dir.color} strokeWidth="7" fill="none" opacity="0.5" strokeLinecap="round" />
+                {/* 눈금 — 방위선(굵게) + 경계선(얇게) */}
+                <line x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="rgba(90,118,168,.5)" strokeWidth={cardinal ? 2.5 : 1.5} strokeLinecap="round" />
+                <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="rgba(139,163,207,.45)" strokeWidth="1" />
                 <text
-                  key={label}
-                  ref={(el) => {
-                    labelRefs.current[i] = el
-                  }}
-                  x={lx}
-                  y={ly}
-                  dominantBaseline="middle"
-                  fill="#2f5cff"
-                  fillOpacity={cardinal ? 1 : 0.55}
-                  style={{ fontSize: cardinal ? 13 : 10, fontWeight: cardinal ? 800 : 600 }}
+                  x={tx}
+                  y={ty}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  transform={`rotate(${angle} ${tx} ${ty})`}
+                  style={{ fill: cardinal ? '#17347f' : '#8ba3cf', fontSize: cardinal ? 19 : 12, fontWeight: 800, fontFamily: 'inherit' }}
                 >
-                  {label}
+                  {dir.label}
                 </text>
-              )
-            })}
-          </g>
+              </g>
+            )
+          })}
         </svg>
       </div>
-
-      {/* 고정 인덱스 — 회전하지 않는다. 화면 12시가 곧 알고리즘 입력 방위각이다. */}
-      <svg
-        viewBox="0 0 320 320"
-        aria-hidden
-        style={{ position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none' }}
-      >
-        {/*
-          중앙 보스와 로고는 회전하지 않는다 — 원판만 돈다.
-          고정 레이어가 회전부 위에 그려지므로 날 밑동(중심에서 28.8)도 함께 가려진다.
-        */}
-        <circle cx="160" cy="160" r="35" fill="#eef3ff" />
-        <circle cx="160" cy="160" r="30" fill="#ffffff" stroke="#dbe6fa" strokeWidth="1" />
-        <image href="/brand-mark-192.png" x="139" y="139" width="42" height="42" />
-
-        <g strokeLinecap="round" strokeLinejoin="round">
-            <path d="M153 10 L160 23 L167 10 Z" fill="#FF7A45"/>
-        </g>
-      </svg>
     </div>
   )
 }
