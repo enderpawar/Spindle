@@ -163,6 +163,14 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             </div>
           )}
         </div>
+        <p
+          id="spin-gesture-instruction"
+          className={`spin-gesture-cue${fieldOn || busy ? ' is-hidden' : ''}`}
+          aria-hidden={fieldOn || busy}
+        >
+          <span className="spin-gesture-cue-mark" aria-hidden />
+          원판을 잡고 휙 돌려보세요
+        </p>
       </div>
 
       {/* 하단에는 이동시간 카드만 남기고, 스핀 실행은 원판 직접 조작으로 일원화한다. */}

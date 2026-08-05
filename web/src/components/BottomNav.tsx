@@ -9,7 +9,8 @@ import {
 export type NavTab = 'home' | 'spots' | 'spin' | 'stamp' | 'settings'
 
 const ACTIVE = '#1e4fd8'
-const INACTIVE = '#9db3d8'
+// 흰 내비게이션 바에서 작은 라벨도 WCAG AA 대비를 확보한다.
+const INACTIVE = '#5b7098'
 
 function Item({ label, active, icon, onClick }: { label: string; active: boolean; icon: ReactNode; onClick: () => void }) {
   const tone = active ? ACTIVE : INACTIVE

@@ -207,13 +207,14 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
               key={theme.id}
               onClick={() => onOpenTheme(theme.id)}
               className="home-theme-card motion-card motion-card-enter"
-              style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
+              data-theme={theme.id}
+              style={{ background: `linear-gradient(145deg, ${theme.color}, #edf4ff 175%)` }}
             >
-              <div aria-hidden style={{ position: 'absolute', right: -6, bottom: -8, fontSize: 46, opacity: 0.34 }}>
-                {theme.emoji}
+              <div aria-hidden className="home-theme-symbol">
+                {theme.label.slice(0, 1)}
               </div>
-              <div style={{ position: 'relative', fontSize: 14, fontWeight: 900 }}>{theme.label}</div>
-              <div style={{ position: 'relative', marginTop: 3, fontSize: 10.5, fontWeight: 600, opacity: 0.92, lineHeight: 1.35 }}>{theme.tagline}</div>
+              <div className="home-theme-title">{theme.label}</div>
+              <div className="home-theme-tagline">{theme.tagline}</div>
             </button>
           ))}
         </div>
@@ -251,7 +252,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         {/* 오늘의 스핀 추천 */}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '18px 20px 12px' }}>
           <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--l-ink)' }}>오늘의 스핀 추천</div>
-          <button onClick={() => onNavigate('spots')} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: 'var(--l-ink-3)', padding: '6px 0' }}>
+          <button onClick={() => onNavigate('spots')} className="home-section-link">
             더보기 ›
           </button>
         </div>

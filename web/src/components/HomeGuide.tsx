@@ -18,7 +18,7 @@ const STEPS: readonly GuideStep[] = [
     target: '[data-guide="spin"]',
     eyebrow: '스핀',
     title: '방향에 맡기고 부산을 발견해요',
-    body: '지금 스핀하기를 누른 뒤 원판을 돌리면, 멈춘 방향에서 갈 곳을 추천해요.',
+    body: '스핀 화면에서 원판을 잡고 휙 돌리면, 멈춘 방향에서 갈 곳을 추천해요.',
   },
   {
     target: '[data-guide="themes"]',

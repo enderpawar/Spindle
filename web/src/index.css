@@ -22,7 +22,8 @@
   --l-bg: #f4f8ff;
   --l-ink: #17347f;
   --l-ink-2: #3a4c78;
-  --l-ink-3: #8ba3cf;
+  /* 밝은 앱 배경에서 작은 보조 문구도 4.5:1 이상의 대비를 유지한다. */
+  --l-ink-3: #5b7098;
   --l-primary: #2f5cff;
   --l-primary-deep: #1e4fd8;
   --l-line: #dbe6fa;
@@ -497,23 +498,61 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 
 .home-theme-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   column-gap: 10px;
-  row-gap: 14px;
+  row-gap: 10px;
   padding: 0 20px 2px;
 }
 
 .home-theme-card {
   position: relative;
+  grid-column: span 2;
   width: 100%;
-  min-height: 92px;
-  padding: 12px 13px;
+  min-height: 96px;
+  padding: 14px;
   overflow: hidden;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 18px;
-  color: #fff;
+  box-shadow: 0 14px 26px -22px rgba(23, 52, 127, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  color: var(--l-ink);
   text-align: left;
   cursor: pointer;
+}
+
+.home-theme-card:nth-child(-n + 2) {
+  grid-column: span 3;
+  min-height: 108px;
+}
+
+.home-theme-symbol {
+  position: absolute;
+  right: 5px;
+  bottom: -13px;
+  color: var(--l-ink);
+  font-size: 58px;
+  font-weight: 950;
+  line-height: 1;
+  opacity: 0.1;
+}
+
+.home-theme-title {
+  position: relative;
+  max-width: calc(100% - 12px);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.home-theme-tagline {
+  position: relative;
+  max-width: 16ch;
+  margin-top: 5px;
+  color: var(--l-ink);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.4;
+  word-break: keep-all;
 }
 
 .home-stamp-card {
@@ -591,13 +630,30 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 }
 
 .home-pick-title {
+  display: -webkit-box;
+  min-height: 2.7em;
   overflow: hidden;
   color: var(--l-ink);
   font-size: 15px;
   font-weight: 800;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-section-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 2px 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--l-ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .home-pick-meta {
@@ -746,6 +802,15 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   .home-theme-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding-inline: 16px;
+  }
+
+  .home-theme-card:nth-child(n) {
+    grid-column: span 1;
+    min-height: 96px;
+  }
+
+  .home-theme-card:nth-child(5) {
+    grid-column: 1 / -1;
   }
 
   .home-stamp-card {
@@ -1113,16 +1178,69 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 
 .spin-compass-stage {
   z-index: 1;
-  display: grid;
+  display: flex;
   min-height: 0;
   flex: 1;
-  place-items: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   padding: 8px 0;
 }
 
 .spin-compass-shell {
   position: relative;
   width: min(72vw, 300px);
+}
+
+.spin-gesture-cue {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--l-ink-2);
+  font-size: 12.5px;
+  font-weight: 800;
+  transition: opacity var(--motion-control) ease;
+}
+
+.spin-gesture-cue.is-hidden {
+  opacity: 0;
+}
+
+.spin-gesture-cue-mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spinGestureCue 1.6s var(--ease-smooth-spring) 2;
+}
+
+.spin-gesture-cue-mark::after {
+  position: absolute;
+  top: -3px;
+  right: -2px;
+  width: 0;
+  height: 0;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  border-left: 5px solid currentColor;
+  content: '';
+  transform: rotate(-18deg);
+}
+
+@keyframes spinGestureCue {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(36deg);
+  }
 }
 
 .spin-controls {
@@ -1139,11 +1257,17 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   }
 
   .spin-compass-stage {
+    gap: 4px;
     padding-block: 2px;
   }
 
   .spin-compass-shell {
     width: min(58vw, 220px);
+  }
+
+  .spin-gesture-cue {
+    min-height: 26px;
+    font-size: 11.5px;
   }
 
 }
@@ -1164,6 +1288,10 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 
   .spin-compass-shell {
     width: min(52vw, 184px);
+  }
+
+  .spin-gesture-cue {
+    display: none;
   }
 }
 
