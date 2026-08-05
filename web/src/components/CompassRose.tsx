@@ -3,6 +3,7 @@ import { DIRECTIONS } from '../mock/pois'
 
 interface Props {
   disabled?: boolean
+  describedById?: string
   onSpinningChange?: (spinning: boolean) => void
   /** 매 프레임 현재 방위각(0=북, 시계방향) — 라이브 방위 표시용 */
   onHeading?: (headingDeg: number) => void
@@ -19,6 +20,7 @@ const FLING_THRESHOLD = 0.25 // deg/ms — 이 미만의 릴리즈는 스핀으�
 const STOP_THRESHOLD = 0.02 // deg/ms — 정지 판정
 const DECAY_TAU = 480 // ms — 감속 시정수 (초속 1.8deg/ms 기준 약 2.5바퀴)
 const MAX_VELOCITY = 3.2
+const LABEL_RADIUS = 96
 
 const polar = (r: number, deg: number) => {
   const rad = (deg * Math.PI) / 180
@@ -31,7 +33,7 @@ const arcPath = (r: number, a1: number, a2: number) => {
   return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
 }
 
-export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
+export function CompassRose({ disabled, describedById, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
   const following = followHeading !== null
   // 현장 모드에서는 드래그·플릭·버튼 스핀을 모두 막는다 — 방위의 출처는 기기뿐이다.
   const locked = disabled || following
@@ -45,11 +47,18 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
   const samples = useRef<{ t: number; r: number }[]>([])
   const spinning = useRef(false)
   const fallback = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const labelRefs = useRef<(SVGTextElement | null)[]>([])
 
   const headingOf = (rot: number) => ((-rot % 360) + 360) % 360
 
   const apply = () => {
     if (discRef.current) discRef.current.style.transform = `rotate(${rotation.current}deg)`
+    for (let index = 0; index < labelRefs.current.length; index += 1) {
+      const label = labelRefs.current[index]
+      if (!label) continue
+      const [x, y] = polar(LABEL_RADIUS, index * 45)
+      label.setAttribute('transform', `rotate(${-rotation.current} ${x} ${y})`)
+    }
     onHeading?.(headingOf(rotation.current))
   }
 
@@ -185,6 +194,7 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
       role="button"
       tabIndex={locked ? -1 : 0}
       aria-label={following ? '기기 나침반 방향을 표시하는 원판' : '나침반 원판을 돌려 방향 정하기'}
+      aria-describedby={describedById}
       aria-disabled={locked || undefined}
       style={{
         position: 'relative',
@@ -243,12 +253,14 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
                 <line x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="rgba(90,118,168,.5)" strokeWidth={cardinal ? 2.5 : 1.5} strokeLinecap="round" />
                 <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="rgba(139,163,207,.45)" strokeWidth="1" />
                 <text
+                  ref={(element) => {
+                    labelRefs.current[i] = element
+                  }}
                   x={tx}
                   y={ty}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  transform={`rotate(${angle} ${tx} ${ty})`}
-                  style={{ fill: cardinal ? '#17347f' : '#8ba3cf', fontSize: cardinal ? 19 : 12, fontWeight: 800, fontFamily: 'inherit' }}
+                  style={{ fill: cardinal ? '#17347f' : 'var(--l-ink-3)', fontSize: cardinal ? 19 : 12, fontWeight: 800, fontFamily: 'inherit' }}
                 >
                   {dir.label}
                 </text>

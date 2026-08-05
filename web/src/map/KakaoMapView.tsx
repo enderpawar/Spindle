@@ -264,6 +264,13 @@ export function KakaoMapView({
     () => new Map(pinLayout.clusters.map((cluster) => [cluster.id, cluster])),
     [pinLayout.clusters],
   )
+  // 팬 이동은 화면 좌표만 바꾸므로 같은 묶음의 CustomOverlay·React 포털을 재사용한다.
+  const clusterOverlayKey = useMemo(
+    () => pinLayout.clusters
+      .map((cluster) => `${cluster.id}@${cluster.positionX},${cluster.positionY}`)
+      .join('\u001f'),
+    [pinLayout.clusters],
+  )
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -464,7 +471,8 @@ export function KakaoMapView({
       records.forEach(({ overlay }) => overlay.setMap(null))
       if (clusterOverlaysRef.current === records) clusterOverlaysRef.current = []
     }
-  }, [pinLayout.clusters, ready])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 같은 id·좌표 묶음은 기존 포털 host를 유지한다
+  }, [clusterOverlayKey, ready])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -498,6 +506,7 @@ export function KakaoMapView({
     const map = mapRef.current
     if (!ready || !pickMode || !focusPoint || !maps || !map) return
     map.panTo(new maps.LatLng(focusPoint.lat, focusPoint.lng))
+    if (map.getLevel() > 4) map.setLevel(4, { animate: true })
   }, [focusPoint, pickMode, ready])
 
   useEffect(() => {

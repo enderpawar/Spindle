@@ -28,6 +28,15 @@ export function buildCongestionStatusMap(
   return statuses
 }
 
+/** 전체 후보로 안전하게 매칭한 상태 중 현재 화면에 보이는 POI만 남긴다. */
+export function filterCongestionStatusMap(
+  statuses: ReadonlyMap<string, CongestionVisualStatus>,
+  visiblePois: readonly Pick<NamedPoi, 'id'>[],
+): ReadonlyMap<string, CongestionVisualStatus> {
+  const visibleIds = new Set(visiblePois.map((poi) => poi.id))
+  return new Map([...statuses].filter(([poiId]) => visibleIds.has(poiId)))
+}
+
 /** 운영 중단 안내가 혼잡 예측보다 우선한다. */
 export function mapPinLabel(
   name: string,

@@ -16,6 +16,9 @@ describe('transitionFor', () => {
     expect(transitionFor('theme', 'result')).toBe('forward')
     expect(transitionFor('result', 'theme')).toBe('back')
     expect(transitionFor('course', 'spin')).toBe('back')
+    expect(transitionFor('origin-pick', 'home')).toBe('back')
+    expect(transitionFor('origin-pick', 'spin')).toBe('back')
+    expect(transitionFor('origin-pick', 'settings')).toBe('back')
   })
 
   it('preserves the spin reveal ritual', () => {

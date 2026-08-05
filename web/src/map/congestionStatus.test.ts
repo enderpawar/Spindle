@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { CongestionForecast } from '../api/congestion'
-import { buildCongestionStatusMap, mapPinLabel } from './congestionStatus'
+import {
+  buildCongestionStatusMap,
+  filterCongestionStatusMap,
+  mapPinLabel,
+} from './congestionStatus'
 
 const DATE = '20260805'
 
@@ -38,6 +42,19 @@ describe('buildCongestionStatusMap', () => {
       DATE,
     )
     expect([...statuses.keys()]).toEqual(['visible'])
+  })
+
+  it('전체 후보에서 정확 일치를 먼저 확정한 뒤 화면 필터를 적용한다', () => {
+    const exact = { id: 'exact', name: '국제시장' }
+    const partial = { id: 'partial', name: '국제시장 먹자골목' }
+    const allStatuses = buildCongestionStatusMap(
+      [exact, partial],
+      [forecast('국제시장', 80)],
+      DATE,
+    )
+
+    expect([...allStatuses]).toEqual([['exact', 'busy']])
+    expect([...filterCongestionStatusMap(allStatuses, [partial])]).toEqual([])
   })
 })
 

@@ -152,6 +152,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           />
           <CompassRose
             disabled={settled}
+            describedById={!fieldOn && !busy ? 'spin-gesture-instruction' : undefined}
             onSpinningChange={setSpinning}
             onHeading={handleHeading}
             onSettle={handleSettle}

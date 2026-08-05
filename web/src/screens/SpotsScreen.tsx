@@ -20,6 +20,7 @@ import { MapView } from '../map/MapView'
 import {
   buildCongestionStatusMap,
   CONGESTION_STATUS_LABELS,
+  filterCongestionStatusMap,
   type CongestionVisualStatus,
 } from '../map/congestionStatus'
 import { evaluateOperation } from '../engine/operation'
@@ -68,6 +69,9 @@ function CongestionStatus({ state, busyCount, goodCount, onRetry }: {
   }
   if (state.status === 'loading') {
     return <div className="congestion-status" role="status">혼잡 예측 확인 중</div>
+  }
+  if (busyCount === 0 && goodCount === 0) {
+    return <div className="congestion-status" role="status">오늘 표시할 혼잡 예측 없음</div>
   }
   return (
     <div className="congestion-status congestion-status--loaded" role="status">
@@ -154,19 +158,27 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     () => extraSpots?.filter((spot) => filter === '전체' || spot.district === filter) ?? [],
     [extraSpots, filter],
   )
+  const allExtraDisplayPois = useMemo(
+    () => extraSpots?.map((spot) => toDisplayPoi(spot, departure)) ?? [],
+    [departure, extraSpots],
+  )
   const extraDisplayPois = useMemo(
-    () => filteredExtraSpots.map((spot) => toDisplayPoi(spot, departure)),
-    [departure, filteredExtraSpots],
+    () => allExtraDisplayPois.filter((spot) => filter === '전체' || spot.district === filter),
+    [allExtraDisplayPois, filter],
   )
   const congestionCandidates = useMemo(
-    () => [...list, ...extraDisplayPois],
-    [extraDisplayPois, list],
+    () => [...POI_POOL, ...allExtraDisplayPois],
+    [allExtraDisplayPois],
   )
-  const statusByPoiId = useMemo(
+  const allStatusByPoiId = useMemo(
     () => congestion.status === 'loaded'
       ? buildCongestionStatusMap(congestionCandidates, congestion.forecasts, congestionDate)
       : EMPTY_STATUS_MAP,
     [congestion, congestionCandidates, congestionDate],
+  )
+  const statusByPoiId = useMemo(
+    () => filterCongestionStatusMap(allStatusByPoiId, [...list, ...extraDisplayPois]),
+    [allStatusByPoiId, extraDisplayPois, list],
   )
   const congestionCounts = useMemo(() => {
     let busy = 0
