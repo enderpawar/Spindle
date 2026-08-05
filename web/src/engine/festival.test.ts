@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { DIRECTION_DISTRICTS, isFestivalOngoing, pickFestivalForDirection, type Festival } from './festival'
+import {
+  DIRECTION_DISTRICTS,
+  festivalBoardFor,
+  isFestivalOngoing,
+  isFestivalUpcoming,
+  pickFestivalForDirection,
+  type Festival,
+} from './festival'
 
 const fest = (over: Partial<Festival>): Festival => ({
   contentId: 'c',
@@ -25,6 +32,45 @@ describe('festival matching', () => {
 
   it('형식이 깨진 날짜는 기간 밖으로 처리 (빈 문자열 등)', () => {
     expect(isFestivalOngoing(fest({ startDate: '', endDate: '' }), '20260708')).toBe(false)
+  })
+
+  it('isFestivalUpcoming: 시작 전만 true, 진행 중·종료는 false', () => {
+    const f = fest({ startDate: '20260710', endDate: '20260712' })
+    expect(isFestivalUpcoming(f, '20260709')).toBe(true)
+    expect(isFestivalUpcoming(f, '20260710')).toBe(false)
+    expect(isFestivalUpcoming(f, '20260713')).toBe(false)
+    expect(isFestivalUpcoming(fest({ startDate: '', endDate: '' }), '20260709')).toBe(false)
+  })
+
+  it('진행 중이 있으면 진행 중만, 종료 임박 순으로 세운다', () => {
+    const board = festivalBoardFor(
+      [
+        fest({ contentId: 'late', startDate: '20260701', endDate: '20260731' }),
+        fest({ contentId: 'soon', startDate: '20260701', endDate: '20260710' }),
+        fest({ contentId: 'next', startDate: '20260801', endDate: '20260805' }),
+      ],
+      '20260708',
+    )
+    expect(board.kind).toBe('ongoing')
+    expect(board.festivals.map((f) => f.contentId)).toEqual(['soon', 'late'])
+  })
+
+  it('진행 중이 하나도 없으면 예정 축제로 대체하고 시작 빠른 순으로 세운다', () => {
+    const board = festivalBoardFor(
+      [
+        fest({ contentId: 'sep', startDate: '20260901', endDate: '20260903' }),
+        fest({ contentId: 'aug', startDate: '20260801', endDate: '20260805' }),
+        fest({ contentId: 'past', startDate: '20260601', endDate: '20260605' }),
+      ],
+      '20260708',
+    )
+    expect(board.kind).toBe('upcoming')
+    expect(board.festivals.map((f) => f.contentId)).toEqual(['aug', 'sep'])
+  })
+
+  it('진행 중도 예정도 없으면 빈 목록 (빈 상태 화면 유지)', () => {
+    const board = festivalBoardFor([fest({ startDate: '20260601', endDate: '20260605' })], '20260708')
+    expect(board.festivals).toEqual([])
   })
 
   it('방위+기간이 맞으면 축제를 반환한다', () => {

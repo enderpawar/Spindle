@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
-import { isFestivalOngoing, type Festival } from '../engine/festival'
+import { festivalBoardFor, type FestivalBoard } from '../engine/festival'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
@@ -13,7 +13,7 @@ interface Props {
 type State =
   | { kind: 'loading' }
   | { kind: 'error' }
-  | { kind: 'ready'; festivals: Festival[] }
+  | { kind: 'ready'; board: FestivalBoard }
 
 function shortDate(yyyymmdd: string): string {
   if (!/^\d{8}$/.test(yyyymmdd)) return yyyymmdd
@@ -32,10 +32,8 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
     fetchOldTownFestivalsCached(today)
       .then((list) => {
         if (cancelled) return
-        const ongoing = list
-          .filter((f) => isFestivalOngoing(f, today))
-          .sort((a, b) => a.endDate.localeCompare(b.endDate))
-        setState({ kind: 'ready', festivals: ongoing })
+        // 진행 중이 하나도 없으면 같은 응답 안의 예정 축제로 대체한다 (추가 호출 없음).
+        setState({ kind: 'ready', board: festivalBoardFor(list, today) })
       })
       .catch(() => {
         if (!cancelled) setState({ kind: 'error' })
@@ -55,7 +53,11 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
         </button>
         <div>
           <div style={{ fontSize: 19, fontWeight: 900, color: 'var(--l-ink)', letterSpacing: -0.4 }}>지금 원도심 축제</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>오늘 진행 중인 축제만 모았어요</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+            {state.kind === 'ready' && state.board.kind === 'upcoming' && state.board.festivals.length > 0
+              ? '진행 중인 축제가 없어 곧 열릴 축제를 모았어요'
+              : '오늘 진행 중인 축제만 모았어요'}
+          </div>
         </div>
       </header>
 
@@ -81,7 +83,7 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
           </div>
         )}
 
-        {state.kind === 'ready' && state.festivals.length === 0 && (
+        {state.kind === 'ready' && state.board.festivals.length === 0 && (
           <div style={{ marginTop: 46, textAlign: 'center', padding: '0 24px' }}>
             <div aria-hidden style={{ fontSize: 40 }}>🎈</div>
             <div style={{ marginTop: 10, fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)' }}>지금은 진행 중인 축제가 없어요</div>
@@ -98,9 +100,9 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
           </div>
         )}
 
-        {state.kind === 'ready' && state.festivals.length > 0 && (
+        {state.kind === 'ready' && state.board.festivals.length > 0 && (
           <div className="motion-card-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {state.festivals.map((f) => (
+            {state.board.festivals.map((f) => (
               <a
                 key={f.contentId}
                 href={`https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${f.title}`)}`}
@@ -120,6 +122,7 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
                   <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)', lineHeight: 1.3 }}>{f.title}</div>
                   <div style={{ marginTop: 5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                     {f.district ? `${f.district} · ` : ''}
+                    {state.board.kind === 'upcoming' ? '곧 열려요 · ' : ''}
                     {shortDate(f.startDate)}–{shortDate(f.endDate)}
                   </div>
                   <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: 'var(--l-primary)' }}>지도에서 보기 ›</div>

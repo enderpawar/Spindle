@@ -35,6 +35,36 @@ export function isFestivalOngoing(festival: Pick<Festival, 'startDate' | 'endDat
   return festival.startDate <= today && today <= festival.endDate
 }
 
+/** 오늘 이후에 시작하는 축제인가 (진행 중은 제외). */
+export function isFestivalUpcoming(festival: Pick<Festival, 'startDate' | 'endDate'>, today: string): boolean {
+  if (!YYYYMMDD.test(festival.startDate) || !YYYYMMDD.test(festival.endDate)) return false
+  return festival.startDate > today
+}
+
+export interface FestivalBoard {
+  /** 진행 중 목록을 보여주는지, 예정 목록으로 대체했는지 */
+  kind: 'ongoing' | 'upcoming'
+  festivals: Festival[]
+}
+
+/**
+ * 축제 화면에 세울 목록 — 진행 중이 있으면 그것만, 하나도 없으면 예정 축제로 대체한다.
+ * searchFestival2는 `eventStartDate` 기준으로 진행 중·예정을 함께 돌려주므로
+ * 폴백에 추가 호출이 필요 없다 (실호출 확인 2026-08-05: eventStartDate=20260101 응답에
+ * 2025-12-05 시작 축제가 포함).
+ */
+export function festivalBoardFor(festivals: Festival[], today: string): FestivalBoard {
+  const ongoing = festivals
+    .filter((f) => isFestivalOngoing(f, today))
+    .sort((a, b) => a.endDate.localeCompare(b.endDate))
+  if (ongoing.length > 0) return { kind: 'ongoing', festivals: ongoing }
+
+  const upcoming = festivals
+    .filter((f) => isFestivalUpcoming(f, today))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+  return { kind: 'upcoming', festivals: upcoming }
+}
+
 /**
  * 방위+기간이 맞는 축제 하나. 가장 곧 끝나는 것 우선(지금 아니면 놓치는 희소성).
  * 매칭 없으면 null → 특별 카드를 띄우지 않는다.
