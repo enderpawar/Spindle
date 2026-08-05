@@ -49,7 +49,11 @@ export function densityModeForLocal(zoom: number): PinDensityMode {
   return 'near'
 }
 
-export function pinLayerOf({ selected, status, kind }: {
+export function pinLayerOf({
+  selected,
+  status,
+  kind,
+}: {
   selected: boolean
   status?: 'busy' | 'good'
   kind: PinKind
@@ -67,14 +71,19 @@ function shouldStayIndividual(item: PinLayoutItem, mode: PinDensityMode): boolea
 }
 
 /** 화면 격자 기반 디클러터링. 1개짜리 셀은 핀을 유지하고 2개 이상만 묶는다. */
-export function buildPinLayout(items: readonly PinLayoutItem[], mode: PinDensityMode): PinLayoutResult {
+export function buildPinLayout(
+  items: readonly PinLayoutItem[],
+  mode: PinDensityMode,
+): PinLayoutResult {
   const visibleIds = new Set<string>()
   if (mode === 'near') {
     for (const item of items) visibleIds.add(item.id)
     return { visibleIds, clusters: [] }
   }
+
   const cellSize = mode === 'far' ? 48 : 40
   const cells = new Map<string, PinLayoutItem[]>()
+
   for (const item of [...items].sort((a, b) => a.id.localeCompare(b.id))) {
     if (shouldStayIndividual(item, mode)) {
       visibleIds.add(item.id)
@@ -85,6 +94,7 @@ export function buildPinLayout(items: readonly PinLayoutItem[], mode: PinDensity
     cell.push(item)
     cells.set(key, cell)
   }
+
   const clusters: PinCluster[] = []
   for (const cell of cells.values()) {
     if (cell.length === 1) {
@@ -103,6 +113,7 @@ export function buildPinLayout(items: readonly PinLayoutItem[], mode: PinDensity
       positionY: cell.reduce((sum, item) => sum + item.positionY, 0) / count,
     })
   }
+
   clusters.sort((a, b) => a.id.localeCompare(b.id))
   return { visibleIds, clusters }
 }

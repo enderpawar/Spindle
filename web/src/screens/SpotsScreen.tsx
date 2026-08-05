@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { fetchOldTownCongestionCached, localYyyymmdd, type CongestionForecast } from '../api/congestion'
+import {
+  fetchOldTownCongestionCached,
+  localYyyymmdd,
+  type CongestionForecast,
+} from '../api/congestion'
 import {
   fetchPoiCardDetailCached,
   firstSentence,
@@ -13,7 +17,11 @@ import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { MapView } from '../map/MapView'
-import { buildCongestionStatusMap, CONGESTION_STATUS_LABELS, type CongestionVisualStatus } from '../map/congestionStatus'
+import {
+  buildCongestionStatusMap,
+  CONGESTION_STATUS_LABELS,
+  type CongestionVisualStatus,
+} from '../map/congestionStatus'
 import { evaluateOperation } from '../engine/operation'
 import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 
@@ -35,7 +43,9 @@ type CongestionLoadState =
 function CongestionBadge({ status, count }: { status: CongestionVisualStatus; count?: number }) {
   return (
     <span className={`congestion-badge congestion-badge--${status}`}>
-      <span className="congestion-badge__mark" aria-hidden="true">{status === 'busy' ? '!' : '✓'}</span>
+      <span className="congestion-badge__mark" aria-hidden="true">
+        {status === 'busy' ? '!' : '✓'}
+      </span>
       {CONGESTION_STATUS_LABELS[status]}
       {count !== undefined && <span className="congestion-badge__count">{count}</span>}
     </span>
@@ -49,13 +59,30 @@ function CongestionStatus({ state, busyCount, goodCount, onRetry }: {
   onRetry: () => void
 }) {
   if (state.status === 'error') {
-    return <div className="congestion-status congestion-status--error" role="alert"><span>혼잡 예측을 불러오지 못했어요</span><button type="button" onClick={onRetry}>다시 시도</button></div>
+    return (
+      <div className="congestion-status congestion-status--error" role="alert">
+        <span>혼잡 예측을 불러오지 못했어요</span>
+        <button type="button" onClick={onRetry}>다시 시도</button>
+      </div>
+    )
   }
-  if (state.status === 'loading') return <div className="congestion-status" role="status">혼잡 예측 확인 중</div>
-  return <div className="congestion-status congestion-status--loaded" role="status"><CongestionBadge status="good" count={goodCount} /><CongestionBadge status="busy" count={busyCount} /></div>
+  if (state.status === 'loading') {
+    return <div className="congestion-status" role="status">혼잡 예측 확인 중</div>
+  }
+  return (
+    <div className="congestion-status congestion-status--loaded" role="status">
+      <CongestionBadge status="good" count={goodCount} />
+      <CongestionBadge status="busy" count={busyCount} />
+    </div>
+  )
 }
 
-function PoiCardBody({ poi, status, summary, notice }: { poi: Poi; status?: CongestionVisualStatus; summary?: string; notice?: string }) {
+function PoiCardBody({ poi, status, summary, notice }: {
+  poi: Poi
+  status?: CongestionVisualStatus
+  summary?: string
+  notice?: string
+}) {
   const dir = directionOf(poi.direction)
   return (
     <>
@@ -94,9 +121,15 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     let active = true
     setCongestion({ status: 'loading' })
     fetchOldTownCongestionCached(congestionDate)
-      .then((forecasts) => { if (active) setCongestion({ status: 'loaded', forecasts }) })
-      .catch(() => { if (active) setCongestion({ status: 'error' }) })
-    return () => { active = false }
+      .then((forecasts) => {
+        if (active) setCongestion({ status: 'loaded', forecasts })
+      })
+      .catch(() => {
+        if (active) setCongestion({ status: 'error' })
+      })
+    return () => {
+      active = false
+    }
   }, [congestionDate, congestionRetry])
 
   useEffect(() => {
@@ -125,9 +158,14 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     () => filteredExtraSpots.map((spot) => toDisplayPoi(spot, departure)),
     [departure, filteredExtraSpots],
   )
-  const congestionCandidates = useMemo(() => [...list, ...extraDisplayPois], [extraDisplayPois, list])
+  const congestionCandidates = useMemo(
+    () => [...list, ...extraDisplayPois],
+    [extraDisplayPois, list],
+  )
   const statusByPoiId = useMemo(
-    () => congestion.status === 'loaded' ? buildCongestionStatusMap(congestionCandidates, congestion.forecasts, congestionDate) : EMPTY_STATUS_MAP,
+    () => congestion.status === 'loaded'
+      ? buildCongestionStatusMap(congestionCandidates, congestion.forecasts, congestionDate)
+      : EMPTY_STATUS_MAP,
     [congestion, congestionCandidates, congestionDate],
   )
   const congestionCounts = useMemo(() => {
@@ -268,7 +306,12 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             <SourceLine style={{ margin: 0, color: '#61789d', fontSize: 9.5, lineHeight: 1.25 }} />
           </div>
           <div className="map-status-stack">
-            <CongestionStatus state={congestion} busyCount={congestionCounts.busy} goodCount={congestionCounts.good} onRetry={() => setCongestionRetry((value) => value + 1)} />
+            <CongestionStatus
+              state={congestion}
+              busyCount={congestionCounts.busy}
+              goodCount={congestionCounts.good}
+              onRetry={() => setCongestionRetry((value) => value + 1)}
+            />
             {extraSpots && (
               <div className="extra-spots-status" role="status">
                 큐레이션 {list.length}곳 + 관광공사 등록 명소 {filteredExtraSpots.length}곳
@@ -324,7 +367,12 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         </>
       ) : (
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(92px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <CongestionStatus state={congestion} busyCount={congestionCounts.busy} goodCount={congestionCounts.good} onRetry={() => setCongestionRetry((value) => value + 1)} />
+          <CongestionStatus
+            state={congestion}
+            busyCount={congestionCounts.busy}
+            goodCount={congestionCounts.good}
+            onRetry={() => setCongestionRetry((value) => value + 1)}
+          />
           {list.map((poi) => {
             const dir = directionOf(poi.direction)
             const notice = closedNoticeByPoi.get(poi.id)

@@ -36,7 +36,15 @@ export interface MapPinProps {
   status?: CongestionVisualStatus
 }
 
-export function MapPin({ color, size, order, selected = false, label, variant = order === undefined ? 'standard' : 'course', status }: MapPinProps) {
+export function MapPin({
+  color,
+  size,
+  order,
+  selected = false,
+  label,
+  variant = order === undefined ? 'standard' : 'course',
+  status,
+}: MapPinProps) {
   const displayColor = selected ? SELECTED_PIN_COLOR : color
   return (
     <>
@@ -56,7 +64,9 @@ export function MapPin({ color, size, order, selected = false, label, variant = 
         <path d={PIN_PATH} fill={displayColor} stroke="#fff" strokeWidth={selected ? 1.8 : 1.15} />
         {order === undefined ? (
           variant === 'curated' ? (
-            <text x="12" y="16.1" textAnchor="middle" fontSize="11.5" fontWeight="900" fill="#fff">★</text>
+            <text x="12" y="16.1" textAnchor="middle" fontSize="11.5" fontWeight="900" fill="#fff">
+              ★
+            </text>
           ) : (
             <circle cx="12" cy="12" r="3.7" fill="#fff" />
           )
