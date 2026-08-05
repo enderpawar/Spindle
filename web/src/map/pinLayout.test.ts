@@ -68,6 +68,33 @@ describe('buildPinLayout', () => {
     const reverse = buildPinLayout([standardB, standardA], 'far')
     expect(reverse.clusters).toEqual(forward.clusters)
   })
+
+  it('같은 줌에서 지도를 팬해도 묶음 숫자와 구성이 바뀌지 않는다', () => {
+    const beforePan = buildPinLayout([
+      item({ id: 'a', kind: 'standard', screenX: 45, screenY: 45 }),
+      item({ id: 'b', kind: 'standard', screenX: 47, screenY: 47 }),
+      item({ id: 'c', kind: 'standard', screenX: 150, screenY: 80 }),
+    ], 'far')
+    const afterPan = buildPinLayout([
+      item({ id: 'a', kind: 'standard', screenX: 49, screenY: 52 }),
+      item({ id: 'b', kind: 'standard', screenX: 51, screenY: 54 }),
+      item({ id: 'c', kind: 'standard', screenX: 154, screenY: 87 }),
+    ], 'far')
+
+    expect(beforePan.clusters.map(({ id, itemIds, count }) => ({ id, itemIds, count })))
+      .toEqual(afterPan.clusters.map(({ id, itemIds, count }) => ({ id, itemIds, count })))
+    expect([...beforePan.visibleIds]).toEqual([...afterPan.visibleIds])
+  })
+
+  it('확대 단계의 거리 밖인 핀은 같은 묶음으로 합치지 않는다', () => {
+    const layout = buildPinLayout([
+      item({ id: 'a', kind: 'standard', screenX: 0, screenY: 0 }),
+      item({ id: 'b', kind: 'standard', screenX: 49, screenY: 0 }),
+    ], 'far')
+
+    expect(layout.clusters).toHaveLength(0)
+    expect([...layout.visibleIds].sort()).toEqual(['a', 'b'])
+  })
 })
 
 describe('pinLayerOf', () => {
