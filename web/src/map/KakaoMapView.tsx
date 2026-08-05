@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPoiPreview } from '../components/MapPoiPreview'
 import { type Poi } from '../mock/pois'
-import { CLOSED_PIN_OPACITY, mapPinLabel, type MapViewProps } from './LocalMapView'
-import { COURSE_PIN_SIZE, DEFAULT_PIN_COLOR, MAP_PIN_SIZE, MapPin, pinColorOf } from './MapPin'
+import { CLOSED_PIN_OPACITY, type MapViewProps } from './LocalMapView'
+import { COURSE_PIN_SIZE, DEFAULT_PIN_COLOR, MAP_PIN_SIZE, MapClusterPin, MapPin, pinColorOf } from './MapPin'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMapsNs, KakaoPolyline } from './kakaoLoader'
+import { mapPinLabel, type CongestionVisualStatus } from './congestionStatus'
+import { buildPinLayout, densityModeForKakao, pinLayerOf, PIN_LAYER, type PinCluster, type PinLayoutResult } from './pinLayout'
 
 interface PoiOverlayHost {
   poiId: string
@@ -27,9 +29,13 @@ interface ExtraOverlayRecord extends ExtraOverlayHost {
   overlay: KakaoCustomOverlay
 }
 
+interface ClusterOverlayHost { clusterId: string; host: HTMLDivElement }
+interface ClusterOverlayRecord extends ClusterOverlayHost { overlay: KakaoCustomOverlay }
+
 interface PoiPinProps {
   poi: Poi
   selected: boolean
+  status?: CongestionVisualStatus
   /** 운영 중단·운영시간 외 — 핀을 흐리게 그린다 */
   closed: boolean
   order?: number
@@ -39,7 +45,7 @@ interface PoiPinProps {
   showPreview: boolean
 }
 
-function PoiPin({ poi, selected, closed, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
+function PoiPin({ poi, selected, status, closed, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
   const color = pinColorOf(poi)
   const inCourse = order !== undefined
   const sizePx = inCourse ? COURSE_PIN_SIZE : MAP_PIN_SIZE
@@ -54,7 +60,7 @@ function PoiPin({ poi, selected, closed, order, showLabel, onPick, onOpen, showP
           event.stopPropagation()
           onPick(poi.id)
         }}
-        aria-label={mapPinLabel(poi.name, closed)}
+        aria-label={mapPinLabel(poi.name, closed, status)}
         style={closed ? { opacity: CLOSED_PIN_OPACITY } : undefined}
       >
         <MapPin
@@ -62,6 +68,8 @@ function PoiPin({ poi, selected, closed, order, showLabel, onPick, onOpen, showP
           size={sizePx}
           order={order}
           selected={selected}
+          variant={inCourse ? 'course' : 'curated'}
+          status={status}
           label={selected || showLabel || inCourse ? poi.name : undefined}
         />
       </button>
@@ -71,9 +79,10 @@ function PoiPin({ poi, selected, closed, order, showLabel, onPick, onOpen, showP
   )
 }
 
-function ExtraSpotPin({ spot, selected, closed, showLabel, onPick, onOpen, showPreview }: {
+function ExtraSpotPin({ spot, selected, status, closed, showLabel, onPick, onOpen, showPreview }: {
   spot: ExtraSpot
   selected: boolean
+  status?: CongestionVisualStatus
   closed: boolean
   showLabel: boolean
   onPick: (id: string | null) => void
@@ -88,7 +97,7 @@ function ExtraSpotPin({ spot, selected, closed, showLabel, onPick, onOpen, showP
         className="map-pin"
         type="button"
         style={closed ? { opacity: CLOSED_PIN_OPACITY } : undefined}
-        aria-label={mapPinLabel(spot.name, closed)}
+        aria-label={mapPinLabel(spot.name, closed, status)}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation()
@@ -99,6 +108,8 @@ function ExtraSpotPin({ spot, selected, closed, showLabel, onPick, onOpen, showP
           color={color}
           size={MAP_PIN_SIZE}
           selected={selected}
+          variant="standard"
+          status={status}
           label={selected || showLabel ? spot.name : undefined}
         />
       </button>
@@ -135,6 +146,7 @@ export function KakaoMapView({
   pois,
   departure,
   selectedId,
+  statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
@@ -154,6 +166,7 @@ export function KakaoMapView({
   const routeRef = useRef<KakaoPolyline | null>(null)
   const poiOverlaysRef = useRef<PoiOverlayRecord[]>([])
   const extraOverlaysRef = useRef<ExtraOverlayRecord[]>([])
+  const clusterOverlaysRef = useRef<ClusterOverlayRecord[]>([])
   const selectionPanTimerRef = useRef<number | null>(null)
   const followTimerRef = useRef<number | null>(null)
   const latestFollowPositionRef = useRef(currentPosition)
@@ -163,8 +176,10 @@ export function KakaoMapView({
   const onPickRef = useRef(onPick)
   const [ready, setReady] = useState(false)
   const [level, setLevel] = useState(7)
+  const [layoutRevision, setLayoutRevision] = useState(0)
   const [poiHosts, setPoiHosts] = useState<PoiOverlayHost[]>([])
   const [extraHosts, setExtraHosts] = useState<ExtraOverlayHost[]>([])
+  const [clusterHosts, setClusterHosts] = useState<ClusterOverlayHost[]>([])
   const [departureHost, setDepartureHost] = useState<HTMLDivElement | null>(null)
   const [currentPositionHost, setCurrentPositionHost] = useState<HTMLDivElement | null>(null)
 
@@ -180,6 +195,33 @@ export function KakaoMapView({
   }, [courseOrder])
   const firstCoursePoi = pois.find((poi) => orderNum.has(poi.id))
   const routeColor = firstCoursePoi ? pinColorOf(firstCoursePoi) : DEFAULT_PIN_COLOR
+
+  const pinLayout = useMemo<PinLayoutResult>(() => {
+    void layoutRevision
+    const allVisible = () => ({
+      visibleIds: new Set([...pois.map((poi) => poi.id), ...extraSpots.map((spot) => spot.id)]),
+      clusters: [],
+    })
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!ready || !maps || !map || navigationMode || (courseOrder?.length ?? 0) > 0) return allVisible()
+    try {
+      const projection = map.getProjection()
+      return buildPinLayout([
+        ...pois.map((poi) => {
+          const point = projection.containerPointFromCoords(new maps.LatLng(poi.lat, poi.lon))
+          return { id: poi.id, kind: 'curated' as const, tier: poi.tier, selected: poi.id === selectedId, screenX: point.x, screenY: point.y, positionX: poi.lon, positionY: poi.lat }
+        }),
+        ...extraSpots.map((spot) => {
+          const point = projection.containerPointFromCoords(new maps.LatLng(spot.lat, spot.lon))
+          return { id: spot.id, kind: 'standard' as const, selected: spot.id === selectedId, screenX: point.x, screenY: point.y, positionX: spot.lon, positionY: spot.lat }
+        }),
+      ], densityModeForKakao(level))
+    } catch {
+      return allVisible()
+    }
+  }, [courseOrder, extraSpots, layoutRevision, level, navigationMode, pois, ready, selectedId])
+  const clusterById = useMemo(() => new Map(pinLayout.clusters.map((cluster) => [cluster.id, cluster])), [pinLayout.clusters])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -201,14 +243,18 @@ export function KakaoMapView({
       selectionPanTimerRef.current = null
     }
     const handleZoom = () => setLevel(map.getLevel())
+    const handleIdle = () => setLayoutRevision((value) => value + 1)
+    const idleEvent = 'idle' as Parameters<typeof maps.event.addListener>[1]
     maps.event.addListener(map, 'click', handleMapClick)
     maps.event.addListener(map, 'dragstart', handleDragStart)
     maps.event.addListener(map, 'zoom_changed', handleZoom)
+    maps.event.addListener(map, idleEvent, handleIdle)
 
     return () => {
       maps.event.removeListener(map, 'click', handleMapClick)
       maps.event.removeListener(map, 'dragstart', handleDragStart)
       maps.event.removeListener(map, 'zoom_changed', handleZoom)
+      maps.event.removeListener(map, idleEvent, handleIdle)
       handleDragStart()
       if (followTimerRef.current !== null) window.clearTimeout(followTimerRef.current)
       followTimerRef.current = null
@@ -281,11 +327,12 @@ export function KakaoMapView({
 
   useEffect(() => {
     for (const record of poiOverlaysRef.current) {
-      const poi = poiById.get(record.poiId)
-      const zIndex = record.poiId === selectedId ? 100 : poi?.tier === 1 ? 30 : 20
+      const closed = closedPoiIds?.has(record.poiId) ?? false
+      const status = closed ? undefined : statusByPoiId?.get(record.poiId)
+      const zIndex = pinLayerOf({ selected: record.poiId === selectedId, status, kind: 'curated' })
       record.overlay.setZIndex(zIndex)
     }
-  }, [poiById, poiHosts, selectedId])
+  }, [closedPoiIds, poiHosts, selectedId, statusByPoiId])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -317,9 +364,41 @@ export function KakaoMapView({
 
   useEffect(() => {
     for (const record of extraOverlaysRef.current) {
-      record.overlay.setZIndex(record.spotId === selectedId ? 9 : 5)
+      const closed = closedPoiIds?.has(record.spotId) ?? false
+      const status = closed ? undefined : statusByPoiId?.get(record.spotId)
+      record.overlay.setZIndex(pinLayerOf({ selected: record.spotId === selectedId, status, kind: 'standard' }))
     }
-  }, [extraHosts, selectedId])
+  }, [closedPoiIds, extraHosts, selectedId, statusByPoiId])
+
+  useEffect(() => {
+    for (const record of poiOverlaysRef.current) record.host.style.display = pinLayout.visibleIds.has(record.poiId) ? '' : 'none'
+    for (const record of extraOverlaysRef.current) record.host.style.display = pinLayout.visibleIds.has(record.spotId) ? '' : 'none'
+  }, [extraHosts, pinLayout.visibleIds, poiHosts])
+
+  useEffect(() => {
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!ready || !maps || !map) return
+    const records = pinLayout.clusters.map((cluster) => {
+      const host = document.createElement('div')
+      const overlay = new maps.CustomOverlay({
+        position: new maps.LatLng(cluster.positionY, cluster.positionX),
+        content: host,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        zIndex: PIN_LAYER.cluster,
+        clickable: true,
+      })
+      overlay.setMap(map)
+      return { clusterId: cluster.id, host, overlay }
+    })
+    clusterOverlaysRef.current = records
+    setClusterHosts(records.map(({ clusterId, host }) => ({ clusterId, host })))
+    return () => {
+      records.forEach(({ overlay }) => overlay.setMap(null))
+      if (clusterOverlaysRef.current === records) clusterOverlaysRef.current = []
+    }
+  }, [pinLayout.clusters, ready])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -506,6 +585,15 @@ export function KakaoMapView({
     if (map) map.setLevel(map.getLevel() + 1, { animate: true })
   }
 
+  const openCluster = (cluster: PinCluster) => {
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!maps || !map) return
+    onPick(null)
+    map.setCenter(new maps.LatLng(cluster.positionY, cluster.positionX))
+    map.setLevel(Math.max(1, map.getLevel() - 1), { animate: true })
+  }
+
   return (
     <div ref={wrapRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#c3dcf9' }}>
       <div
@@ -516,13 +604,16 @@ export function KakaoMapView({
       {poiHosts.map(({ poiId, host }) => {
         const poi = poiById.get(poiId)
         if (!poi) return null
+        const closed = closedPoiIds?.has(poiId) ?? false
+        const status = closed ? undefined : statusByPoiId?.get(poiId)
         return createPortal(
           <PoiPin
             key={poiId}
             poi={poi}
             showPreview={showSelectedPreview}
             selected={poiId === selectedId}
-            closed={closedPoiIds?.has(poiId) ?? false}
+            status={status}
+            closed={closed}
             order={orderNum.get(poiId)}
             showLabel={level <= 5}
             onPick={onPick}
@@ -535,12 +626,15 @@ export function KakaoMapView({
       {extraHosts.map(({ spotId, host }) => {
         const spot = extraById.get(spotId)
         if (!spot) return null
+        const closed = closedPoiIds?.has(spotId) ?? false
+        const status = closed ? undefined : statusByPoiId?.get(spotId)
         return createPortal(
           <ExtraSpotPin
             key={spotId}
             spot={spot}
             selected={spotId === selectedId}
-            closed={closedPoiIds?.has(spotId) ?? false}
+            status={status}
+            closed={closed}
             showLabel={level <= 4}
             onPick={onPick}
             onOpen={onOpen}
@@ -549,6 +643,11 @@ export function KakaoMapView({
           host,
           spotId,
         )
+      })}
+      {clusterHosts.map(({ clusterId, host }) => {
+        const cluster = clusterById.get(clusterId)
+        if (!cluster) return null
+        return createPortal(<MapClusterPin count={cluster.count} onClick={() => openCluster(cluster)} />, host, clusterId)
       })}
       {departureHost && !navigationMode && createPortal(<DeparturePin name={departure.name} />, departureHost)}
       {currentPositionHost && navigationMode && createPortal(<CurrentPositionPin headingDeg={currentHeadingDeg} />, currentPositionHost)}

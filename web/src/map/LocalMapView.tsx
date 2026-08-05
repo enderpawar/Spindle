@@ -3,8 +3,10 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BRIDGES, GEO, LAND_PATH, ROADS_MAJOR, ROADS_MINOR, project } from './busanGeo'
 import { type Departure, type Poi } from '../mock/pois'
 import { MapPoiPreview } from '../components/MapPoiPreview'
-import { COURSE_PIN_SIZE, MAP_PIN_SIZE, MapPin, pinColorOf } from './MapPin'
+import { COURSE_PIN_SIZE, MAP_PIN_SIZE, MapClusterPin, MapPin, pinColorOf } from './MapPin'
 import type { GeoPoint } from '../engine/geo'
+import { mapPinLabel, type CongestionVisualStatus } from './congestionStatus'
+import { buildPinLayout, densityModeForLocal, pinLayerOf } from './pinLayout'
 
 /*
  * 원도심·영도 벡터 지도 — OSM 실측 해안선·도로 위에 POI 핀을 올린다.
@@ -25,6 +27,8 @@ export interface MapViewProps {
   pois: Poi[]
   departure: Departure
   selectedId: string | null
+  /** 혼잡·쾌적 화면 상태. 추천 계산에는 사용하지 않는다. */
+  statusByPoiId?: ReadonlyMap<string, CongestionVisualStatus>
   /** 운영 중단·운영시간 외로 확인된 POI id — 핀을 흐리게 그린다 (선택·열기는 그대로 가능). */
   closedPoiIds?: ReadonlySet<string>
   /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로 표시. Poi 형태라 프리뷰도 재사용한다. */
@@ -85,11 +89,6 @@ const EMPTY_EXTRA_SPOTS: NonNullable<MapViewProps['extraSpots']> = []
  */
 export const CLOSED_PIN_OPACITY = 0.38
 
-/** 핀 접근성 라벨 — 운영 안내만 이름 뒤에 덧붙인다. */
-export function mapPinLabel(name: string, closed: boolean): string {
-  return closed ? `${name}, 지금 갈 수 없어요` : name
-}
-
 function ease(t: number) {
   return 1 - Math.pow(1 - t, 3)
 }
@@ -106,6 +105,7 @@ export function LocalMapView({
   pois,
   departure,
   selectedId,
+  statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
@@ -219,6 +219,32 @@ export function LocalMapView({
     return m
   }, [courseOrder])
   const routeColor = pins.find((p) => orderNum.has(p.poi.id))?.color ?? '#2f5cff'
+
+  const pinLayout = useMemo(() => {
+    if (!cam) return { visibleIds: new Set<string>(), clusters: [] }
+    const mode = navigationMode || (courseOrder?.length ?? 0) > 0 ? 'near' : densityModeForLocal(cam.z)
+    return buildPinLayout([
+      ...pins.map(({ poi, x, y }) => ({
+        id: poi.id,
+        kind: 'curated' as const,
+        tier: poi.tier,
+        selected: poi.id === selectedId,
+        screenX: (x - cam.cx) * cam.z + size.w / 2,
+        screenY: (y - cam.cy) * cam.z + size.h / 2,
+        positionX: x,
+        positionY: y,
+      })),
+      ...extraPins.map(({ spot, x, y }) => ({
+        id: spot.id,
+        kind: 'standard' as const,
+        selected: spot.id === selectedId,
+        screenX: (x - cam.cx) * cam.z + size.w / 2,
+        screenY: (y - cam.cy) * cam.z + size.h / 2,
+        positionX: x,
+        positionY: y,
+      })),
+    ], mode)
+  }, [cam, courseOrder, extraPins, navigationMode, pins, selectedId, size.h, size.w])
 
   // 초기 카메라: 표시 중인 핀 전체가 들어오게 (하단 카드 영역 고려해 아래 여백 크게)
   useEffect(() => {
@@ -609,11 +635,35 @@ export function LocalMapView({
           </div>
         )}
 
+        {pinLayout.clusters.map((cluster) => (
+          <div
+            key={cluster.id}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              zIndex: 20,
+              transform: `translate3d(${cluster.screenX}px,${cluster.screenY}px,0)`,
+              pointerEvents: 'none',
+            }}
+          >
+            <MapClusterPin
+              count={cluster.count}
+              onClick={() => {
+                onPick(null)
+                animateTo({ cx: cluster.positionX, cy: cluster.positionY, z: Math.min(cam.z * 1.6, Z_MAX) }, 260)
+              }}
+            />
+          </div>
+        ))}
+
         {/* 전체 명소 핀 — 큐레이션 핀과 같은 물방울·같은 크기로 그린다. */}
         {extraPins.map(({ spot, x, y }) => {
+          if (!pinLayout.visibleIds.has(spot.id)) return null
           const s = toScreen(x, y)
           const selected = spot.id === selectedId
           const closed = closedPoiIds?.has(spot.id) ?? false
+          const status = closed ? undefined : statusByPoiId?.get(spot.id)
           const color = pinColorOf(spot)
           return (
             <div
@@ -623,7 +673,7 @@ export function LocalMapView({
                 left: 0,
                 top: 0,
                 transform: `translate3d(${s.x}px,${s.y}px,0)`,
-                zIndex: 1,
+                zIndex: pinLayerOf({ selected, status, kind: 'standard' }),
                 opacity: closed ? CLOSED_PIN_OPACITY : 1,
                 pointerEvents: 'none',
                 willChange: 'transform',
@@ -632,7 +682,7 @@ export function LocalMapView({
               <button
                 className="map-pin"
                 type="button"
-                aria-label={mapPinLabel(spot.name, closed)}
+                aria-label={mapPinLabel(spot.name, closed, status)}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation()
@@ -643,6 +693,8 @@ export function LocalMapView({
                   color={color}
                   size={MAP_PIN_SIZE}
                   selected={selected}
+                  variant="standard"
+                  status={status}
                   label={selected || showPoiLabels ? spot.name : undefined}
                 />
               </button>
@@ -654,9 +706,11 @@ export function LocalMapView({
 
         {/* 큐레이션 POI 핀 — 선택 핀이 맨 위. */}
         {pins.map(({ poi, x, y, color }) => {
+          if (!pinLayout.visibleIds.has(poi.id)) return null
           const s = toScreen(x, y)
           const sel = poi.id === selectedId
           const closed = closedPoiIds?.has(poi.id) ?? false
+          const status = closed ? undefined : statusByPoiId?.get(poi.id)
           const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
           const sizePx = inCourse ? COURSE_PIN_SIZE : MAP_PIN_SIZE
@@ -668,7 +722,7 @@ export function LocalMapView({
                 left: 0,
                 top: 0,
                 transform: `translate3d(${s.x}px,${s.y}px,0)`,
-                zIndex: sel ? 6 : poi.tier === 1 ? 3 : 2,
+                zIndex: pinLayerOf({ selected: sel, status, kind: 'curated' }),
                 opacity: closed ? CLOSED_PIN_OPACITY : 1,
                 pointerEvents: 'none',
                 willChange: 'transform',
@@ -682,13 +736,15 @@ export function LocalMapView({
                   e.stopPropagation()
                   onPick(poi.id)
                 }}
-                aria-label={mapPinLabel(poi.name, closed)}
+                aria-label={mapPinLabel(poi.name, closed, status)}
               >
                 <MapPin
                   color={color}
                   size={sizePx}
                   order={n}
                   selected={sel}
+                  variant={inCourse ? 'course' : 'curated'}
+                  status={status}
                   label={sel || showPoiLabels || inCourse ? poi.name : undefined}
                 />
               </button>
