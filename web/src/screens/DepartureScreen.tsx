@@ -1,14 +1,21 @@
 import locateImg from '../assets/poses/별이_curios.webp'
 import { ScreenFrame } from '../components/ScreenFrame'
+import { MAP_PICKED_ORIGIN_ID } from '../engine/origins'
 import { DEPARTURES, type Departure } from '../mock/pois'
 
 interface Props {
   selected: Departure
   onSelect: (departure: Departure) => void
+  /** 지도에서 좌표를 직접 찍는 화면으로 이동 */
+  onOpenMap: () => void
   onBack: () => void
 }
 
-export function DepartureScreen({ selected, onSelect, onBack }: Props) {
+export function DepartureScreen({ selected, onSelect, onOpenMap, onBack }: Props) {
+  // 지도에서 찍은 출발점은 프리셋 아래 한 칸으로 남아 다시 고를 수 있다.
+  const options = selected.id === MAP_PICKED_ORIGIN_ID ? [...DEPARTURES, selected] : DEPARTURES
+
+
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 20px 0', zIndex: 2 }}>
@@ -35,7 +42,7 @@ export function DepartureScreen({ selected, onSelect, onBack }: Props) {
         </p>
 
         <div className="motion-card-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {DEPARTURES.map((d) => {
+          {options.map((d) => {
             const on = d.id === selected.id
             return (
               <button
@@ -75,13 +82,20 @@ export function DepartureScreen({ selected, onSelect, onBack }: Props) {
           })}
         </div>
 
-        <div style={{ marginTop: 16, padding: '14px 16px', borderRadius: 16, border: '1px dashed var(--l-line)', display: 'flex', alignItems: 'center', gap: 10, color: 'var(--l-ink-3)' }}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <rect x="3" y="3" width="18" height="18" rx="4" />
-            <path d="M9 12 l2 2 4-5" />
+        <button
+          onClick={onOpenMap}
+          className="motion-card"
+          style={{ marginTop: 16, width: '100%', padding: '14px 16px', borderRadius: 16, border: '1px dashed var(--l-line)', background: 'transparent', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left', color: 'var(--l-ink-2)' }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M9 3 L3 5.4 v15.2 L9 18.2 l6 2.4 6-2.4 V3 L15 5.4 Z" />
+            <path d="M9 3 v15.2 M15 5.4 v15.2" />
           </svg>
-          <span style={{ fontSize: 12.5, fontWeight: 600 }}>지도에서 직접 고르기는 곧 열려요</span>
-        </div>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>지도에서 좌표 직접 찍기</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
+            <path d="M9 5 l7 7 -7 7" />
+          </svg>
+        </button>
       </div>
     </ScreenFrame>
   )

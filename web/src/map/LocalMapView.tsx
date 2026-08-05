@@ -56,7 +56,27 @@ export interface MapViewProps {
   followCurrentPosition?: boolean
   /** 실제로 선택된 베이스맵 공급자를 상위 화면의 출처 표시에 알린다. */
   onProviderChange?: (provider: 'kakao' | 'local') => void
+  /**
+   * 출발점 찍기 모드 — 지도 중심을 후보 좌표로 계속 보고한다 (화면 중앙 십자선은 상위 화면이 그린다).
+   * 출발 마커·경로선은 그리지 않는다. 좌표는 단말 안에서만 흐른다 (절대 원칙 1).
+   */
+  pickMode?: boolean
+  /** pickMode에서 지도 중심이 바뀔 때 호출 */
+  onPickPoint?: (point: GeoPoint) => void
+  /** pickMode에서 지도를 이 좌표로 옮긴다 (내 위치 버튼 등). 값이 바뀔 때만 반영된다. */
+  focusPoint?: GeoPoint | null
 }
+
+/** 지도 viewBox 좌표 → 위경도 (busanGeo.project의 역변환, 단말 내 계산 전용) */
+export function unproject(x: number, y: number): GeoPoint {
+  return {
+    lat: GEO.maxLat - (y / GEO.h) * (GEO.maxLat - GEO.minLat),
+    lng: GEO.minLon + (x / GEO.w) * (GEO.maxLon - GEO.minLon),
+  }
+}
+
+/** 출발점 찍기 모드의 기본 배율 — 골목 단위로 찍을 만큼 확대해서 연다 */
+const PICK_ZOOM = 3.2
 
 /** 해상 교량 라벨 — 고가도로 세그먼트는 라벨을 달지 않는다 */
 const BRIDGE_LABELS = ['영도대교', '남항대교', '부산대교', '부산항대교']
@@ -116,6 +136,9 @@ export function LocalMapView({
   currentHeadingDeg = 0,
   navigationMode = false,
   followCurrentPosition = false,
+  pickMode = false,
+  onPickPoint,
+  focusPoint,
 }: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -222,7 +245,9 @@ export function LocalMapView({
 
   const pinLayout = useMemo(() => {
     if (!cam) return { visibleIds: new Set<string>(), clusters: [] }
-    const mode = navigationMode || (courseOrder?.length ?? 0) > 0 ? 'near' : densityModeForLocal(cam.z)
+    const mode = navigationMode || pickMode || (courseOrder?.length ?? 0) > 0
+      ? 'near'
+      : densityModeForLocal(cam.z)
     return buildPinLayout([
       ...pins.map(({ poi, x, y }) => ({
         id: poi.id,
@@ -244,16 +269,39 @@ export function LocalMapView({
         positionY: y,
       })),
     ], mode)
-  }, [cam, courseOrder, extraPins, navigationMode, pins, selectedId, size.h, size.w])
+  }, [cam, courseOrder, extraPins, navigationMode, pickMode, pins, selectedId, size.h, size.w])
 
   // 초기 카메라: 표시 중인 핀 전체가 들어오게 (하단 카드 영역 고려해 아래 여백 크게)
   useEffect(() => {
     if (!size.w) return
+    // 찍기 모드는 "전체가 보이는 fit"이 아니라 현재 후보 지점을 골목 단위로 연다.
+    // 후보(dep)는 팬할 때마다 바뀌므로 최초 1회만 카메라를 잡는다.
+    if (pickMode) {
+      setZMin(coverZ)
+      if (!cam) setCam({ cx: dep.x, cy: dep.y, z: Math.max(PICK_ZOOM, coverZ) })
+      return
+    }
     const fit = fitCam(fitPoints)
     setZMin(Math.min(fit.z, coverZ))
     if (!cam || (navigationMode && !followCurrentPosition)) setCam(fit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, fitPoints])
+  }, [size, fitPoints, pickMode])
+
+  // 화면 중앙 = 후보 좌표. 상위 화면이 그 위에 십자선을 겹쳐 그린다.
+  useEffect(() => {
+    if (!pickMode || !cam || !onPickPoint) return
+    onPickPoint(unproject(cam.cx, cam.cy))
+  }, [cam, onPickPoint, pickMode])
+
+  // 내 위치 등 외부에서 지정한 좌표로 이동
+  useEffect(() => {
+    if (!pickMode || !focusPoint) return
+    const current = camRef.current
+    if (!current) return
+    const target = project(focusPoint.lat, focusPoint.lng)
+    animateTo({ cx: target.x, cy: target.y, z: Math.max(current.z, PICK_ZOOM) })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPoint, pickMode])
 
   // 심사용 조이스틱은 현재 위치를 화면 위쪽 지도 영역에 고정하고 지형이 아래에서 움직이게 한다.
   useEffect(() => {
@@ -612,8 +660,8 @@ export function LocalMapView({
             )
           })}
 
-        {/* 출발점 마커 */}
-        {!navigationMode && <div style={{ position: 'absolute', transform: `translate(${depScreen.x}px,${depScreen.y}px)` }}>
+        {/* 출발점 마커 — 찍기 모드에서는 화면 중앙 십자선이 그 역할을 한다 */}
+        {!navigationMode && !pickMode && <div style={{ position: 'absolute', transform: `translate(${depScreen.x}px,${depScreen.y}px)` }}>
           <span style={{ position: 'absolute', left: -22, top: -22, width: 44, height: 44, borderRadius: '50%', background: 'rgba(47,92,255,.22)', animation: 'maprip 2.4s ease-out infinite' }} />
           <span style={{ position: 'absolute', left: -8, top: -8, width: 16, height: 16, borderRadius: '50%', background: '#2f5cff', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(20,50,140,.45)' }} />
           <span style={{ position: 'absolute', left: 12, top: -9, padding: '3px 8px', borderRadius: 8, background: 'rgba(255,255,255,.92)', fontSize: 10.5, fontWeight: 800, color: '#17347f', whiteSpace: 'nowrap', boxShadow: '0 3px 10px -3px rgba(20,50,140,.35)' }}>
@@ -651,7 +699,11 @@ export function LocalMapView({
               count={cluster.count}
               onClick={() => {
                 onPick(null)
-                animateTo({ cx: cluster.positionX, cy: cluster.positionY, z: Math.min(cam.z * 1.6, Z_MAX) }, 260)
+                animateTo({
+                  cx: cluster.positionX,
+                  cy: cluster.positionY,
+                  z: Math.min(cam.z * 1.6, Z_MAX),
+                }, 260)
               }}
             />
           </div>
@@ -768,16 +820,18 @@ export function LocalMapView({
             <path d="M5 12 h14" />
           </svg>
         </button>
-        <button
-          className="l-icon-btn"
-          aria-label="전체 보기"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => animateTo(fitCam(fitPoints))}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
-            <path d="M9 4 H4 v5 M15 4 h5 v5 M9 20 H4 v-5 M15 20 h5 v-5" />
-          </svg>
-        </button>
+        {!pickMode && (
+          <button
+            className="l-icon-btn"
+            aria-label="전체 보기"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => animateTo(fitCam(fitPoints))}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+              <path d="M9 4 H4 v5 M15 4 h5 v5 M9 20 H4 v-5 M15 20 h5 v-5" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* 데이터 출처 (ODbL 표기 의무) */}

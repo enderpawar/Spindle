@@ -6,7 +6,14 @@ import { CLOSED_PIN_OPACITY, type MapViewProps } from './LocalMapView'
 import { COURSE_PIN_SIZE, DEFAULT_PIN_COLOR, MAP_PIN_SIZE, MapClusterPin, MapPin, pinColorOf } from './MapPin'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMapsNs, KakaoPolyline } from './kakaoLoader'
 import { mapPinLabel, type CongestionVisualStatus } from './congestionStatus'
-import { buildPinLayout, densityModeForKakao, pinLayerOf, PIN_LAYER, type PinCluster, type PinLayoutResult } from './pinLayout'
+import {
+  buildPinLayout,
+  densityModeForKakao,
+  pinLayerOf,
+  PIN_LAYER,
+  type PinCluster,
+  type PinLayoutResult,
+} from './pinLayout'
 
 interface PoiOverlayHost {
   poiId: string
@@ -29,8 +36,14 @@ interface ExtraOverlayRecord extends ExtraOverlayHost {
   overlay: KakaoCustomOverlay
 }
 
-interface ClusterOverlayHost { clusterId: string; host: HTMLDivElement }
-interface ClusterOverlayRecord extends ClusterOverlayHost { overlay: KakaoCustomOverlay }
+interface ClusterOverlayHost {
+  clusterId: string
+  host: HTMLDivElement
+}
+
+interface ClusterOverlayRecord extends ClusterOverlayHost {
+  overlay: KakaoCustomOverlay
+}
 
 interface PoiPinProps {
   poi: Poi
@@ -158,6 +171,9 @@ export function KakaoMapView({
   currentHeadingDeg = 0,
   navigationMode = false,
   followCurrentPosition = false,
+  pickMode = false,
+  onPickPoint,
+  focusPoint,
 }: MapViewProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
@@ -183,7 +199,10 @@ export function KakaoMapView({
   const [departureHost, setDepartureHost] = useState<HTMLDivElement | null>(null)
   const [currentPositionHost, setCurrentPositionHost] = useState<HTMLDivElement | null>(null)
 
+  const onPickPointRef = useRef(onPickPoint)
+
   onPickRef.current = onPick
+  onPickPointRef.current = onPickPoint
   latestFollowPositionRef.current = currentPosition
 
   const poiById = useMemo(() => new Map(pois.map((poi) => [poi.id, poi])), [pois])
@@ -204,24 +223,47 @@ export function KakaoMapView({
     })
     const maps = mapsRef.current
     const map = mapRef.current
-    if (!ready || !maps || !map || navigationMode || (courseOrder?.length ?? 0) > 0) return allVisible()
+    if (!ready || !maps || !map || navigationMode || pickMode || (courseOrder?.length ?? 0) > 0) {
+      return allVisible()
+    }
+
     try {
       const projection = map.getProjection()
       return buildPinLayout([
         ...pois.map((poi) => {
           const point = projection.containerPointFromCoords(new maps.LatLng(poi.lat, poi.lon))
-          return { id: poi.id, kind: 'curated' as const, tier: poi.tier, selected: poi.id === selectedId, screenX: point.x, screenY: point.y, positionX: poi.lon, positionY: poi.lat }
+          return {
+            id: poi.id,
+            kind: 'curated' as const,
+            tier: poi.tier,
+            selected: poi.id === selectedId,
+            screenX: point.x,
+            screenY: point.y,
+            positionX: poi.lon,
+            positionY: poi.lat,
+          }
         }),
         ...extraSpots.map((spot) => {
           const point = projection.containerPointFromCoords(new maps.LatLng(spot.lat, spot.lon))
-          return { id: spot.id, kind: 'standard' as const, selected: spot.id === selectedId, screenX: point.x, screenY: point.y, positionX: spot.lon, positionY: spot.lat }
+          return {
+            id: spot.id,
+            kind: 'standard' as const,
+            selected: spot.id === selectedId,
+            screenX: point.x,
+            screenY: point.y,
+            positionX: spot.lon,
+            positionY: spot.lat,
+          }
         }),
       ], densityModeForKakao(level))
     } catch {
       return allVisible()
     }
-  }, [courseOrder, extraSpots, layoutRevision, level, navigationMode, pois, ready, selectedId])
-  const clusterById = useMemo(() => new Map(pinLayout.clusters.map((cluster) => [cluster.id, cluster])), [pinLayout.clusters])
+  }, [courseOrder, extraSpots, layoutRevision, level, navigationMode, pickMode, pois, ready, selectedId])
+  const clusterById = useMemo(
+    () => new Map(pinLayout.clusters.map((cluster) => [cluster.id, cluster])),
+    [pinLayout.clusters],
+  )
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -231,7 +273,7 @@ export function KakaoMapView({
     const initialDeparture = initialDepartureRef.current
     const map = new maps.Map(container, {
       center: new maps.LatLng(initialDeparture.lat, initialDeparture.lon),
-      level: navigationMode ? 5 : 7,
+      level: navigationMode ? 5 : pickMode ? 4 : 7,
     })
     mapRef.current = map
     setLevel(map.getLevel())
@@ -243,12 +285,19 @@ export function KakaoMapView({
       selectionPanTimerRef.current = null
     }
     const handleZoom = () => setLevel(map.getLevel())
-    const handleIdle = () => setLayoutRevision((value) => value + 1)
+    // 찍기 모드의 중심 보고와 핀 묶음 재계산을 같은 idle 이벤트에서 처리한다.
+    const handleIdle = () => {
+      setLayoutRevision((value) => value + 1)
+      if (!pickMode) return
+      const center = map.getCenter()
+      onPickPointRef.current?.({ lat: center.getLat(), lng: center.getLng() })
+    }
     const idleEvent = 'idle' as Parameters<typeof maps.event.addListener>[1]
     maps.event.addListener(map, 'click', handleMapClick)
     maps.event.addListener(map, 'dragstart', handleDragStart)
     maps.event.addListener(map, 'zoom_changed', handleZoom)
     maps.event.addListener(map, idleEvent, handleIdle)
+    if (pickMode) handleIdle()
 
     return () => {
       maps.event.removeListener(map, 'click', handleMapClick)
@@ -261,7 +310,7 @@ export function KakaoMapView({
       if (mapRef.current === map) mapRef.current = null
       container.replaceChildren()
     }
-  }, [navigationMode])
+  }, [navigationMode, pickMode])
 
   useEffect(() => {
     if (!ready) return
@@ -280,6 +329,9 @@ export function KakaoMapView({
     const map = mapRef.current
     if (!maps || !map) return
 
+    // 찍기 모드에서 departure는 "지금 화면 중앙"이라 다시 맞출 대상이 없다.
+    if (pickMode) return
+
     if (navigationMode) {
       map.setCenter(new maps.LatLng(departure.lat, departure.lon))
       map.setLevel(5)
@@ -291,7 +343,7 @@ export function KakaoMapView({
     for (const spot of extraSpots) bounds.extend(new maps.LatLng(spot.lat, spot.lon))
     bounds.extend(new maps.LatLng(departure.lat, departure.lon))
     map.setBounds(bounds, 64, 44, 196, 44)
-  }, [departure.lat, departure.lon, extraSpots, navigationMode, pois])
+  }, [departure.lat, departure.lon, extraSpots, navigationMode, pickMode, pois])
 
   useEffect(() => {
     if (ready) fitAll()
@@ -329,10 +381,14 @@ export function KakaoMapView({
     for (const record of poiOverlaysRef.current) {
       const closed = closedPoiIds?.has(record.poiId) ?? false
       const status = closed ? undefined : statusByPoiId?.get(record.poiId)
-      const zIndex = pinLayerOf({ selected: record.poiId === selectedId, status, kind: 'curated' })
+      const zIndex = pinLayerOf({
+        selected: record.poiId === selectedId,
+        status,
+        kind: 'curated',
+      })
       record.overlay.setZIndex(zIndex)
     }
-  }, [closedPoiIds, poiHosts, selectedId, statusByPoiId])
+  }, [closedPoiIds, poiById, poiHosts, selectedId, statusByPoiId])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -366,19 +422,28 @@ export function KakaoMapView({
     for (const record of extraOverlaysRef.current) {
       const closed = closedPoiIds?.has(record.spotId) ?? false
       const status = closed ? undefined : statusByPoiId?.get(record.spotId)
-      record.overlay.setZIndex(pinLayerOf({ selected: record.spotId === selectedId, status, kind: 'standard' }))
+      record.overlay.setZIndex(pinLayerOf({
+        selected: record.spotId === selectedId,
+        status,
+        kind: 'standard',
+      }))
     }
   }, [closedPoiIds, extraHosts, selectedId, statusByPoiId])
 
   useEffect(() => {
-    for (const record of poiOverlaysRef.current) record.host.style.display = pinLayout.visibleIds.has(record.poiId) ? '' : 'none'
-    for (const record of extraOverlaysRef.current) record.host.style.display = pinLayout.visibleIds.has(record.spotId) ? '' : 'none'
+    for (const record of poiOverlaysRef.current) {
+      record.host.style.display = pinLayout.visibleIds.has(record.poiId) ? '' : 'none'
+    }
+    for (const record of extraOverlaysRef.current) {
+      record.host.style.display = pinLayout.visibleIds.has(record.spotId) ? '' : 'none'
+    }
   }, [extraHosts, pinLayout.visibleIds, poiHosts])
 
   useEffect(() => {
     const maps = mapsRef.current
     const map = mapRef.current
     if (!ready || !maps || !map) return
+
     const records = pinLayout.clusters.map((cluster) => {
       const host = document.createElement('div')
       const overlay = new maps.CustomOverlay({
@@ -392,6 +457,7 @@ export function KakaoMapView({
       overlay.setMap(map)
       return { clusterId: cluster.id, host, overlay }
     })
+
     clusterOverlaysRef.current = records
     setClusterHosts(records.map(({ clusterId, host }) => ({ clusterId, host })))
     return () => {
@@ -405,7 +471,8 @@ export function KakaoMapView({
     const map = mapRef.current
     if (!ready || !maps || !map) return
 
-    if (navigationMode) {
+    // 찍기 모드에서는 중앙 십자선이 출발 마커를 대신한다.
+    if (navigationMode || pickMode) {
       setDepartureHost(null)
       return
     }
@@ -423,7 +490,15 @@ export function KakaoMapView({
     setDepartureHost(host)
 
     return () => overlay.setMap(null)
-  }, [departure.lat, departure.lon, navigationMode, ready])
+  }, [departure.lat, departure.lon, navigationMode, pickMode, ready])
+
+  // 내 위치 등 외부에서 지정한 좌표로 이동 (찍기 모드 전용)
+  useEffect(() => {
+    const maps = mapsRef.current
+    const map = mapRef.current
+    if (!ready || !pickMode || !focusPoint || !maps || !map) return
+    map.panTo(new maps.LatLng(focusPoint.lat, focusPoint.lng))
+  }, [focusPoint, pickMode, ready])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -647,7 +722,11 @@ export function KakaoMapView({
       {clusterHosts.map(({ clusterId, host }) => {
         const cluster = clusterById.get(clusterId)
         if (!cluster) return null
-        return createPortal(<MapClusterPin count={cluster.count} onClick={() => openCluster(cluster)} />, host, clusterId)
+        return createPortal(
+          <MapClusterPin count={cluster.count} onClick={() => openCluster(cluster)} />,
+          host,
+          clusterId,
+        )
       })}
       {departureHost && !navigationMode && createPortal(<DeparturePin name={departure.name} />, departureHost)}
       {currentPositionHost && navigationMode && createPortal(<CurrentPositionPin headingDeg={currentHeadingDeg} />, currentPositionHost)}
@@ -663,11 +742,13 @@ export function KakaoMapView({
             <path d="M5 12 h14" />
           </svg>
         </button>
-        <button className="l-icon-btn" aria-label="전체 보기" onPointerDown={(event) => event.stopPropagation()} onClick={fitAll}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
-            <path d="M9 4 H4 v5 M15 4 h5 v5 M9 20 H4 v-5 M15 20 h5 v-5" />
-          </svg>
-        </button>
+        {!pickMode && (
+          <button className="l-icon-btn" aria-label="전체 보기" onPointerDown={(event) => event.stopPropagation()} onClick={fitAll}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5a9e" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+              <path d="M9 4 H4 v5 M15 4 h5 v5 M9 20 H4 v-5 M15 20 h5 v-5" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   )

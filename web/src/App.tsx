@@ -13,6 +13,7 @@ import { SpinScreen, type SpinPurpose } from './screens/SpinScreen'
 import { StampScreen } from './screens/StampScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { DepartureScreen } from './screens/DepartureScreen'
+import { OriginPickScreen } from './screens/OriginPickScreen'
 import { RevealScreen } from './screens/RevealScreen'
 import { ResultScreen } from './screens/ResultScreen'
 import { CourseScreen } from './screens/CourseScreen'
@@ -295,7 +296,19 @@ function App() {
             setDeparture(d)
             goTo(departureReturn)
           }}
+          onOpenMap={() => goTo('origin-pick')}
           onBack={() => goTo(departureReturn)}
+        />
+      )
+    case 'origin-pick':
+      return (
+        <OriginPickScreen
+          origin={departure}
+          onConfirm={(d) => {
+            setDeparture(d)
+            goTo(departureReturn)
+          }}
+          onBack={() => goTo('departure')}
         />
       )
     case 'reveal':

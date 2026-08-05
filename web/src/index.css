@@ -2913,8 +2913,17 @@ button.is-pressing:not(:disabled) {
   line-height: 1;
   pointer-events: none;
 }
-.map-pin__status--busy { background: var(--l-orange); box-shadow: 0 3px 8px rgba(126, 47, 26, .3); }
-.map-pin__status--good { background: #1f9d72; box-shadow: 0 3px 8px rgba(19, 112, 78, .28); font-size: 8px; }
+
+.map-pin__status--busy {
+  background: var(--l-orange);
+  box-shadow: 0 3px 8px rgba(126, 47, 26, .3);
+}
+
+.map-pin__status--good {
+  background: #1f9d72;
+  box-shadow: 0 3px 8px rgba(19, 112, 78, .28);
+  font-size: 8px;
+}
 
 .map-cluster {
   position: absolute;
@@ -2930,6 +2939,7 @@ button.is-pressing:not(:disabled) {
   pointer-events: auto;
   place-items: center;
 }
+
 .map-cluster > span {
   display: grid;
   width: 32px;
@@ -2944,8 +2954,14 @@ button.is-pressing:not(:disabled) {
   font-weight: 900;
   line-height: 1;
 }
-.map-cluster:active:not(:disabled) { transform: none; }
-.map-cluster:active:not(:disabled) > span { transform: scale(.94); }
+
+.map-cluster:active:not(:disabled) {
+  transform: none;
+}
+
+.map-cluster:active:not(:disabled) > span {
+  transform: scale(.94);
+}
 
 /* 명소 지도 하단 시트 — 핀을 탭하면 사진+요약이 지도 아래 절반으로 올라온다 */
 .spot-sheet {
@@ -3046,8 +3062,18 @@ button.is-pressing:not(:disabled) {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
-.congestion-status--loaded { flex-wrap: wrap; column-gap: 10px; row-gap: 4px; }
-.congestion-status--error { align-items: center; flex-wrap: wrap; }
+
+.congestion-status--loaded {
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 4px;
+}
+
+.congestion-status--error {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .congestion-status button {
   min-width: 64px;
   min-height: 44px;
@@ -3061,6 +3087,7 @@ button.is-pressing:not(:disabled) {
   white-space: nowrap;
   cursor: pointer;
 }
+
 .congestion-badge {
   display: inline-flex;
   min-height: 24px;
@@ -3071,8 +3098,10 @@ button.is-pressing:not(:disabled) {
   font-weight: 800;
   line-height: 1.2;
 }
+
 .congestion-badge--busy { color: #a9462d; }
 .congestion-badge--good { color: #167a58; }
+
 .congestion-badge__mark {
   display: grid;
   width: 17px;
@@ -3085,8 +3114,16 @@ button.is-pressing:not(:disabled) {
   font-weight: 900;
   line-height: 1;
 }
-.congestion-badge--busy .congestion-badge__mark { background: var(--l-orange); font-size: 11px; }
-.congestion-badge--good .congestion-badge__mark { background: #1f9d72; }
+
+.congestion-badge--busy .congestion-badge__mark {
+  background: var(--l-orange);
+  font-size: 11px;
+}
+
+.congestion-badge--good .congestion-badge__mark {
+  background: #1f9d72;
+}
+
 .congestion-badge__count {
   min-width: 17px;
   padding: 1px 5px;
@@ -3096,11 +3133,26 @@ button.is-pressing:not(:disabled) {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.congestion-status .congestion-badge { min-height: 20px; margin-top: 0; }
-.motion-card-list > .congestion-status { position: static; max-width: none; flex: none; align-self: stretch; }
+
+.congestion-status .congestion-badge {
+  min-height: 20px;
+  margin-top: 0;
+}
+
+/* 리스트 모드에서는 상태가 문서 흐름을 차지해 첫 카드를 가리지 않는다. */
+.motion-card-list > .congestion-status {
+  position: static;
+  max-width: none;
+  flex: none;
+  align-self: stretch;
+}
 
 @media (prefers-reduced-transparency: reduce) {
-  .congestion-status { background: #f8fbff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .congestion-status {
+    background: #f8fbff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 /* 별도 푸터 공간을 만들지 않고 지도 위에 출처를 띄운다.
@@ -3456,6 +3508,56 @@ button.is-pressing:not(:disabled) {
   .course-guide-arrow { width: min(28vw, 112px); }
   .course-guide-map-note { padding-block: 9px; }
   .course-arrival-photo { height: 26vh; }
+}
+
+/* ── 지도에서 출발점 찍기 ── */
+
+/* 화면 중앙 = 후보 좌표. 물방울 끝이 정확히 중앙 픽셀에 오도록 앵커만 잡는다. */
+.origin-pick__crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 12;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.origin-pick__crosshair .map-pin__drop {
+  position: absolute;
+  animation: origin-pick-hover 2.6s ease-in-out infinite;
+}
+
+.origin-pick__crosshair-shadow {
+  position: absolute;
+  top: -3px;
+  left: -7px;
+  width: 14px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(25, 55, 130, 0.22);
+  filter: blur(1px);
+}
+
+@keyframes origin-pick-hover {
+  0%, 100% { transform: translate(-50%, -100%); }
+  50% { transform: translate(-50%, calc(-100% - 4px)); }
+}
+
+.origin-pick__locate {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 12;
+}
+
+.origin-pick__sheet {
+  z-index: 14;
+  flex: none;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0;
+  background: #fff;
+  box-shadow: 0 -14px 34px -18px rgba(20, 50, 140, .5);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,7 @@
-export interface KakaoLatLng {}
+export interface KakaoLatLng {
+  getLat(): number
+  getLng(): number
+}
 
 export interface KakaoLatLngBounds {
   extend(position: KakaoLatLng): void
@@ -17,6 +20,8 @@ export interface KakaoProjection {
 
 export interface KakaoMap {
   getProjection(): KakaoProjection
+  /** 현재 지도 중심 — 출발점 찍기 모드에서 화면 중앙 좌표를 읽는 데만 쓴다 (단말 내 계산). */
+  getCenter(): KakaoLatLng
   setBounds(
     bounds: KakaoLatLngBounds,
     paddingTop?: number,
@@ -43,7 +48,7 @@ export interface KakaoPolyline {
   setPath(path: KakaoLatLng[]): void
 }
 
-type KakaoMapEvent = 'click' | 'dragstart' | 'zoom_changed'
+type KakaoMapEvent = 'click' | 'dragstart' | 'zoom_changed' | 'idle'
 type KakaoMapEventListener = () => void
 
 export interface KakaoMapsNs {
