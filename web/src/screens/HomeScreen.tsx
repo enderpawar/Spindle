@@ -208,7 +208,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
               onClick={() => onOpenTheme(theme.id)}
               className="home-theme-card motion-card motion-card-enter"
               data-theme={theme.id}
-              style={{ background: `linear-gradient(145deg, ${theme.color}, #edf4ff 175%)` }}
+              style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
             >
               <div aria-hidden className="home-theme-symbol">
                 {theme.emoji}
