@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { MapPoiPreview } from '../components/MapPoiPreview'
-import { directionOf, type Poi } from '../mock/pois'
+import { type Poi } from '../mock/pois'
 import { CLOSED_PIN_OPACITY, mapPinLabel, type MapViewProps } from './LocalMapView'
-import { CuratedPinShape, SpotPinShape } from '../components/Icons'
+import { DEFAULT_PIN_COLOR, MapPin, pinColorOf } from './MapPin'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMapsNs, KakaoPolyline } from './kakaoLoader'
 
 interface PoiOverlayHost {
@@ -30,8 +30,6 @@ interface ExtraOverlayRecord extends ExtraOverlayHost {
 interface PoiPinProps {
   poi: Poi
   selected: boolean
-  busy: boolean
-  good: boolean
   /** 운영 중단·운영시간 외 — 핀을 흐리게 그린다 */
   closed: boolean
   order?: number
@@ -41,85 +39,31 @@ interface PoiPinProps {
   showPreview: boolean
 }
 
-function PoiPin({ poi, selected, busy, good, closed, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
-  const color = directionOf(poi.direction).color
+function PoiPin({ poi, selected, closed, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
+  const color = pinColorOf(poi)
   const inCourse = order !== undefined
-  const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 22 : 16
+  const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 24 : 19
 
   return (
     <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>
       <button
+        className="map-pin"
+        type="button"
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation()
           onPick(poi.id)
         }}
-        aria-label={mapPinLabel(poi.name, closed, busy, good)}
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          padding: 0,
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          pointerEvents: 'auto',
-          opacity: closed ? CLOSED_PIN_OPACITY : 1,
-        }}
+        aria-label={mapPinLabel(poi.name, closed)}
+        style={closed ? { opacity: CLOSED_PIN_OPACITY } : undefined}
       >
-        <svg
-          width={sizePx}
-          height={sizePx * 1.28}
-          viewBox="0 0 30 38"
-          style={{
-            display: 'block',
-            transform: 'translate(-50%,-100%)',
-            filter: selected ? `drop-shadow(0 6px 10px ${color}88)` : 'drop-shadow(0 3px 5px rgba(25,55,130,.35))',
-            transition: 'width .18s ease, height .18s ease',
-          }}
-          aria-hidden
-        >
-          {inCourse ? (
-            <>
-              <path d="M15 1.5A13.5 13.5 0 0 0 1.5 15c0 9.35 9.6 18.69 13.5 21.5 3.9-2.81 13.5-12.15 13.5-21.5A13.5 13.5 0 0 0 15 1.5Z" fill={color} stroke="#fff" strokeWidth={2.2} />
-              <text x="15" y="20" textAnchor="middle" fontSize="15" fontWeight="900" fill="#fff">
-                {order}
-              </text>
-            </>
-          ) : (
-            <CuratedPinShape color={color} />
-          )}
-        </svg>
-        {busy && (
-          <span className="map-congestion-pin" style={{ left: sizePx * 0.18, top: sizePx * -1.35 }} aria-hidden="true">
-            !
-          </span>
-        )}
-        {!busy && good && (
-          <span className="map-good-pin" style={{ left: sizePx * 0.18, top: sizePx * -1.35 }} aria-hidden="true">
-            ✓
-          </span>
-        )}
-        {(selected || showLabel || inCourse) && (
-          <span
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 3,
-              padding: '2px 7px',
-              borderRadius: 7,
-              background: selected ? '#fff' : 'rgba(255,255,255,.82)',
-              boxShadow: selected ? '0 3px 10px -3px rgba(20,50,140,.4)' : 'none',
-              color: '#1d3a75',
-              fontSize: 10.5,
-              fontWeight: 800,
-              whiteSpace: 'nowrap',
-              transform: 'translateX(-50%)',
-            }}
-          >
-            {poi.name}
-          </span>
-        )}
+        <MapPin
+          color={color}
+          size={sizePx}
+          order={order}
+          selected={selected}
+          label={selected || showLabel || inCourse ? poi.name : undefined}
+        />
       </button>
 
       {selected && showPreview && <MapPoiPreview poi={poi} color={color} onOpen={onOpen} />}
@@ -127,38 +71,36 @@ function PoiPin({ poi, selected, busy, good, closed, order, showLabel, onPick, o
   )
 }
 
-function ExtraSpotPin({ spot, selected, busy, good, closed, showLabel, onPick, onOpen, showPreview }: {
+function ExtraSpotPin({ spot, selected, closed, showLabel, onPick, onOpen, showPreview }: {
   spot: ExtraSpot
   selected: boolean
-  busy: boolean
-  good: boolean
   closed: boolean
   showLabel: boolean
   onPick: (id: string | null) => void
   onOpen?: (poi: Poi) => void
   showPreview: boolean
 }) {
-  const color = directionOf(spot.direction).color
+  const color = pinColorOf(spot)
 
   return (
     <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>
       <button
-        className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
+        className="map-pin"
         type="button"
         style={closed ? { opacity: CLOSED_PIN_OPACITY } : undefined}
-        aria-label={mapPinLabel(spot.name, closed, busy, good)}
+        aria-label={mapPinLabel(spot.name, closed)}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
           event.stopPropagation()
           onPick(spot.id)
         }}
       >
-        <svg className="map-extra-spot__pin" viewBox="0 0 18 23" aria-hidden="true">
-          <SpotPinShape color={color} />
-        </svg>
-        {busy && <span className="map-congestion-pin map-extra-spot__status" aria-hidden="true">!</span>}
-        {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
-        {(selected || showLabel) && <span className="map-extra-spot__label">{spot.name}</span>}
+        <MapPin
+          color={color}
+          size={selected ? 20 : 14}
+          selected={selected}
+          label={selected || showLabel ? spot.name : undefined}
+        />
       </button>
 
       {selected && showPreview && <MapPoiPreview poi={spot} color={color} onOpen={onOpen} />}
@@ -193,8 +135,6 @@ export function KakaoMapView({
   pois,
   departure,
   selectedId,
-  busyPoiIds,
-  goodPoiIds,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
@@ -239,7 +179,7 @@ export function KakaoMapView({
     return order
   }, [courseOrder])
   const firstCoursePoi = pois.find((poi) => orderNum.has(poi.id))
-  const routeColor = firstCoursePoi ? directionOf(firstCoursePoi.direction).color : '#2f5cff'
+  const routeColor = firstCoursePoi ? pinColorOf(firstCoursePoi) : DEFAULT_PIN_COLOR
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -342,10 +282,10 @@ export function KakaoMapView({
   useEffect(() => {
     for (const record of poiOverlaysRef.current) {
       const poi = poiById.get(record.poiId)
-      const zIndex = record.poiId === selectedId ? 100 : busyPoiIds?.has(record.poiId) ? 40 : goodPoiIds?.has(record.poiId) ? 35 : poi?.tier === 1 ? 30 : 20
+      const zIndex = record.poiId === selectedId ? 100 : poi?.tier === 1 ? 30 : 20
       record.overlay.setZIndex(zIndex)
     }
-  }, [busyPoiIds, goodPoiIds, poiById, poiHosts, selectedId])
+  }, [poiById, poiHosts, selectedId])
 
   useEffect(() => {
     const maps = mapsRef.current
@@ -480,7 +420,7 @@ export function KakaoMapView({
       const selected = poiById.get(selectedId)
       if (selected) {
         path.push(new maps.LatLng(selected.lat, selected.lon))
-        color = directionOf(selected.direction).color
+        color = pinColorOf(selected)
         strokeWeight = 2
         strokeOpacity = 0.85
       }
@@ -582,8 +522,6 @@ export function KakaoMapView({
             poi={poi}
             showPreview={showSelectedPreview}
             selected={poiId === selectedId}
-            busy={busyPoiIds?.has(poiId) ?? false}
-            good={goodPoiIds?.has(poiId) ?? false}
             closed={closedPoiIds?.has(poiId) ?? false}
             order={orderNum.get(poiId)}
             showLabel={level <= 5}
@@ -602,8 +540,6 @@ export function KakaoMapView({
             key={spotId}
             spot={spot}
             selected={spotId === selectedId}
-            busy={busyPoiIds?.has(spotId) ?? false}
-            good={goodPoiIds?.has(spotId) ?? false}
             closed={closedPoiIds?.has(spotId) ?? false}
             showLabel={level <= 4}
             onPick={onPick}

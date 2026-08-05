@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BRIDGES, GEO, LAND_PATH, ROADS_MAJOR, ROADS_MINOR, project } from './busanGeo'
-import { directionOf, type Departure, type Poi } from '../mock/pois'
+import { type Departure, type Poi } from '../mock/pois'
 import { MapPoiPreview } from '../components/MapPoiPreview'
-import { CuratedPinShape, SpotPinShape } from '../components/Icons'
+import { MapPin, pinColorOf } from './MapPin'
 import type { GeoPoint } from '../engine/geo'
 
 /*
@@ -25,10 +25,6 @@ export interface MapViewProps {
   pois: Poi[]
   departure: Departure
   selectedId: string | null
-  /** 당일 혼잡 예상 기준을 넘은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
-  busyPoiIds?: ReadonlySet<string>
-  /** 당일 혼잡 예측이 낮아 가기 좋은 POI id. 정보 표시 전용이며 지도 계산에는 쓰지 않는다. */
-  goodPoiIds?: ReadonlySet<string>
   /** 운영 중단·운영시간 외로 확인된 POI id — 핀을 흐리게 그린다 (선택·열기는 그대로 가능). */
   closedPoiIds?: ReadonlySet<string>
   /** 큐레이션 외 전체 명소(areaBasedList2) — 축소형 핀으로 표시. Poi 형태라 프리뷰도 재사용한다. */
@@ -89,12 +85,9 @@ const EMPTY_EXTRA_SPOTS: NonNullable<MapViewProps['extraSpots']> = []
  */
 export const CLOSED_PIN_OPACITY = 0.38
 
-/** 핀 접근성 라벨 — 운영 안내가 혼잡 안내보다 우선한다. */
-export function mapPinLabel(name: string, closed: boolean, busy: boolean, good: boolean): string {
-  if (closed) return `${name}, 지금 갈 수 없어요`
-  if (busy) return `${name}, 오늘 혼잡 예상`
-  if (good) return `${name}, 오늘 가기 좋아요`
-  return name
+/** 핀 접근성 라벨 — 운영 안내만 이름 뒤에 덧붙인다. */
+export function mapPinLabel(name: string, closed: boolean): string {
+  return closed ? `${name}, 지금 갈 수 없어요` : name
 }
 
 function ease(t: number) {
@@ -113,8 +106,6 @@ export function LocalMapView({
   pois,
   departure,
   selectedId,
-  busyPoiIds,
-  goodPoiIds,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
   onPick,
@@ -190,7 +181,7 @@ export function LocalMapView({
     () =>
       pois.map((p) => {
         const { x, y } = project(p.lat, p.lon)
-        return { poi: p, x, y, color: directionOf(p.direction).color }
+        return { poi: p, x, y, color: pinColorOf(p) }
       }),
     [pois],
   )
@@ -618,14 +609,12 @@ export function LocalMapView({
           </div>
         )}
 
-        {/* 전체 명소 축소형 핀 — 큐레이션 핀보다 낮은 위계로 조용히 표시한다. */}
+        {/* 전체 명소 축소형 핀 — 큐레이션 핀과 같은 물방울을 작게 그린다. */}
         {extraPins.map(({ spot, x, y }) => {
           const s = toScreen(x, y)
           const selected = spot.id === selectedId
-          const busy = busyPoiIds?.has(spot.id) ?? false
-          const good = goodPoiIds?.has(spot.id) ?? false
           const closed = closedPoiIds?.has(spot.id) ?? false
-          const color = directionOf(spot.direction).color
+          const color = pinColorOf(spot)
           return (
             <div
               key={spot.id}
@@ -641,21 +630,21 @@ export function LocalMapView({
               }}
             >
               <button
-                className={`map-extra-spot${selected ? ' map-extra-spot--selected' : ''}`}
+                className="map-pin"
                 type="button"
-                aria-label={mapPinLabel(spot.name, closed, busy, good)}
+                aria-label={mapPinLabel(spot.name, closed)}
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={(event) => {
                   event.stopPropagation()
                   onPick(spot.id)
                 }}
               >
-                <svg className="map-extra-spot__pin" viewBox="0 0 18 23" aria-hidden="true">
-                  <SpotPinShape color={color} />
-                </svg>
-                {busy && <span className="map-congestion-pin map-extra-spot__status" aria-hidden="true">!</span>}
-                {!busy && good && <span className="map-good-pin map-extra-spot__status" aria-hidden="true">✓</span>}
-                {(selected || showPoiLabels) && <span className="map-extra-spot__label">{spot.name}</span>}
+                <MapPin
+                  color={color}
+                  size={selected ? 20 : 14}
+                  selected={selected}
+                  label={selected || showPoiLabels ? spot.name : undefined}
+                />
               </button>
 
               {selected && showSelectedPreview && <MapPoiPreview poi={spot} color={color} onOpen={onOpen} />}
@@ -667,12 +656,10 @@ export function LocalMapView({
         {pins.map(({ poi, x, y, color }) => {
           const s = toScreen(x, y)
           const sel = poi.id === selectedId
-          const busy = busyPoiIds?.has(poi.id) ?? false
-          const good = goodPoiIds?.has(poi.id) ?? false
           const closed = closedPoiIds?.has(poi.id) ?? false
           const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
-          const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 22 : 16
+          const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 24 : 19
           return (
             <div
               key={poi.id}
@@ -681,84 +668,29 @@ export function LocalMapView({
                 left: 0,
                 top: 0,
                 transform: `translate3d(${s.x}px,${s.y}px,0)`,
-                zIndex: sel ? 6 : busy ? 4 : poi.tier === 1 ? 3 : 2,
+                zIndex: sel ? 6 : poi.tier === 1 ? 3 : 2,
                 opacity: closed ? CLOSED_PIN_OPACITY : 1,
                 pointerEvents: 'none',
                 willChange: 'transform',
               }}
             >
               <button
+                className="map-pin"
+                type="button"
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation()
                   onPick(poi.id)
                 }}
-                aria-label={mapPinLabel(poi.name, closed, busy, good)}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  pointerEvents: 'auto',
-                }}
+                aria-label={mapPinLabel(poi.name, closed)}
               >
-                <svg
-                  width={sizePx}
-                  height={sizePx * 1.28}
-                  viewBox="0 0 30 38"
-                  style={{ display: 'block', transform: 'translate(-50%,-100%)', filter: sel ? `drop-shadow(0 6px 10px ${color}88)` : 'drop-shadow(0 3px 5px rgba(25,55,130,.35))', transition: 'width .18s ease, height .18s ease' }}
-                  aria-hidden
-                >
-                  {inCourse ? (
-                    <>
-                      <path d="M15 1.5A13.5 13.5 0 0 0 1.5 15c0 9.35 9.6 18.69 13.5 21.5 3.9-2.81 13.5-12.15 13.5-21.5A13.5 13.5 0 0 0 15 1.5Z" fill={color} stroke="#fff" strokeWidth={2.2} />
-                      <text x="15" y="20" textAnchor="middle" fontSize="15" fontWeight="900" fill="#fff">{n}</text>
-                    </>
-                  ) : (
-                    <CuratedPinShape color={color} />
-                  )}
-                </svg>
-                {busy && (
-                  <span
-                    className="map-congestion-pin"
-                    style={{ left: sizePx * 0.18, top: sizePx * -1.35 }}
-                    aria-hidden="true"
-                  >
-                    !
-                  </span>
-                )}
-                {!busy && good && (
-                  <span
-                    className="map-good-pin"
-                    style={{ left: sizePx * 0.18, top: sizePx * -1.35 }}
-                    aria-hidden="true"
-                  >
-                    ✓
-                  </span>
-                )}
-                {(sel || showPoiLabels || inCourse) && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 3,
-                      transform: 'translateX(-50%)',
-                      fontSize: 10.5,
-                      fontWeight: 800,
-                      color: '#1d3a75',
-                      whiteSpace: 'nowrap',
-                      padding: '2px 7px',
-                      borderRadius: 7,
-                      background: sel ? '#fff' : 'rgba(255,255,255,.82)',
-                      boxShadow: sel ? '0 3px 10px -3px rgba(20,50,140,.4)' : 'none',
-                    }}
-                  >
-                    {poi.name}
-                  </span>
-                )}
+                <MapPin
+                  color={color}
+                  size={sizePx}
+                  order={n}
+                  selected={sel}
+                  label={sel || showPoiLabels || inCourse ? poi.name : undefined}
+                />
               </button>
 
               {/* 사진·핀·라벨이 같은 앵커 transform을 공유해 팬 애니메이션 중 어긋나지 않는다. */}

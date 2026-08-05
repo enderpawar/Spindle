@@ -2832,77 +2832,72 @@ button.is-pressing:not(:disabled) {
   transition-timing-function: var(--ease-touch-down);
 }
 
-/* 큐레이션 외 전체 명소는 큰 물방울 핀의 형태를 잇는 축소형 핀으로 표시한다. */
-.map-extra-spot {
+/* 지도 핀 — 큐레이션·전체 명소·코스 순번 핀이 모두 같은 물방울 하나를 쓴다.
+   형태로 위계를 나누지 않고 크기와 테마색만 다르게 준다 (MapPin.tsx). */
+.map-pin {
   position: absolute;
   left: 0;
   top: 0;
-  box-sizing: border-box;
-  width: 16px;
-  height: 21px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: #7895bf;
-  filter: drop-shadow(0 2px 3px rgba(40, 65, 105, 0.3));
   cursor: pointer;
   pointer-events: auto;
-  transform: translate(-50%, -100%);
-  transition: width 180ms ease, height 180ms ease, color 180ms ease, filter 180ms ease;
 }
 
-.map-extra-spot::after {
+/* 작은 핀도 손가락으로 집히도록 보이는 물방울 둘레로 여유 히트영역을 깐다. */
+.map-pin::after {
   position: absolute;
-  inset: -12px -14px -11px;
+  left: -50%;
+  top: -100%;
+  box-sizing: content-box;
+  width: 100%;
+  height: 100%;
+  padding: 7px 10px;
+  margin: -7px -10px;
   content: '';
 }
 
-.map-extra-spot__pin {
+.map-pin__drop {
   display: block;
-  width: 100%;
-  height: 100%;
   overflow: visible;
+  transform: translate(-50%, -100%);
+  transition: width 180ms ease, height 180ms ease, filter 180ms ease;
 }
 
-.map-extra-spot__pin path {
-  fill: currentColor;
-  stroke: #fff;
-  stroke-width: 2;
+/* 전역 button:active 축소는 앵커를 흔든다 — 핀은 물방울만 눌린다. */
+.map-pin:active:not(:disabled) {
+  transform: none;
 }
 
-.map-extra-spot__pin circle {
-  fill: #fff;
-}
-
-.map-extra-spot--selected {
-  width: 22px;
-  height: 28px;
-  color: var(--l-primary);
-  filter: drop-shadow(0 4px 7px rgba(47, 92, 255, 0.42));
-}
-
-.map-extra-spot:active:not(:disabled),
-.map-extra-spot.is-pressing:not(:disabled) {
+.map-pin:active:not(:disabled) .map-pin__drop {
   transform: translate(-50%, -100%) scale(0.94);
 }
 
-.map-extra-spot__label {
+.map-pin__label {
   position: absolute;
-  left: 50%;
-  top: calc(100% + 3px);
-  padding: 2px 5px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #36527e;
-  font-size: 10px;
-  font-weight: 700;
+  left: 0;
+  top: 4px;
+  z-index: 1;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2b4a80;
+  font-size: 10.5px;
+  font-weight: 750;
   line-height: 1.25;
   white-space: nowrap;
   pointer-events: none;
   transform: translateX(-50%);
 }
 
-/* 명소 지도 혼잡 예측. 현재 인원수가 아닌 당일 예측임을 텍스트로 함께 전달한다. */
+.map-pin__label--on {
+  background: #fff;
+  color: #17347f;
+  font-weight: 800;
+  box-shadow: 0 5px 14px -7px rgba(20, 50, 140, 0.6);
+}
+
 /* 명소 지도 하단 시트 — 핀을 탭하면 사진+요약이 지도 아래 절반으로 올라온다 */
 .spot-sheet {
   position: absolute;
@@ -2969,12 +2964,6 @@ button.is-pressing:not(:disabled) {
   pointer-events: none;
 }
 
-.map-status-stack > .congestion-status {
-  position: static;
-  max-width: 100%;
-  pointer-events: auto;
-}
-
 .extra-spots-status {
   padding: 0 3px;
   color: #49617f;
@@ -2999,78 +2988,6 @@ button.is-pressing:not(:disabled) {
   pointer-events: none;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-}
-
-.map-congestion-pin,
-.map-good-pin {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  width: 14px;
-  height: 14px;
-  place-items: center;
-  border: 1.5px solid #fff;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 900;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.map-congestion-pin {
-  background: var(--l-orange);
-  box-shadow: 0 3px 8px rgba(126, 47, 26, 0.3);
-}
-
-.map-good-pin {
-  background: #23ad78;
-  box-shadow: 0 3px 8px rgba(19, 112, 78, 0.28);
-  font-size: 8px;
-}
-
-.map-extra-spot__status {
-  top: -4px;
-  left: 10px;
-}
-
-.congestion-status {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 12;
-  display: flex;
-  min-height: 36px;
-  max-width: calc(100% - 88px);
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 7px 18px -12px rgba(20, 40, 90, 0.45);
-  color: var(--l-ink-2);
-  font-size: 11.5px;
-  font-weight: 750;
-  line-height: 1.35;
-  backdrop-filter: blur(8px);
-}
-
-.congestion-status--error {
-  align-items: center;
-}
-
-.congestion-status button {
-  min-width: 64px;
-  min-height: 44px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--l-soft);
-  color: var(--l-primary);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
 }
 
 /* 운영 중단·운영시간 외 안내 — 결과/명소 상세 카드에서 장소명 바로 아래 */
@@ -3098,72 +3015,6 @@ button.is-pressing:not(:disabled) {
   font-size: 11.5px;
   font-weight: 900;
   line-height: 1;
-}
-
-.congestion-badge {
-  display: inline-flex;
-  min-height: 24px;
-  align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  color: #a9462d;
-  font-size: 11.5px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.good-to-go-badge {
-  display: inline-flex;
-  min-height: 24px;
-  align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  color: #167a58;
-  font-size: 11.5px;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.congestion-status .congestion-badge,
-.congestion-status .good-to-go-badge {
-  min-height: 20px;
-  margin-top: 0;
-}
-
-.good-to-go-badge__mark {
-  display: grid;
-  width: 17px;
-  height: 17px;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: #23ad78;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.congestion-badge__mark {
-  display: grid;
-  width: 17px;
-  height: 17px;
-  flex: none;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--l-orange);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 900;
-  line-height: 1;
-}
-
-/* 리스트 모드에서는 상태가 문서 흐름을 차지해 첫 카드를 가리지 않는다. */
-.motion-card-list > .congestion-status {
-  position: static;
-  max-width: none;
-  flex: none;
-  align-self: stretch;
 }
 
 @media (max-width: 320px) {
