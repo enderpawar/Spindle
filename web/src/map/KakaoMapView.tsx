@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { MapPoiPreview } from '../components/MapPoiPreview'
 import { type Poi } from '../mock/pois'
 import { CLOSED_PIN_OPACITY, mapPinLabel, type MapViewProps } from './LocalMapView'
-import { DEFAULT_PIN_COLOR, MapPin, pinColorOf } from './MapPin'
+import { COURSE_PIN_SIZE, DEFAULT_PIN_COLOR, MAP_PIN_SIZE, MapPin, pinColorOf } from './MapPin'
 import type { KakaoCustomOverlay, KakaoMap, KakaoMapsNs, KakaoPolyline } from './kakaoLoader'
 
 interface PoiOverlayHost {
@@ -42,7 +42,7 @@ interface PoiPinProps {
 function PoiPin({ poi, selected, closed, order, showLabel, onPick, onOpen, showPreview }: PoiPinProps) {
   const color = pinColorOf(poi)
   const inCourse = order !== undefined
-  const sizePx = inCourse ? (selected ? 30 : 26) : selected ? 24 : 19
+  const sizePx = inCourse ? COURSE_PIN_SIZE : MAP_PIN_SIZE
 
   return (
     <div style={{ position: 'relative', width: 0, height: 0, pointerEvents: 'none' }}>
@@ -97,7 +97,7 @@ function ExtraSpotPin({ spot, selected, closed, showLabel, onPick, onOpen, showP
       >
         <MapPin
           color={color}
-          size={selected ? 20 : 14}
+          size={MAP_PIN_SIZE}
           selected={selected}
           label={selected || showLabel ? spot.name : undefined}
         />

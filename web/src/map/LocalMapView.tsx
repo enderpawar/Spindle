@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BRIDGES, GEO, LAND_PATH, ROADS_MAJOR, ROADS_MINOR, project } from './busanGeo'
 import { type Departure, type Poi } from '../mock/pois'
 import { MapPoiPreview } from '../components/MapPoiPreview'
-import { MapPin, pinColorOf } from './MapPin'
+import { COURSE_PIN_SIZE, MAP_PIN_SIZE, MapPin, pinColorOf } from './MapPin'
 import type { GeoPoint } from '../engine/geo'
 
 /*
@@ -609,7 +609,7 @@ export function LocalMapView({
           </div>
         )}
 
-        {/* 전체 명소 축소형 핀 — 큐레이션 핀과 같은 물방울을 작게 그린다. */}
+        {/* 전체 명소 핀 — 큐레이션 핀과 같은 물방울·같은 크기로 그린다. */}
         {extraPins.map(({ spot, x, y }) => {
           const s = toScreen(x, y)
           const selected = spot.id === selectedId
@@ -641,7 +641,7 @@ export function LocalMapView({
               >
                 <MapPin
                   color={color}
-                  size={selected ? 20 : 14}
+                  size={MAP_PIN_SIZE}
                   selected={selected}
                   label={selected || showPoiLabels ? spot.name : undefined}
                 />
@@ -659,7 +659,7 @@ export function LocalMapView({
           const closed = closedPoiIds?.has(poi.id) ?? false
           const n = orderNum.get(poi.id)
           const inCourse = n !== undefined
-          const sizePx = inCourse ? (sel ? 30 : 26) : sel ? 24 : 19
+          const sizePx = inCourse ? COURSE_PIN_SIZE : MAP_PIN_SIZE
           return (
             <div
               key={poi.id}
