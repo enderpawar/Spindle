@@ -211,7 +211,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
               style={{ background: `linear-gradient(145deg, ${theme.color}, #edf4ff 175%)` }}
             >
               <div aria-hidden className="home-theme-symbol">
-                {theme.label.slice(0, 1)}
+                {theme.emoji}
               </div>
               <div className="home-theme-title">{theme.label}</div>
               <div className="home-theme-tagline">{theme.tagline}</div>
