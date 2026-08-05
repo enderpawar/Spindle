@@ -237,8 +237,8 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
             const [bx2, by2] = polar(140, angle + 22.5)
             return (
               <g key={dir.id}>
-                {/* 림 방위 색 아크 */}
-                <path d={arcPath(150, angle - 16, angle + 16)} stroke={dir.color} strokeWidth="7" fill="none" opacity="0.5" strokeLinecap="round" />
+                {/* 림 아크 — 방위별 색을 쓰지 않고 Spindle 테마 블루로 통일 */}
+                <path d={arcPath(150, angle - 16, angle + 16)} stroke="var(--l-primary)" strokeWidth="7" fill="none" opacity="0.42" strokeLinecap="round" />
                 {/* 눈금 — 방위선(굵게) + 경계선(얇게) */}
                 <line x1={mx1} y1={my1} x2={mx2} y2={my2} stroke="rgba(90,118,168,.5)" strokeWidth={cardinal ? 2.5 : 1.5} strokeLinecap="round" />
                 <line x1={bx1} y1={by1} x2={bx2} y2={by2} stroke="rgba(139,163,207,.45)" strokeWidth="1" />
@@ -255,6 +255,20 @@ export function CompassRose({ disabled, onSpinningChange, onHeading, onSettle, f
               </g>
             )
           })}
+
+          {/* 중앙 나침반 — 북쪽을 가리키는 양면 바늘과 작은 브랜드 별 허브 */}
+          <g aria-hidden strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="160" cy="160" r="40" fill="rgba(47,92,255,.04)" stroke="rgba(47,92,255,.12)" />
+            <path d="M160 123 L147 160 L160 154 Z" fill="var(--l-primary)" />
+            <path d="M160 123 L173 160 L160 154 Z" fill="var(--l-primary)" fillOpacity="0.68" />
+            <path d="M160 197 L147 160 L160 166 Z" fill="var(--l-primary)" fillOpacity="0.18" />
+            <path d="M160 197 L173 160 L160 166 Z" fill="var(--l-primary)" fillOpacity="0.32" />
+            <circle cx="160" cy="160" r="15" fill="#ffffff" stroke="var(--l-primary)" strokeWidth="3" />
+            <path
+              d="M160 150.5 L163 157 L169.5 160 L163 163 L160 169.5 L157 163 L150.5 160 L157 157 Z"
+              fill="var(--l-primary)"
+            />
+          </g>
         </svg>
       </div>
     </div>
