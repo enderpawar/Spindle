@@ -13,8 +13,9 @@ describe('iPhone PWA mobile layout contract', () => {
     expect(mobileCss).toMatch(/html:has\(\.bottom-nav\),\s*body:has\(\.bottom-nav\)\s*{\s*background:\s*#fff;/)
   })
 
-  it('앱 프레임을 뷰포트 밖으로 늘리지 않는다 (밖은 터치가 안 먹는다)', () => {
-    expect(mobileCss).toMatch(/#root\s*{[^}]*inset:\s*0;/s)
+  it('앱 프레임을 실제로 보이는 높이(뷰포트 − 상단 inset)로 맞춘다', () => {
+    expect(mobileCss).toMatch(/#root\s*{[^}]*height:\s*calc\(100% - env\(safe-area-inset-top, 0px\)\);/s)
+    // 프레임 밖은 그려지기만 하고 터치를 받지 못한다 — 늘리는 보정은 쓰지 않는다.
     expect(mobileCss).not.toMatch(/--app-bottom-gap/)
   })
 

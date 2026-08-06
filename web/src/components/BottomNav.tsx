@@ -52,10 +52,11 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
       className="bottom-nav"
       aria-label="주요 메뉴"
       style={{
-        // 화면 컨테이너(.screen)의 계산 높이에 기대지 않도록 내비게이션은 뷰포트
-        // 기준으로 고정하고, 480px 중앙 정렬과 safe area는 자체 스타일로 처리한다.
-        // (실제 프레임 고정은 mobile-pwa.css의 #root position:fixed가 담당한다)
-        position: 'fixed',
+        // 뷰포트(fixed)가 아니라 앱 프레임 기준으로 붙인다. iOS 홈화면 실행은
+        // 레이아웃 뷰포트를 실제로 보이는 높이보다 크게 보고해서, 뷰포트 바닥에
+        // 고정하면 라벨이 화면 밖으로 잘린다. 프레임 높이는 mobile-pwa.css의
+        // #root가 보이는 만큼으로 맞춰 둔다.
+        position: 'absolute',
         bottom: 0,
         left: '50%',
         width: '100%',
