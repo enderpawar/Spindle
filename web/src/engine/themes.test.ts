@@ -11,6 +11,14 @@ import {
   type ThemeId,
 } from './themes'
 
+const EXPECTED_REPRESENTATIVE: Record<ThemeId, string> = {
+  sea: 'taejongdae',
+  alley: 'bupyeong-market',
+  history: 'baeksan-memorial',
+  night: 'busan-tower',
+  food: 'gukje-food-alley',
+}
+
 describe('themes', () => {
   it('모든 POI는 최소 1개 테마에 속한다 (빈 덱 방지)', () => {
     for (const poi of POI_POOL) {
@@ -28,6 +36,7 @@ describe('themes', () => {
     for (const theme of THEMES) {
       const representative = representativePoiForTheme(theme.id)
       expect(representative, `${theme.id} 대표 장소 없음`).toBeDefined()
+      expect(representative!.id).toBe(EXPECTED_REPRESENTATIVE[theme.id])
       expect(themesOf(representative!).includes(theme.id), `${theme.id} 대표 장소 테마 불일치`).toBe(true)
     }
   })
