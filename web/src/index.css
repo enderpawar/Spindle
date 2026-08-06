@@ -1217,7 +1217,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
-  animation: spinGestureCue 1.6s var(--ease-smooth-spring) 2;
+  animation: spinGestureCue 1.6s var(--ease-smooth-spring) infinite;
 }
 
 .spin-gesture-cue-mark::after {
