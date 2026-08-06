@@ -1330,9 +1330,9 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 22px;
   background:
-    radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--theme-color) 48%, transparent), transparent 42%),
-    linear-gradient(145deg, color-mix(in srgb, var(--theme-color) 36%, #14366f), #0f2540 72%);
-  box-shadow: 0 18px 36px -24px color-mix(in srgb, var(--theme-color) 58%, #14366f);
+    radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--theme-color) 58%, transparent), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-color) 58%, #2b68bd), #21518f 72%);
+  box-shadow: 0 18px 36px -24px color-mix(in srgb, var(--theme-color) 58%, #1c4a8c);
   animation: themeStoryCardIn 520ms var(--spring-pop) both;
 }
 
@@ -1351,12 +1351,15 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   animation: themeStoryDrift 7.5s ease-in-out infinite alternate;
 }
 
+/* 카드 자체는 테마색으로 밝게 두고, 흰 글자가 얹히는 왼쪽 열(0~48%)에서만
+   스크림을 평평하게 유지하다 사진이 시작되는 60% 직후 완전히 빠진다.
+   사진(.theme-story-media, z-index 2)은 이 레이어(z-index 1) 위라 영향받지 않는다. */
 .theme-story-card::after {
   content: '';
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: linear-gradient(90deg, rgba(5, 18, 40, 0.56) 0%, rgba(5, 18, 40, 0.34) 48%, rgba(5, 18, 40, 0) 74%);
+  background: linear-gradient(90deg, rgba(5, 18, 40, 0.56) 0%, rgba(5, 18, 40, 0.46) 48%, rgba(5, 18, 40, 0) 70%);
   pointer-events: none;
 }
 
@@ -1406,7 +1409,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 .theme-story-copy p {
   max-width: 20ch;
   margin: 8px 0 14px;
-  color: rgba(255, 255, 255, 0.92);
+  color: #fff;
   font-size: 12px;
   font-weight: 650;
   line-height: 1.48;
@@ -1441,7 +1444,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   height: 100%;
   overflow: hidden;
   clip-path: polygon(17% 0, 100% 0, 100% 100%, 0 100%);
-  background: color-mix(in srgb, var(--theme-color) 34%, #15345d);
+  background: color-mix(in srgb, var(--theme-color) 46%, #24589c);
 }
 
 .theme-story-media::after {
@@ -1450,7 +1453,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   inset: 0;
   z-index: 2;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--theme-color) 24%, #102743) 0%, transparent 38%),
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-color) 24%, #1d4677) 0%, transparent 38%),
     linear-gradient(180deg, transparent 58%, rgba(9, 27, 56, 0.3));
   pointer-events: none;
 }
@@ -1470,7 +1473,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   place-items: center;
   background:
     radial-gradient(circle at 72% 28%, rgba(255, 255, 255, 0.3), transparent 26%),
-    linear-gradient(155deg, color-mix(in srgb, var(--theme-color) 72%, white), color-mix(in srgb, var(--theme-color) 55%, #173d72));
+    linear-gradient(155deg, color-mix(in srgb, var(--theme-color) 72%, white), color-mix(in srgb, var(--theme-color) 55%, #24589c));
 }
 
 .theme-story-photo-fallback span {
@@ -1586,7 +1589,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   }
 
   .theme-story-card::after {
-    background: linear-gradient(180deg, rgba(5, 18, 40, 0) 30%, rgba(5, 18, 40, 0.52) 62%);
+    background: linear-gradient(180deg, rgba(5, 18, 40, 0) 30%, rgba(5, 18, 40, 0.56) 62%);
   }
 
   .theme-story-media {
