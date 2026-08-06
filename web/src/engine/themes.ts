@@ -136,6 +136,15 @@ const POI_EXTRA_THEMES: Record<string, ThemeId[]> = {
   'songdo-skywalk-bridge': ['sea'],
 }
 
+/** 테마 덱의 사진 히어로에 노출할 대표 장소. TourAPI 이미지는 화면 진입 때만 실시간 조회한다. */
+const THEME_REPRESENTATIVE_POI: Readonly<Record<ThemeId, string>> = {
+  sea: 'taejongdae',
+  alley: 'bupyeong-market',
+  history: 'baeksan-memorial',
+  night: 'busan-tower',
+  food: 'gukje-food-alley',
+}
+
 export function themesOf(poi: Poi): ThemeId[] {
   const base = CATEGORY_THEMES[poi.category] ?? []
   const extra = POI_EXTRA_THEMES[poi.id] ?? []
@@ -144,6 +153,11 @@ export function themesOf(poi: Poi): ThemeId[] {
 
 export function poisByTheme(themeId: ThemeId): Poi[] {
   return POI_POOL.filter((poi) => themesOf(poi).includes(themeId))
+}
+
+export function representativePoiForTheme(themeId: ThemeId): Poi | undefined {
+  const themedPois = poisByTheme(themeId)
+  return themedPois.find((poi) => poi.id === THEME_REPRESENTATIVE_POI[themeId]) ?? themedPois[0]
 }
 
 export function themeInfo(id: ThemeId): ThemeInfo {
