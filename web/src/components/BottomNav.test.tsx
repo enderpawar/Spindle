@@ -2,8 +2,9 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { BottomNav } from './BottomNav'
 
+// 레이아웃 회귀는 실기기 육안 확인 대상이다.
 describe('BottomNav', () => {
-  it('화면 컨테이너 높이와 무관하게 뷰포트 최하단에 고정된다', () => {
+  it('뷰포트 기준 fixed·480px 중앙 정렬·safe area 패딩 스타일을 유지한다', () => {
     const markup = renderToStaticMarkup(
       <BottomNav active="home" onNavigate={() => undefined} />,
     )

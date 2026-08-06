@@ -1210,6 +1210,10 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   opacity: 0;
 }
 
+.spin-gesture-cue.is-hidden .spin-gesture-cue-mark {
+  animation-play-state: paused;
+}
+
 .spin-gesture-cue-mark {
   position: relative;
   width: 18px;
@@ -1347,6 +1351,15 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   animation: themeStoryDrift 7.5s ease-in-out infinite alternate;
 }
 
+.theme-story-card::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(5, 18, 40, 0.72) 0%, rgba(5, 18, 40, 0.5) 46%, rgba(5, 18, 40, 0) 70%);
+  pointer-events: none;
+}
+
 .theme-story-glow {
   position: absolute;
   z-index: 0;
@@ -1393,8 +1406,8 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 .theme-story-copy p {
   max-width: 20ch;
   margin: 8px 0 14px;
-  color: rgba(255, 255, 255, 0.84);
-  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
   font-weight: 650;
   line-height: 1.48;
 }
@@ -1553,7 +1566,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 
   .theme-story-copy p {
     max-width: 18ch;
-    font-size: 10.5px;
+    font-size: 11.5px;
   }
 
   .theme-story-cta {
@@ -1570,6 +1583,10 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 @media (max-width: 320px) {
   .theme-story-card {
     min-height: 354px;
+  }
+
+  .theme-story-card::after {
+    background: linear-gradient(180deg, rgba(5, 18, 40, 0) 30%, rgba(5, 18, 40, 0.66) 62%);
   }
 
   .theme-story-media {

@@ -34,9 +34,9 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
       className="bottom-nav"
       aria-label="주요 메뉴"
       style={{
-        // iOS standalone은 화면 컨테이너 높이를 실제 표시 영역보다 짧게
-        // 계산할 수 있다. 내비게이션은 컨테이너가 아니라 뷰포트 하단에
-        // 고정하고 safe area는 내부 패딩으로 흡수한다.
+        // 화면 컨테이너(.screen)의 계산 높이에 기대지 않도록 내비게이션은 뷰포트
+        // 기준으로 고정하고, 480px 중앙 정렬과 safe area는 자체 스타일로 처리한다.
+        // (실제 프레임 고정은 mobile-pwa.css의 #root position:fixed가 담당한다)
         position: 'fixed',
         bottom: 0,
         left: '50%',
