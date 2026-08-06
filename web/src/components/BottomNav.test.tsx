@@ -10,8 +10,7 @@ describe('BottomNav', () => {
     )
 
     expect(markup).toContain('position:fixed')
-    // iOS standalone이 짧게 보고한 뷰포트만큼 실측값으로 다시 내려 화면 바닥에 밀착시킨다.
-    expect(markup).toContain('bottom:calc(var(--app-bottom-gap, 0px) * -1)')
+    expect(markup).toContain('bottom:0')
     expect(markup).toContain('left:50%')
     expect(markup).toContain('width:100%')
     expect(markup).toContain('max-width:480px')

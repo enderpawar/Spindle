@@ -20,16 +20,13 @@ body:has(.bottom-nav) {
   background: #fff;
 }
 
-/* 앱 프레임은 뷰포트 상단에 고정하되, iOS standalone이 실제 화면보다 짧게 보고한
-   만큼(--app-bottom-gap, pwa/appFrame.ts가 실측) 아래로 더 늘린다. 그래야 하단
-   내비게이션과 시트가 화면 바닥에 밀착한다. 버그가 없는 환경에서는 변수가 0px이라
-   기존 동작(inset: 0)과 같다. */
+/* 앱 프레임은 뷰포트에 그대로 고정한다. 레이아웃 뷰포트 밖으로 밀어낸 영역은
+   iOS에서 그려지기만 하고 터치를 받지 못하므로, 프레임을 화면보다 크게 늘려
+   내비게이션을 내리는 보정은 쓰지 않는다 (상태바 스타일 default가 전제). */
 #root {
   position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: calc(100% + var(--app-bottom-gap, 0px));
+  inset: 0;
+  height: auto;
   min-height: 0;
   overflow: hidden;
 }

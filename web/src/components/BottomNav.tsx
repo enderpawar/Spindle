@@ -55,10 +55,8 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         // 화면 컨테이너(.screen)의 계산 높이에 기대지 않도록 내비게이션은 뷰포트
         // 기준으로 고정하고, 480px 중앙 정렬과 safe area는 자체 스타일로 처리한다.
         // (실제 프레임 고정은 mobile-pwa.css의 #root position:fixed가 담당한다)
-        // iOS standalone이 뷰포트를 상태바 높이만큼 짧게 보고하면 bottom: 0이 화면
-        // 바닥보다 위에 멈추므로, 실측한 --app-bottom-gap만큼 다시 내린다.
         position: 'fixed',
-        bottom: 'calc(var(--app-bottom-gap, 0px) * -1)',
+        bottom: 0,
         left: '50%',
         width: '100%',
         maxWidth: 480,
