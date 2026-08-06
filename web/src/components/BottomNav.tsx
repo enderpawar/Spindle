@@ -34,10 +34,15 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
       className="bottom-nav"
       aria-label="주요 메뉴"
       style={{
-        position: 'absolute',
+        // iOS standalone은 화면 컨테이너 높이를 실제 표시 영역보다 짧게
+        // 계산할 수 있다. 내비게이션은 컨테이너가 아니라 뷰포트 하단에
+        // 고정하고 safe area는 내부 패딩으로 흡수한다.
+        position: 'fixed',
         bottom: 0,
-        left: 0,
-        right: 0,
+        left: '50%',
+        width: '100%',
+        maxWidth: 480,
+        transform: 'translateX(-50%)',
         background: '#fff',
         boxShadow: '0 -6px 20px -8px rgba(20,40,90,.18)',
         display: 'flex',
