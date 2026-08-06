@@ -11,6 +11,15 @@ body {
   height: 100%;
 }
 
+/* WebKit standalone can paint the Home Indicator inset outside the fixed app
+   frame using the document canvas background. Match that inset to the global
+   navigation only while a tab screen is mounted, without changing dark ritual
+   screens that do not render BottomNav. */
+html:has(.bottom-nav),
+body:has(.bottom-nav) {
+  background: #fff;
+}
+
 #root {
   position: fixed;
   inset: 0;
@@ -35,17 +44,21 @@ body {
   height: 100%;
 }
 
-/* The spot sheet already ends above the global bottom navigation, so it must
-   not reserve the device bottom safe area a second time. Give its photo a
-   stable mobile-first size instead of only the flex space left by the copy. */
+/* The sheet shares the map viewport with a fixed navigation layer. Make the
+   full card independently scrollable and reserve enough trailing space for
+   its CTA to move above the navigation on short iPhone PWA viewports. */
 .spot-sheet {
   height: min(68%, 500px);
   min-height: min(360px, calc(100% - 24px));
-  padding-bottom: 14px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .spot-sheet__photo {
-  flex: 1 1 clamp(170px, 26dvh, 240px);
+  flex: 0 0 clamp(170px, 26dvh, 240px);
   min-height: 170px;
   max-height: 240px;
 }

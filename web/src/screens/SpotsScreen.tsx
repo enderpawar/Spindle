@@ -337,7 +337,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             지도는 선택 핀을 시트 위쪽 가운데로 부드럽게 정렬한다(selectionOffsetRatio).
           */}
           {selectedPoi && (
-            <section key={selectedPoi.id} className="spot-sheet" aria-live="polite">
+            <section key={selectedPoi.id} className="spot-sheet no-scrollbar" aria-live="polite">
               <button type="button" className="spot-sheet__close" onClick={() => pick(null)} aria-label="닫기">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.8} strokeLinecap="round" aria-hidden>
                   <path d="M6 6 L18 18 M18 6 L6 18" />
