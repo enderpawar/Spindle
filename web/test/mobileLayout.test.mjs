@@ -8,8 +8,13 @@ describe('iPhone PWA mobile layout contract', () => {
     expect(mobileCss).toMatch(/html:has\(\.bottom-nav\),\s*body:has\(\.bottom-nav\)\s*{\s*background:\s*#fff;/)
   })
 
-  it('명소 상세 시트가 독립적으로 세로 스크롤되고 내비게이션 공간을 예약한다', () => {
-    expect(mobileCss).toMatch(/\.spot-sheet\s*{[^}]*padding-bottom:\s*calc\(96px \+ env\(safe-area-inset-bottom\)\);/s)
+  it('앱 프레임이 iOS standalone의 하단 죽은 띠만큼 늘어난다', () => {
+    expect(mobileCss).toMatch(/#root\s*{[^}]*height:\s*calc\(100% \+ var\(--app-bottom-gap, 0px\)\);/s)
+  })
+
+  it('명소 상세 시트가 내비게이션 위에서 멈추고 독립적으로 세로 스크롤된다', () => {
+    expect(mobileCss).toMatch(/\.spot-sheet\s*{[^}]*--sheet-space:\s*calc\(100% - var\(--nav-h/s)
+    expect(mobileCss).toMatch(/\.spot-sheet\s*{[^}]*max-height:\s*var\(--sheet-space\);/s)
     expect(mobileCss).toMatch(/\.spot-sheet\s*{[^}]*overflow-y:\s*auto;/s)
     expect(mobileCss).toMatch(/\.spot-sheet\s*{[^}]*touch-action:\s*pan-y;/s)
     expect(mobileCss).toMatch(/\.spot-sheet__photo\s*{[^}]*flex:\s*0 0 clamp\(/s)

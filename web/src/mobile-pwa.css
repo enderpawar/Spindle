@@ -20,10 +20,16 @@ body:has(.bottom-nav) {
   background: #fff;
 }
 
+/* 앱 프레임은 뷰포트 상단에 고정하되, iOS standalone이 실제 화면보다 짧게 보고한
+   만큼(--app-bottom-gap, pwa/appFrame.ts가 실측) 아래로 더 늘린다. 그래야 하단
+   내비게이션과 시트가 화면 바닥에 밀착한다. 버그가 없는 환경에서는 변수가 0px이라
+   기존 동작(inset: 0)과 같다. */
 #root {
   position: fixed;
-  inset: 0;
-  height: auto;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(100% + var(--app-bottom-gap, 0px));
   min-height: 0;
   overflow: hidden;
 }
@@ -44,13 +50,14 @@ body:has(.bottom-nav) {
   height: 100%;
 }
 
-/* The sheet shares the map viewport with a fixed navigation layer. Make the
-   full card independently scrollable and reserve enough trailing space for
-   its CTA to move above the navigation on short iPhone PWA viewports. */
+/* The sheet stops above the navigation instead of sliding under it, so the CTA
+   is never cropped. It still scrolls as a safety net on very short viewports. */
 .spot-sheet {
-  height: min(68%, 500px);
-  min-height: min(360px, calc(100% - 24px));
-  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  --sheet-space: calc(100% - var(--nav-h, calc(88px + env(safe-area-inset-bottom))) - 8px);
+  height: min(74%, 470px);
+  min-height: min(330px, var(--sheet-space));
+  max-height: var(--sheet-space);
+  padding-bottom: 14px;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   touch-action: pan-y;
@@ -65,7 +72,7 @@ body:has(.bottom-nav) {
 
 @media (max-height: 700px) {
   .spot-sheet {
-    min-height: min(326px, calc(100% - 16px));
+    min-height: min(300px, var(--sheet-space));
   }
 
   .spot-sheet__photo {

@@ -378,7 +378,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
           </div>
         </>
       ) : (
-        <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(92px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(var(--nav-h, calc(88px + env(safe-area-inset-bottom))) + 16px)', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <CongestionStatus
             state={congestion}
             busyCount={congestionCounts.busy}

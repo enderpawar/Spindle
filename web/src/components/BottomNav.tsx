@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import {
   NavHomeIcon,
   NavSettingsIcon,
@@ -29,16 +29,36 @@ function Item({ label, active, icon, onClick }: { label: string; active: boolean
 
 export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: (tab: NavTab) => void }) {
   const c = (tab: NavTab) => (active === tab ? ACTIVE : INACTIVE)
+  const navRef = useRef<HTMLElement | null>(null)
+
+  // 내비게이션이 실제로 가리는 높이를 CSS 변수로 알린다. 각 화면이 하단 여백을
+  // 숫자로 추정하지 않고 이 값을 쓰면 콘텐츠가 내비게이션에 잘리지 않는다.
+  useEffect(() => {
+    const node = navRef.current
+    if (!node) return
+    const publish = () => {
+      document.documentElement.style.setProperty('--nav-h', `${Math.round(node.getBoundingClientRect().height)}px`)
+    }
+    publish()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(publish)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <nav
+      ref={navRef}
       className="bottom-nav"
       aria-label="주요 메뉴"
       style={{
         // 화면 컨테이너(.screen)의 계산 높이에 기대지 않도록 내비게이션은 뷰포트
         // 기준으로 고정하고, 480px 중앙 정렬과 safe area는 자체 스타일로 처리한다.
         // (실제 프레임 고정은 mobile-pwa.css의 #root position:fixed가 담당한다)
+        // iOS standalone이 뷰포트를 상태바 높이만큼 짧게 보고하면 bottom: 0이 화면
+        // 바닥보다 위에 멈추므로, 실측한 --app-bottom-gap만큼 다시 내린다.
         position: 'fixed',
-        bottom: 0,
+        bottom: 'calc(var(--app-bottom-gap, 0px) * -1)',
         left: '50%',
         width: '100%',
         maxWidth: 480,

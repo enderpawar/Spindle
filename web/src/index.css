@@ -3103,18 +3103,20 @@ button.is-pressing:not(:disabled) {
   transform: scale(.94);
 }
 
-/* 명소 지도 하단 시트 — 핀을 탭하면 사진+요약이 지도 아래 절반으로 올라온다 */
+/* 명소 지도 하단 시트 — 핀을 탭하면 사진+요약이 지도 아래 절반으로 올라온다.
+   내비게이션 위에서 멈춰 세워 카드가 잘리지 않게 한다 (--nav-h는 BottomNav가 실측). */
 .spot-sheet {
   position: absolute;
   right: 0;
-  bottom: 0;
+  bottom: var(--nav-h, calc(88px + env(safe-area-inset-bottom)));
   left: 0;
   z-index: 12;
   display: flex;
   flex-direction: column;
   height: 50%;
   min-height: 260px;
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  max-height: calc(100% - var(--nav-h, calc(88px + env(safe-area-inset-bottom))) - 8px);
+  padding: 12px 16px 14px;
   border-radius: 22px 22px 0 0;
   background: #fff;
   box-shadow: 0 -14px 34px -18px rgba(20, 50, 140, .5);

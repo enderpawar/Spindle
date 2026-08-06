@@ -4,9 +4,11 @@ import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'
 import './index.css'
 import './mobile-pwa.css'
 import App from './App.tsx'
+import { installAppFrameMetrics } from './pwa/appFrame'
 import { registerSpindlePwa } from './pwa/register'
 
 registerSpindlePwa()
+installAppFrameMetrics()
 
 const removedEntryPath = `/${['travel', 'html'].join('.')}`
 if (window.location.pathname === removedEntryPath) {
