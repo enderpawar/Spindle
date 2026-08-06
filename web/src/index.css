@@ -1356,7 +1356,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: linear-gradient(90deg, rgba(5, 18, 40, 0.72) 0%, rgba(5, 18, 40, 0.5) 46%, rgba(5, 18, 40, 0) 70%);
+  background: linear-gradient(90deg, rgba(5, 18, 40, 0.56) 0%, rgba(5, 18, 40, 0.34) 48%, rgba(5, 18, 40, 0) 74%);
   pointer-events: none;
 }
 
@@ -1586,7 +1586,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   }
 
   .theme-story-card::after {
-    background: linear-gradient(180deg, rgba(5, 18, 40, 0) 30%, rgba(5, 18, 40, 0.66) 62%);
+    background: linear-gradient(180deg, rgba(5, 18, 40, 0) 30%, rgba(5, 18, 40, 0.52) 62%);
   }
 
   .theme-story-media {
