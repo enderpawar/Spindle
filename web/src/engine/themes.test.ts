@@ -4,6 +4,7 @@ import {
   THEMES,
   pickThemeMission,
   poisByTheme,
+  representativePoiForTheme,
   themeJourneyTarget,
   themeSpinResult,
   themesOf,
@@ -20,6 +21,14 @@ describe('themes', () => {
   it('모든 테마 덱은 최소 2개 POI를 가진다 (덱이 비지 않게)', () => {
     for (const theme of THEMES) {
       expect(poisByTheme(theme.id).length, `${theme.id} 덱 부족`).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('모든 테마의 대표 사진 장소는 실제 해당 테마 후보에 속한다', () => {
+    for (const theme of THEMES) {
+      const representative = representativePoiForTheme(theme.id)
+      expect(representative, `${theme.id} 대표 장소 없음`).toBeDefined()
+      expect(themesOf(representative!).includes(theme.id), `${theme.id} 대표 장소 테마 불일치`).toBe(true)
     }
   })
 

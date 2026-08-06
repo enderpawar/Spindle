@@ -3,8 +3,8 @@ import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
-import { THEMES, poisByTheme, themeInfo, type ThemeId } from '../engine/themes'
-import { DIRECTIONS, directionOf, type Poi } from '../mock/pois'
+import { THEMES, poisByTheme, representativePoiForTheme, themeInfo, type ThemeId } from '../engine/themes'
+import { directionOf, type Poi } from '../mock/pois'
 import { useVisited } from '../lib/visited'
 
 interface Props {
@@ -22,6 +22,7 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect
   const visited = useVisited()
   const theme = themeInfo(themeId)
   const pois = poisByTheme(themeId)
+  const representative = representativePoiForTheme(themeId)
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
@@ -67,44 +68,46 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect
         })}
       </div>
 
-      {/* 선택 테마 소개·디스크·장소 목록은 한 흐름으로 함께 스크롤한다. */}
+      {/* 선택 테마 소개·사진 히어로·장소 목록은 한 흐름으로 함께 스크롤한다. */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         <div style={{ padding: '10px 18px 0', zIndex: 2 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>
-            <b style={{ color: theme.color, fontWeight: 900 }}>{theme.label}</b> · {theme.tagline} · {pois.length}곳
+          <div className="theme-deck-summary">
+            <span><b style={{ color: theme.color }}>{theme.label}</b> {theme.tagline}</span>
+            <strong>{pois.length}곳</strong>
           </div>
         </div>
 
-        <section className="theme-disc-intro" aria-labelledby="theme-disc-title">
-          <div className="theme-disc-preview" style={{ '--theme-color': theme.color } as React.CSSProperties} aria-hidden="true">
-            {DIRECTIONS.map((direction, index) => (
-              <span
-                key={direction.id}
-                className="theme-disc-direction"
-                style={{
-                  '--disc-angle': `${index * 45}deg`,
-                  '--disc-counter-angle': `${-index * 45}deg`,
-                } as React.CSSProperties}
-              >
-                {direction.label.slice(0, 1)}
-              </span>
-            ))}
-            <div className="theme-disc-center">
-              <strong>{theme.label}</strong>
-              <span>{pois.length}곳</span>
-            </div>
-          </div>
-          <div className="theme-disc-copy">
-            <h1 id="theme-disc-title">{theme.label} 테마로 방향을 맡겨보세요</h1>
-            <p>{journeyTarget}개의 장면과 매번 다른 여행 미션을 만나요.</p>
+        <section
+          key={themeId}
+          className="theme-story-card"
+          style={{ '--theme-color': theme.color } as React.CSSProperties}
+          aria-labelledby="theme-story-title"
+        >
+          <div className="theme-story-glow" aria-hidden="true" />
+          <div className="theme-story-copy">
+            <span className="theme-story-symbol" aria-hidden>{theme.emoji}</span>
+            <h1 id="theme-story-title">{theme.label} 테마로<br />방향을 맡겨보세요</h1>
+            <p>{journeyTarget}개의 장면, 매번 다른 여행 미션을 만나요.</p>
             <button
               type="button"
-              className="btn btn-blue"
+              className="theme-story-cta motion-card"
               onClick={() => onStart(themeId)}
               disabled={pois.length === 0}
             >
               이 테마로 돌리기
             </button>
+          </div>
+          <div className="theme-story-media">
+            <div className="theme-story-photo-fallback" aria-hidden>
+              <span>{theme.emoji}</span>
+            </div>
+            {representative && (
+              <PoiPhoto
+                contentId={representative.contentId}
+                alt={`${theme.label} 테마 대표 장소 ${representative.name}`}
+                scrim
+              />
+            )}
           </div>
         </section>
 
