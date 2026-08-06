@@ -2884,7 +2884,7 @@ button:disabled,
   z-index: 1;
   fill: #78b2ff;
   opacity: 0.68;
-  animation: introWaveBack 4.8s ease-in-out infinite alternate;
+  animation: introWaveBack 3.2s ease-in-out infinite alternate;
 }
 .intro-tide-surface--front {
   z-index: 2;
@@ -2892,7 +2892,7 @@ button:disabled,
   left: -36%;
   width: 172%;
   fill: #2876e8;
-  animation: introWaveFront 3.7s ease-in-out infinite alternate;
+  animation: introWaveFront 2.45s ease-in-out infinite alternate;
 }
 
 @keyframes introWaveBack {
