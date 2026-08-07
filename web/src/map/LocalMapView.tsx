@@ -577,9 +577,12 @@ export function LocalMapView({
   const currentScreen = current ? toScreen(current.x, current.y) : null
   const routeStartScreen = currentScreen ?? depScreen
   return (
+    // isolation: 핀의 z-index(PIN_LAYER 20~100)를 지도 안에 가둔다. 없으면 z-index:auto라
+    // 쌓임 맥락이 안 생겨 핀이 부모 맥락으로 올라오고, 명소 시트(.spot-sheet z-12)와
+    // 출처 표기(.spots-source-overlay z-10) 위에 그려진다.
     <div
       ref={wrapRef}
-      style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'linear-gradient(180deg, #cde3fb, #b7d4f6)', touchAction: 'none', cursor: 'grab', userSelect: 'none' }}
+      style={{ position: 'absolute', inset: 0, isolation: 'isolate', overflow: 'hidden', background: 'linear-gradient(180deg, #cde3fb, #b7d4f6)', touchAction: 'none', cursor: 'grab', userSelect: 'none' }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

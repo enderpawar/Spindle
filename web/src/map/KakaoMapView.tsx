@@ -679,7 +679,10 @@ export function KakaoMapView({
   }
 
   return (
-    <div ref={wrapRef} style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: '#c3dcf9' }}>
+    // isolation: 핀 오버레이(z 20~120)와 줌 컨트롤(z 200)을 지도 안에 가둔다. 없으면
+    // z-index:auto라 쌓임 맥락이 안 생겨 부모 맥락으로 올라오고, 명소 시트(.spot-sheet
+    // z-12)와 출처 표기(.spots-source-overlay z-10) 위에 그려진다.
+    <div ref={wrapRef} style={{ position: 'absolute', inset: 0, isolation: 'isolate', overflow: 'hidden', background: '#c3dcf9' }}>
       <div
         ref={mapContainerRef}
         style={{ position: 'absolute', inset: navigationMode ? '0 0 min(48dvh, 430px) 0' : 0 }}
