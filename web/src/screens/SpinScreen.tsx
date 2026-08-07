@@ -182,17 +182,6 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           <span className="spin-gesture-cue-mark" aria-hidden />
           {shakeOn ? '휴대폰을 흔들거나, 원판을 휙 돌려보세요' : '원판을 잡고 휙 돌려보세요'}
         </p>
-        {/* iOS는 사용자 제스처 안에서만 동작 센서 권한을 물을 수 있다 (sensors 스킬) */}
-        {!fieldOn && !busy && shake.needsPermission && shake.status !== 'on' && (
-          <button
-            type="button"
-            className="spin-shake-enable"
-            onClick={() => void shake.enable()}
-            disabled={shake.status === 'requesting'}
-          >
-            {shake.status === 'requesting' ? '흔들기 준비 중…' : '휴대폰을 흔들어서 돌리기'}
-          </button>
-        )}
       </div>
 
       {/* 하단에는 이동시간 카드만 남기고, 스핀 실행은 원판 직접 조작으로 일원화한다. */}

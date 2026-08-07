@@ -1247,27 +1247,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   }
 }
 
-/* 흔들기 스핀 켜기 — iOS 동작 센서 권한 프롬프트를 부르는 조용한 텍스트 버튼 */
-.spin-shake-enable {
-  min-height: 32px;
-  padding: 4px 10px;
-  border: 0;
-  background: transparent;
-  color: var(--l-primary);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-
-.spin-shake-enable:disabled {
-  color: var(--l-ink-3);
-  text-decoration: none;
-  cursor: default;
-}
-
 .spin-controls {
   position: relative;
   z-index: 2;

@@ -27,6 +27,18 @@ export function motionNeedsPermission(): boolean {
 }
 
 /**
+ * 이 페이지 세션에서 이미 받은 응답. iOS는 페이지 로드마다 제스처 안에서 물어야 하지만,
+ * 같은 로드 안에서는 한 번 허용받으면 이후 구독에 다시 물을 필요가 없다 —
+ * 스핀 탭을 오갈 때마다 프롬프트가 다시 뜨지 않게 기억해 둔다. (영속 저장 아님, 메모리 한정)
+ */
+let sessionPermission: MotionPermission | null = null;
+
+/** 이번 페이지 로드에서 이미 확정된 응답 (아직 묻지 않았으면 null) */
+export function knownMotionPermission(): MotionPermission | null {
+  return sessionPermission;
+}
+
+/**
  * iOS 13+ 모션 권한 요청 — 나침반과 마찬가지로 **사용자 제스처 핸들러 안에서** 호출한다.
  * 모션 권한은 방위 권한과 별개라 `requestOrientationPermission`을 통과했어도 따로 물어야 한다.
  */
@@ -36,13 +48,15 @@ export async function requestMotionPermission(): Promise<MotionPermission> {
   if (typeof ctor.requestPermission === "function") {
     try {
       const res = await ctor.requestPermission();
-      return res === "granted" ? "granted" : "denied";
+      sessionPermission = res === "granted" ? "granted" : "denied";
     } catch {
       // 제스처 밖 호출 등으로 예외 → 거부로 처리하고 드래그 스핀만 남긴다
-      return "denied";
+      sessionPermission = "denied";
     }
+    return sessionPermission;
   }
-  return "granted";
+  sessionPermission = "granted";
+  return sessionPermission;
 }
 
 /**
