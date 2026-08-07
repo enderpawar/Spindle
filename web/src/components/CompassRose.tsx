@@ -1,5 +1,12 @@
-import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { DIRECTIONS } from '../mock/pois'
+import { SHAKE_DEADZONE, SHAKE_TRIGGER } from '../engine/shake'
+
+/** 흔들기 등 화면 밖 입력으로 원판을 돌리기 위한 명령형 핸들 */
+export interface CompassRoseHandle {
+  /** 흔들림 세기(ShakeMeter 단위)를 회전 에너지로 밀어 넣는다 */
+  shake: (energy: number) => void
+}
 
 interface Props {
   disabled?: boolean
@@ -22,6 +29,15 @@ const DECAY_TAU = 480 // ms — 감속 시정수 (초속 1.8deg/ms 기준 약 2.
 const MAX_VELOCITY = 3.2
 const LABEL_RADIUS = 96
 
+/** 흔들기 세기 1당 더해지는 각속도(deg/ms) — 두어 번 세게 흔들면 최고 속도에 닿는 크기 */
+const SHAKE_GAIN = 0.05
+/** 멈춘 원판을 새로 돌리기 시작시키는 세기 (데드존 차감 후 기준) */
+const SHAKE_START_ENERGY = SHAKE_TRIGGER - SHAKE_DEADZONE
+/** 흔드는 동안의 감쇠 시정수 — 흔들기를 멈추는 순간 바로 처지도록 관성보다 짧게 잡는다 */
+const SHAKE_DRIVE_TAU = 700
+/** 이 시간 동안 흔들림이 없으면 손을 멈춘 것으로 보고 관성 감속으로 넘긴다 */
+const SHAKE_IDLE_MS = 260
+
 const polar = (r: number, deg: number) => {
   const rad = (deg * Math.PI) / 180
   return [160 + r * Math.sin(rad), 160 - r * Math.cos(rad)] as const
@@ -33,7 +49,10 @@ const arcPath = (r: number, a1: number, a2: number) => {
   return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`
 }
 
-export function CompassRose({ disabled, describedById, onSpinningChange, onHeading, onSettle, followHeading = null }: Props) {
+export const CompassRose = forwardRef<CompassRoseHandle, Props>(function CompassRose(
+  { disabled, describedById, onSpinningChange, onHeading, onSettle, followHeading = null }: Props,
+  handleRef,
+) {
   const following = followHeading !== null
   // 현장 모드에서는 드래그·플릭·버튼 스핀을 모두 막는다 — 방위의 출처는 기기뿐이다.
   const locked = disabled || following
@@ -48,6 +67,13 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
   const spinning = useRef(false)
   const fallback = useRef<ReturnType<typeof setTimeout>>(undefined)
   const labelRefs = useRef<(SVGTextElement | null)[]>([])
+  // 흔들기 구동 상태 — 흔드는 동안은 관성 폐형식 대신 프레임 적분으로 돌린다.
+  const shaking = useRef(false)
+  const shakeDirection = useRef(1)
+  const lastShakeAt = useRef(0)
+  const driveAt = useRef(0)
+  // 정착 직후 리렌더로 disabled가 내려오기 전 남은 흔들림이 원판을 다시 돌리지 못하게 막는다.
+  const finished = useRef(false)
 
   const headingOf = (rot: number) => ((-rot % 360) + 360) % 360
 
@@ -75,7 +101,8 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
     const t0 = performance.now()
     // 지수 감쇠의 폐형식 해 — rAF는 그리기만 담당하고, 물리는 경과 시간으로 계산한다.
     // 탭이 가려져 rAF가 멈춰도 setTimeout 폴백이 정확한 최종 각도로 정착시킨다.
-    const duration = DECAY_TAU * Math.log(Math.abs(v0) / STOP_THRESHOLD)
+    // 이미 멈춘 것이나 다름없는 속도(v0≈0)면 log가 음수라 duration이 0으로 눌려 즉시 정착한다.
+    const duration = Math.max(DECAY_TAU * Math.log(Math.abs(v0) / STOP_THRESHOLD), 0)
     const rotationAt = (t: number) => r0 + v0 * DECAY_TAU * (1 - Math.exp(-t / DECAY_TAU))
 
     const finish = () => {
@@ -83,6 +110,8 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
       clearTimeout(fallback.current)
       rotation.current = rotationAt(duration)
       velocity.current = 0
+      shaking.current = false
+      finished.current = true
       apply()
       setSpinning(false)
       onSettle(headingOf(rotation.current))
@@ -105,6 +134,56 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
     }, duration + 50)
   }
 
+  /**
+   * 흔드는 동안의 프레임 루프. 매 프레임 감쇠만 적용하고, 가속은 `shake()`가 넣어준다 —
+   * 흔들수록 속도가 쌓이고, 손을 멈추면 감쇠만 남아 자연히 느려진다.
+   * 흔들림이 끊기면 그대로 기존 관성 감속(startInertia)에 속도를 넘겨 정착까지 맡긴다.
+   */
+  const driveStep = (now: number) => {
+    const dt = Math.min(now - driveAt.current, 100) // 탭 전환 등으로 프레임이 밀려도 튀지 않게
+    driveAt.current = now
+    velocity.current *= Math.exp(-dt / SHAKE_DRIVE_TAU)
+    rotation.current += velocity.current * dt
+    apply()
+    if (now - lastShakeAt.current >= SHAKE_IDLE_MS) {
+      shaking.current = false
+      startInertia(velocity.current)
+      return
+    }
+    raf.current = requestAnimationFrame(driveStep)
+  }
+
+  /** 흔들림 세기를 회전 에너지로 받는다 (useShakeSpin → SpinScreen 경유) */
+  const shake = (energy: number) => {
+    if (locked || finished.current || dragging.current) return
+    const now = performance.now()
+
+    if (!shaking.current) {
+      // 스핀을 새로 걸거나 감속 중인 원판을 다시 잡아채는 건 분명한 흔들기에만 허용한다
+      // (걷는 진동으로 원판이 멋대로 살아나지 않도록).
+      if (energy < SHAKE_START_ENERGY) return
+      // 감속 중이었다면 돌던 방향을 이어받고, 멈춰 있었다면 방향을 무작위로 고른다.
+      shakeDirection.current = spinning.current
+        ? Math.sign(velocity.current) || 1
+        : Math.random() < 0.5
+          ? -1
+          : 1
+      cancelAnimationFrame(raf.current)
+      clearTimeout(fallback.current)
+      shaking.current = true
+      driveAt.current = now
+      lastShakeAt.current = now
+      setSpinning(true)
+      raf.current = requestAnimationFrame(driveStep)
+    }
+
+    lastShakeAt.current = now
+    const next = velocity.current + shakeDirection.current * energy * SHAKE_GAIN
+    velocity.current = Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, next))
+  }
+
+  useImperativeHandle(handleRef, () => ({ shake }))
+
   const spinFromKeyboard = () => {
     if (locked || spinning.current || dragging.current) return
     cancelAnimationFrame(raf.current)
@@ -119,6 +198,11 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
     },
     [],
   )
+
+  // 다시 돌릴 수 있는 상태로 돌아오면 정착 직후 걸어둔 흔들기 잠금을 푼다.
+  useEffect(() => {
+    if (!locked) finished.current = false
+  }, [locked])
 
   // 현장 모드: 기기 방위를 원판에 반영한다. 바늘은 화면 12시에 고정돼 있으므로
   // 원판을 -heading 만큼 돌리면 바늘이 실제 기기가 가리키는 방위를 짚는다.
@@ -146,6 +230,8 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
     cancelAnimationFrame(raf.current)
     clearTimeout(fallback.current)
     setSpinning(false)
+    shaking.current = false
+    velocity.current = 0
     dragging.current = true
     lastPointerAngle.current = pointerAngle(e)
     samples.current = [{ t: performance.now(), r: rotation.current }]
@@ -285,4 +371,4 @@ export function CompassRose({ disabled, describedById, onSpinningChange, onHeadi
       </div>
     </div>
   )
-}
+})

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { CompassRose } from '../components/CompassRose'
+import { CompassRose, type CompassRoseHandle } from '../components/CompassRose'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
 import { DIRECTIONS, directionFromHeading, type Departure } from '../mock/pois'
 import type { ThemeInfo } from '../engine/themes'
 import { useFieldMode } from '../sensors/useFieldMode'
+import { useShakeSpin } from '../sensors/useShakeSpin'
 
 export type SpinPurpose = 'single' | 'course'
 
@@ -40,6 +41,14 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
   const liveDir = DIRECTIONS[dirIndex]
   const field = useFieldMode()
   const fieldOn = field.status === 'on'
+
+  // 흔들기 스핀 — 흔드는 동안 원판에 회전 에너지를 넣고, 멈추면 원판이 알아서 감속·정착한다.
+  const roseRef = useRef<CompassRoseHandle>(null)
+  const handleShake = useCallback((energy: number) => {
+    roseRef.current?.shake(energy)
+  }, [])
+  const shake = useShakeSpin(handleShake)
+  const shakeOn = shake.status === 'on' && !fieldOn
 
   // 현장 모드에서는 현재 위치가 출발점이 된다 — 좌표는 App 상태(메모리)까지만 올라간다.
   useEffect(() => {
@@ -151,6 +160,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
             }}
           />
           <CompassRose
+            ref={roseRef}
             disabled={settled}
             describedById={!fieldOn && !busy ? 'spin-gesture-instruction' : undefined}
             onSpinningChange={setSpinning}
@@ -170,8 +180,19 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           aria-hidden={fieldOn || busy}
         >
           <span className="spin-gesture-cue-mark" aria-hidden />
-          원판을 잡고 휙 돌려보세요
+          {shakeOn ? '휴대폰을 흔들거나, 원판을 휙 돌려보세요' : '원판을 잡고 휙 돌려보세요'}
         </p>
+        {/* iOS는 사용자 제스처 안에서만 동작 센서 권한을 물을 수 있다 (sensors 스킬) */}
+        {!fieldOn && !busy && shake.needsPermission && shake.status !== 'on' && (
+          <button
+            type="button"
+            className="spin-shake-enable"
+            onClick={() => void shake.enable()}
+            disabled={shake.status === 'requesting'}
+          >
+            {shake.status === 'requesting' ? '흔들기 준비 중…' : '휴대폰을 흔들어서 돌리기'}
+          </button>
+        )}
       </div>
 
       {/* 하단에는 이동시간 카드만 남기고, 스핀 실행은 원판 직접 조작으로 일원화한다. */}
@@ -190,6 +211,7 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           <DialSlider minutes={dial} onChange={onDialChange} />
 
           {field.notice && <p className="spin-field-notice" role="status">{field.notice}</p>}
+          {shake.notice && <p className="spin-field-notice" role="status">{shake.notice}</p>}
         </div>
       </div>
 
