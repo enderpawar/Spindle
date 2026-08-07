@@ -5,8 +5,12 @@ import './index.css'
 import './mobile-pwa.css'
 import App from './App.tsx'
 import { registerSpindlePwa } from './pwa/register'
+import { mountScrollDiag } from './dev/scrollDiag'
 
 registerSpindlePwa()
+
+// 임시: 콜드 스타트 스크롤 버그 진단 (?scrolldebug=1 일 때만 동작). 원인 확정 후 제거.
+mountScrollDiag()
 
 const removedEntryPath = `/${['travel', 'html'].join('.')}`
 if (window.location.pathname === removedEntryPath) {
