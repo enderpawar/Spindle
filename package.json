@@ -7,6 +7,11 @@
     "dev:proxy": "npm --prefix proxy run dev",
     "build": "npm --prefix web run build",
     "pwa:verify": "npm run build && node scripts/verify-pwa.mjs",
+    "app:build": "npm --prefix web run build:app",
+    "app:sync": "npm run app:build && cd web && npx cap sync",
+    "app:android": "cd web && npx cap open android",
+    "app:apk": "npm run app:sync && cd web/android && gradlew.bat assembleDebug",
+    "app:install": "npm run app:apk && adb install -r web/android/app/build/outputs/apk/debug/app-debug.apk",
     "guard": "node scripts/guard.mjs",
     "check": "node scripts/guard.mjs && npm --prefix web run check && npm --prefix proxy run check"
   }

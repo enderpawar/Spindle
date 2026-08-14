@@ -5,10 +5,18 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { API_NETWORK_ONLY_CACHE_NAME } from './src/pwa/cachePolicy.ts'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  /**
+   * 앱(Capacitor) 빌드 여부. `vite build --mode app`으로 켠다 (루트 `npm run app:build`).
+   * 네이티브 앱은 웹 자산이 이미 번들돼 있어 service worker가 캐시 꼬임만 만든다.
+   * 웹 배포(Cloudflare Pages)는 기존대로 PWA를 유지하므로 `npm run pwa:verify`도 그대로 통과한다.
+   */
+  const isAppBuild = mode === 'app'
+
+  return {
   plugins: [
     react(),
-    VitePWA({
+    ...(isAppBuild ? [] : [VitePWA({
       registerType: 'autoUpdate', // 심사 기간 중 구버전 방지 (pwa 스킬)
       injectRegister: false,
       includeAssets: ['favicon-32.png', 'apple-touch-icon-180.png', 'brand-mark-192.png', 'stamp-mark-512.png', 'pwa-icon-192.png', 'pwa-icon-512.png'],
@@ -58,8 +66,16 @@ export default defineConfig({
           },
         ],
       },
-    }),
+    })]),
   ],
+  resolve: isAppBuild
+    ? {
+        // VitePWA를 끄면 가상 모듈이 사라지므로 no-op 스텁으로 대체한다.
+        alias: {
+          'virtual:pwa-register': fileURLToPath(new URL('./src/pwa/virtualPwaRegisterStub.ts', import.meta.url)),
+        },
+      }
+    : {},
   server: {
     // 로컬 개발: /api → wrangler dev (proxy/) — 클라이언트는 TourAPI를 직접 호출하지 않는다
     proxy: {
@@ -71,7 +87,9 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         poiCheck: fileURLToPath(new URL('./poi-check.html', import.meta.url)), // Phase 1 검증 페이지
+        sensorCheck: fileURLToPath(new URL('./sensor-check.html', import.meta.url)),
       },
     },
   },
+  }
 })
