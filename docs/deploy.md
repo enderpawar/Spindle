@@ -83,10 +83,17 @@ GitHub 저장소 → Settings → Secrets and variables → Actions → New repo
 | `CLOUDFLARE_API_TOKEN` | Cloudflare 대시보드 → My Profile → API Tokens → Create Token. "Edit Cloudflare Workers" + "Cloudflare Pages: Edit" 권한(또는 이 두 권한을 포함하는 커스텀 토큰)으로 발급 |
 | `CLOUDFLARE_ACCOUNT_ID` | 1단계에서 확인한 계정 ID |
 
-이 두 값이 등록되면 `master`에 push할 때마다 `.github/workflows/deploy.yml`이:
+이 두 값이 등록되면 `main`에 push할 때마다 `.github/workflows/deploy.yml`이:
 1. `npm run check` (품질 게이트) 실행 — 실패 시 배포 중단
-2. `web/` 빌드 후 Cloudflare Pages(`spindle` 프로젝트, `master` 브랜치)에 배포
+2. `web/` 빌드 후 Cloudflare Pages(`spindle` 프로젝트, 프로덕션 브랜치 `master`)에 배포
 3. `proxy/`를 Cloudflare Workers(`spindle-proxy`)에 배포
+
+> **git 브랜치 `main` ≠ Pages 프로덕션 브랜치 `master`.** 둘은 별개 개념이다.
+> git 기본 브랜치는 `main`으로 전환했지만, Cloudflare Pages 프로젝트에 설정된
+> 프로덕션 브랜치 이름은 여전히 `master`다. 그래서 워크플로의 `--branch=master`는
+> 그대로 두어야 한다 — 이 값을 `main`으로 바꾸면 Pages가 프리뷰 배포로 처리해
+> 프로덕션 URL이 갱신을 멈춘다. 정렬하려면 Pages 대시보드에서 프로덕션 브랜치를
+> `main`으로 바꾸고 **같은 시점에** 워크플로 플래그도 바꿔야 한다.
 
 `TOURAPI_SERVICE_KEY`는 GitHub secrets에 등록하지 않는다 — 3단계에서 이미 Cloudflare 쪽에 영구 등록했으므로 CI 배포와 무관하게 유지된다.
 
@@ -95,7 +102,7 @@ GitHub 저장소 → Settings → Secrets and variables → Actions → New repo
 `proxy/wrangler.toml`의 `[vars] ALLOWED_ORIGIN`은 실제 Pages 도메인 `https://spindle-6vp.pages.dev`로 고정한다. 도메인을 변경하면:
 
 1. `proxy/wrangler.toml`의 `ALLOWED_ORIGIN` 값을 실제 도메인으로 수정 (현재 `https://spindle-6vp.pages.dev`, 커스텀 도메인을 쓴다면 그 값).
-2. 커밋 후 `master`에 push → CI가 프록시를 재배포하며 새 CORS 설정이 반영된다. (급하면 로컬에서 `npm --prefix proxy run deploy`로 즉시 반영 가능.)
+2. 커밋 후 `main`에 push → CI가 프록시를 재배포하며 새 CORS 설정이 반영된다. (급하면 로컬에서 `npm --prefix proxy run deploy`로 즉시 반영 가능.)
 3. 반영 후 시크릿 창에서 프로덕션 Pages URL을 열어 여행 모드가 완주되는지 확인 (CORS가 막히면 브라우저 콘솔에 `Access-Control-Allow-Origin` 에러가 뜬다).
 
 ## 6. 배포 후 검증 (Phase 6 사람 체크리스트, PLAN.md와 동일)
@@ -109,5 +116,5 @@ GitHub 저장소 → Settings → Secrets and variables → Actions → New repo
 
 ## 7. 프리뷰 배포 주의
 
-- `wrangler pages deploy`는 브랜치명이 `master`가 아니면 프리뷰 URL(`<hash>.spindle.pages.dev`)을 생성한다. **심사 제출물에는 프로덕션 URL만 사용** — 프리뷰 URL을 제출하지 않는다.
-- CI 워크플로는 `master` push에서만 동작하므로 일반적인 PR/브랜치 작업은 자동 배포되지 않는다(의도된 동작).
+- `wrangler pages deploy`는 `--branch` 값이 Pages 프로덕션 브랜치(`master`)와 다르면 프리뷰 URL(`<hash>.spindle.pages.dev`)을 생성한다. 이건 git 브랜치명과 무관하게 **플래그 값**으로 결정된다. **심사 제출물에는 프로덕션 URL만 사용** — 프리뷰 URL을 제출하지 않는다.
+- CI 워크플로는 `main` push에서만 동작하므로 일반적인 PR/브랜치 작업은 자동 배포되지 않는다(의도된 동작).

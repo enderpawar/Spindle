@@ -1,6 +1,6 @@
 # Spindle 프로덕션 배포 워크플로
 #
-# master push 시:
+# main push 시:
 #   1) check — guard(금지 패턴) + web(typecheck/lint/test) + proxy(typecheck/test)
 #   2) deploy-web — web/ 빌드 후 Cloudflare Pages 배포
 #   3) deploy-proxy — proxy/ 를 Cloudflare Workers 배포
@@ -21,7 +21,7 @@ name: Deploy
 
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 env:
   NODE_VERSION: "22"
@@ -75,6 +75,11 @@ jobs:
             --project-name=${{ env.CLOUDFLARE_PAGES_PROJECT }}
             --branch=master
             --commit-dirty=true
+        # ⚠ 위 --branch 값은 git 브랜치명이 아니라 Cloudflare Pages 프로젝트에 설정된
+        #   "프로덕션 브랜치" 이름이다. git 기본 브랜치를 main으로 바꾼 뒤에도 여기는
+        #   master로 유지해야 프로덕션 URL(spindle-6vp.pages.dev)이 갱신된다.
+        #   값이 어긋나면 프리뷰 배포로 빠져 운영 사이트가 갱신을 멈춘다.
+        #   Pages 대시보드에서 프로덕션 브랜치를 main으로 바꾸는 날 이 값도 함께 바꿀 것.
 
   deploy-proxy:
     name: Deploy proxy/ to Cloudflare Workers
