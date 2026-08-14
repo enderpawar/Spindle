@@ -28,11 +28,18 @@ const EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".html", ".css", ".j
 const SKIP_DIRS = new Set(["node_modules", "dist", "build", ".git", ".wrangler", "coverage"]);
 // 락파일 제외: integrity 해시(무작위 base64)가 mapX 등 패턴에 오탐된다. 코드가 아니므로 스캔 불필요.
 const SKIP_FILES = new Set(["package-lock.json"]);
+/**
+ * Capacitor가 `cap sync`로 복사해 넣는 웹 빌드 산출물. dist의 사본이라 원본을 이미 스캔했고,
+ * 번들된 코드는 소스가 아니다(git에도 커밋되지 않음 — android/.gitignore).
+ * 네이티브 소스(java/kotlin/swift)는 계속 스캔 대상으로 남긴다.
+ */
+const SKIP_PATH_SUFFIXES = [join("app", "src", "main", "assets", "public")];
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
     if (SKIP_DIRS.has(name)) continue;
     const p = join(dir, name);
+    if (SKIP_PATH_SUFFIXES.some((suffix) => p.endsWith(suffix))) continue;
     if (statSync(p).isDirectory()) yield* walk(p);
     else if (!SKIP_FILES.has(name) && [...EXTS].some((e) => name.endsWith(e))) yield p;
   }
