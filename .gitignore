@@ -6,4 +6,9 @@ dist/
 .dev.vars
 *.local
 
+# Android 릴리스 서명 — 키스토어와 비밀번호는 절대 커밋하지 않는다
+*.jks
+*.keystore
+keystore.properties
+
 *.log

@@ -1,5 +1,17 @@
 apply plugin: 'com.android.application'
 
+/*
+  릴리스 서명. 키스토어 경로·비밀번호는 저장소에 넣지 않는다(절대 원칙 4와 같은 이유).
+  web/android/keystore.properties 에 두고 .gitignore로 제외한다.
+  파일이 없으면 서명 설정을 붙이지 않아 디버그 빌드는 그대로 동작한다.
+*/
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def hasReleaseSigning = keystorePropsFile.exists()
+
 android {
     namespace = "kr.spindle.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +28,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

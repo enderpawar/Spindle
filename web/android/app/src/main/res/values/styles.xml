@@ -18,5 +18,12 @@
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+
+        <!--
+          Android 12+는 시스템 스플래시가 앱 아이콘을 원형으로 마스킹해 그린다.
+          배경색이 아이콘 자체 배경(흰색)과 다르면 "흰 원 안의 둥근 사각형"으로
+          이중 프레임이 보인다. 배경을 아이콘과 같은 흰색으로 맞춰 경계를 없앤다.
+        -->
+        <item name="windowSplashScreenBackground">@color/splashScreenBackground</item>
     </style>
 </resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+ 시스템 스플래시 배경.
+      아이콘 자체 배경과 같은 흰색이어야 원형 마스크 경계가 보이지 않는다
+      (다른 색이면 "흰 원 안의 둥근 사각형"으로 이중 프레임이 드러난다).
+      아이콘 원본(web/assets/icon.png)의 배경색을 바꾸면 이 값도 함께 바꿀 것.
+    -->
+    <color name="splashScreenBackground">#FFFFFF</color>
+</resources>
