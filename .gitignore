@@ -11,4 +11,10 @@ dist/
 *.keystore
 keystore.properties
 
+# Capacitor iOS에서 빌드/동기화 때 다시 생성되는 파일
+web/ios/App/App/public/
+web/ios/App/DerivedData/
+web/ios/App/App.xcodeproj/xcuserdata/
+web/ios/App/App.xcworkspace/xcuserdata/
+
 *.log

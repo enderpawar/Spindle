@@ -30,10 +30,13 @@ const SKIP_DIRS = new Set(["node_modules", "dist", "build", ".git", ".wrangler",
 const SKIP_FILES = new Set(["package-lock.json"]);
 /**
  * Capacitor가 `cap sync`로 복사해 넣는 웹 빌드 산출물. dist의 사본이라 원본을 이미 스캔했고,
- * 번들된 코드는 소스가 아니다(git에도 커밋되지 않음 — android/.gitignore).
+ * 번들된 코드는 소스가 아니다(git에도 커밋하지 않음).
  * 네이티브 소스(java/kotlin/swift)는 계속 스캔 대상으로 남긴다.
  */
-const SKIP_PATH_SUFFIXES = [join("app", "src", "main", "assets", "public")];
+const SKIP_PATH_SUFFIXES = [
+  join("app", "src", "main", "assets", "public"),
+  join("ios", "App", "App", "public"),
+];
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
