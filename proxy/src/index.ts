@@ -116,8 +116,45 @@ async function handleImage(url: URL, env: Env): Promise<Response> {
   });
 }
 
+/**
+ * Capacitor 네이티브 셸의 오리진. 웹 자산을 로컬 번들로 로드하므로 Pages 도메인이 아니다
+ * (iOS `capacitor://localhost`, Android `https://localhost`).
+ * ALLOWED_ORIGIN(쉼표 구분)에 이 값들을 더해 허용하고, 목록에 있으면 요청 오리진을 그대로 반향한다.
+ */
+const APP_SHELL_ORIGINS = ["capacitor://localhost", "https://localhost"] as const;
+
+function resolveAllowedOrigin(env: Env, request: Request): string {
+  const configured = env.ALLOWED_ORIGIN;
+  if (configured === undefined || configured === "") return "*";
+
+  const requestOrigin = request.headers.get("Origin");
+  if (requestOrigin === null) return configured.split(",")[0]!.trim();
+
+  const allowlist = [
+    ...configured.split(",").map((value) => value.trim()).filter((value) => value !== ""),
+    ...APP_SHELL_ORIGINS,
+  ];
+  return allowlist.includes(requestOrigin) ? requestOrigin : configured.split(",")[0]!.trim();
+}
+
+/**
+ * 내부 핸들러들은 `corsHeaders(env)`로 기본값을 넣는다. 실제 허용 오리진은 요청마다 달라지므로
+ * 최종 응답에서 한 번에 덮어쓴다 — 핸들러 시그니처에 request를 흘리지 않기 위한 선택.
+ */
+function withResolvedCors(response: Response, origin: string): Response {
+  const withCors = new Response(response.body, response);
+  withCors.headers.set("Access-Control-Allow-Origin", origin);
+  withCors.headers.set("Vary", "Origin");
+  return withCors;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    return withResolvedCors(await handleRequest(request, env), resolveAllowedOrigin(env, request));
+  },
+};
+
+async function handleRequest(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(env) });
     }
@@ -165,5 +202,4 @@ export default {
         ...corsHeaders(env),
       },
     });
-  },
-};
+}
