@@ -67,6 +67,25 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
             위치와 방위는 휴대폰 안에서만 계산돼요. 서버로 보내지 않아요.
           </div>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>계정과 개인정보 수집 없이 쓰는 서비스예요 · 출처: ⓒ한국관광공사</div>
+          {/*
+            스토어 심사 요건: 개인정보처리방침을 앱 안에서 열 수 있어야 한다.
+            public/privacy.html은 빌드가 그대로 복사하므로 웹·앱 양쪽에서 같은 경로로 열린다
+            (앱은 번들에 포함돼 오프라인에서도 표시된다).
+          */}
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              alignSelf: 'flex-start',
+              fontSize: 11.5,
+              fontWeight: 700,
+              color: 'var(--l-primary)',
+              textDecoration: 'underline',
+            }}
+          >
+            개인정보처리방침
+          </a>
         </div>
 
         <div style={{ textAlign: 'center', padding: '12px 0 0', fontSize: 11, fontWeight: 600, color: 'var(--l-ink-3)' }}>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spindle 개인정보처리방침</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --background: #ffffff;
+        --text: #1d1d1f;
+        --muted-text: #5f6368;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #151515;
+          --text: #f2f2f2;
+          --muted-text: #b8b8b8;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      main {
+        width: min(100% - 40px, 720px);
+        margin: 0 auto;
+        padding: 48px 0 64px;
+      }
+
+      h1 {
+        margin: 0 0 32px;
+        font-size: clamp(1.75rem, 6vw, 2.25rem);
+        line-height: 1.3;
+      }
+
+      h2 {
+        margin: 40px 0 12px;
+        font-size: 1.25rem;
+        line-height: 1.4;
+      }
+
+      p,
+      ul {
+        margin: 0 0 16px;
+      }
+
+      ul {
+        padding-left: 1.35rem;
+      }
+
+      .summary {
+        font-size: 1.05rem;
+      }
+
+      .effective-date {
+        margin-top: 48px;
+        color: var(--muted-text);
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Spindle 개인정보처리방침</h1>
+
+      <section aria-labelledby="overview">
+        <h2 id="overview">1. 개요</h2>
+        <p class="summary">
+          Spindle은 휴대폰을 돌리거나 흔들어 나침반이 가리키는 방향의 부산
+          원도심·영도 관광지를 추천하는 관광 탐색 웹앱 및 Android/iOS
+          앱입니다. Spindle은 회원가입이나 로그인을 제공하지 않으며, 이름,
+          이메일, 전화번호 등 개인을 식별할 수 있는 정보를 수집하지 않습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="not-collected">
+        <h2 id="not-collected">2. 수집하지 않는 정보</h2>
+        <p>
+          Spindle에는 계정이 없으며 이름, 이메일 주소, 전화번호를 비롯한
+          개인식별정보를 수집하지 않습니다. 광고, 인앱결제, 사용자 생성
+          콘텐츠 및 분석·추적 SDK도 사용하지 않습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="location-and-sensors">
+        <h2 id="location-and-sensors">3. 위치정보 및 센서 정보의 처리</h2>
+        <p>
+          위치정보(GPS)와 방위 정보(나침반)는 관광지 방향 추천을 위해 단말
+          내에서만 사용됩니다. 방향 계산, 거리 계산 및 권역 판정은 모두 기기
+          안에서 이루어지며, 위치정보와 방위 정보는 어떤 서버로도 전송되지
+          않습니다.
+        </p>
+        <p>
+          앱은 위치 권한을 앱 사용 중에만 요청하며 백그라운드 위치를 사용하지
+          않습니다. 위치 또는 모션·방위 센서 권한을 거부해도 지도에서
+          출발점을 직접 선택해 서비스를 이용할 수 있습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="device-storage">
+        <h2 id="device-storage">4. 기기에 저장되는 정보</h2>
+        <p>
+          방문한 관광지의 식별자(도장깨기 기록)와 앱 설정이 기기 내부에만
+          저장됩니다. 이 정보는 서버로 전송되지 않으며 앱을 삭제하면 함께
+          삭제됩니다. Spindle은 서버에 사용자 정보를 저장하는 저장소를 두고
+          있지 않습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="external-services">
+        <h2 id="external-services">5. 제3자 제공 및 외부 서비스</h2>
+        <ul>
+          <li>
+            <strong>한국관광공사 TourAPI:</strong> 관광지 정보를 실시간으로
+            받아오는 데 사용합니다. 자체 프록시 서버(Cloudflare Workers)는
+            API 키를 주입하고 요청을 중계할 뿐이며 사용자 좌표를 받지
+            않습니다.
+          </li>
+          <li>
+            <strong>카카오맵:</strong> 지도를 표시하고 길찾기로 연결하는 데
+            사용합니다. 길찾기 링크에는 목적지 관광지의 좌표만 담기며 사용자의
+            현재 위치는 넣지 않습니다. 다만 지도를 화면에 그릴 때 지도 데이터가
+            카카오 서버에서 전달되므로, 현재 위치를 기준으로 지도를 보는 경우
+            해당 지역을 조회한다는 사실이 카카오맵에 전달될 수 있습니다. 이때
+            적용되는 처리 기준은 카카오의 개인정보처리방침을 따릅니다.
+          </li>
+        </ul>
+        <p>
+          Spindle은 사용자의 위치정보와 방위 정보를 자체 프록시 서버나 한국관광공사
+          TourAPI로 전송하지 않습니다. 관광지 조회 요청에는 좌표가 포함되지 않으며,
+          지역 코드만 사용합니다.
+        </p>
+        <p>출처: ⓒ한국관광공사</p>
+      </section>
+
+      <section aria-labelledby="children">
+        <h2 id="children">6. 아동의 개인정보</h2>
+        <p>
+          Spindle은 만 14세 미만 아동을 특정해 겨냥한 서비스가 아니며,
+          이용자의 나이를 포함한 개인식별정보를 수집하지 않습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="changes">
+        <h2 id="changes">7. 방침 변경 고지</h2>
+        <p>
+          이 개인정보처리방침의 내용이 변경되는 경우 이 페이지를 통해 변경
+          내용과 시행일자를 알립니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="contact">
+        <h2 id="contact">8. 문의처</h2>
+        <!-- TODO: 연락처 이메일을 채울 것 -->
+        <p>문의: (이메일 주소를 입력하세요)</p>
+      </section>
+
+      <p class="effective-date">시행일자: 2026-08-14</p>
+    </main>
+  </body>
+</html>
