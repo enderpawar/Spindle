@@ -3,7 +3,6 @@ import winkImg from '../assets/poses/별이_wink.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
-import { SourceLine } from '../components/SourceLine'
 import { dailyMissionFor } from '../content/dailyMissions'
 import { useVisited } from '../lib/visited'
 import { THEMES, type ThemeId } from '../engine/themes'
@@ -292,8 +291,6 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           </span>
           <img src={winkImg} alt="" className="home-mission-mascot" />
         </button>
-
-        <SourceLine style={{ margin: '18px 20px 8px' }} />
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />

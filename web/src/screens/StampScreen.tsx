@@ -2,7 +2,6 @@ import { useState } from 'react'
 import locateImg from '../assets/poses/별이_explore.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { ScreenFrame } from '../components/ScreenFrame'
-import { SourceLine } from '../components/SourceLine'
 import { useVisited } from '../lib/visited'
 import { zones } from '../mock/stamps'
 
@@ -79,7 +78,6 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
           </svg>
           다음 스핀으로 채우기
         </button>
-        <SourceLine />
       </div>
 
       <BottomNav active="stamp" onNavigate={onNavigate} />
