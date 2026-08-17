@@ -93,6 +93,7 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 1. 대시보드 → **앱 설정** 태스크를 `docs/play-console-입력값.md` 2절대로 채운다.
 2. **스토어 등록정보**: 문안 + 아이콘 + 그래픽 이미지 + **스크린샷 1~4번**
    (5_settings는 앱과 어긋나 있다 — 같은 문서 1절의 경고 참고).
+   태블릿 슬롯도 필수다 — `sevenInchScreenshots/`·`tenInchScreenshots/`에 4장씩 준비돼 있다.
 3. **비공개 테스트 트랙**에 `web/android/spindle-1.0-vc2-release.aab`를 올린다.
 4. 그다음은 3절 B(Doply 테스터) → D(설치 가능 확인 후 결제) 순서.
 
