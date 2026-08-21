@@ -11,6 +11,8 @@ import { evaluateOperation, type OperationStatus } from '../engine/operation'
 import { kakaoMapSearchUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
+import { failureCauseLine } from '../api/failureCopy'
+import { useBackGuard } from '../navigation/useBackGuard'
 import type { Poi, Recommendation } from '../mock/pois'
 
 interface Props {
@@ -49,6 +51,12 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [fullDetail, setFullDetail] = useState<PoiDetail | null>(null)
   const [fullDetailLoading, setFullDetailLoading] = useState(false)
   const [fullDetailError, setFullDetailError] = useState(false)
+  const [fullDetailErrorCause, setFullDetailErrorCause] = useState<unknown>(null)
+
+  // 오버레이가 열려 있으면 하드웨어 뒤로가기는 화면을 옮기지 않고 이것부터 닫는다.
+  // 갤러리를 나중에 등록해 (더 위에 뜨는) 갤러리가 먼저 닫히게 한다.
+  useBackGuard(infoOpen, () => setInfoOpen(false))
+  useBackGuard(galleryOpen, () => setGalleryOpen(false))
   const [operation, setOperation] = useState<OperationStatus | null>(null)
 
   // 운영 중단·운영시간 외 안내 — 이미 세션 캐시에 있는 상세 원문을 재사용한다(추가 호출 없음).
@@ -96,17 +104,20 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     setFullDetail(null)
     setFullDetailLoading(true)
     setFullDetailError(false)
+    setFullDetailErrorCause(null)
     fetchPoiDetailCached(poi.contentId)
       .then((d) => {
         if (!cancelled) {
           setFullDetail(d)
+          // 소개정보만 실패한 부분 성공 — 에러 객체가 없어 기본 문구로 떨어진다.
           setFullDetailError(d.visitFactsStatus === 'error')
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!cancelled) {
           setFullDetail(null)
           setFullDetailError(true)
+          setFullDetailErrorCause(error)
         }
       })
       .finally(() => {
@@ -215,14 +226,16 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const retryFullDetail = () => {
     setFullDetailLoading(true)
     setFullDetailError(false)
+    setFullDetailErrorCause(null)
     fetchPoiDetailCached(poi.contentId)
       .then((d) => {
         setFullDetail(d)
         setFullDetailError(d.visitFactsStatus === 'error')
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         setFullDetail(null)
         setFullDetailError(true)
+        setFullDetailErrorCause(error)
       })
       .finally(() => setFullDetailLoading(false))
   }
@@ -374,7 +387,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
               )}
               {!fullDetailLoading && fullDetailError && (
                 <p className="result-visit-error">
-                  방문 정보를 불러오지 못했어요.
+                  방문 정보를 불러오지 못했어요 · {failureCauseLine(fullDetailErrorCause)}
                   <button type="button" onClick={retryFullDetail}>다시 시도</button>
                 </p>
               )}
@@ -535,7 +548,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
             {fullDetailLoading && <VisitFactsSkeleton compact />}
             {!fullDetailLoading && fullDetailError && (
               <p className="result-visit-error result-visit-error--sheet">
-                방문 정보를 불러오지 못했어요.
+                방문 정보를 불러오지 못했어요 · {failureCauseLine(fullDetailErrorCause)}
                 <button type="button" onClick={retryFullDetail}>다시 시도</button>
               </p>
             )}

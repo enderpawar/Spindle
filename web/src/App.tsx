@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, primeOperationInfo } from './api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
@@ -28,7 +28,12 @@ import {
   type ThemeJourney,
 } from './engine/themes'
 import { HomeGuide } from './components/HomeGuide'
+import { ExitNotice } from './components/ExitNotice'
 import { transitionFor, type Screen, type TransitionIntent } from './navigationMotion'
+import { backActionFor } from './navigation/backAction'
+import { runTopBackGuard } from './navigation/backGuards'
+import { decideExit, EXIT_CONFIRM_WINDOW_MS } from './navigation/exitIntent'
+import { exitApp, useHardwareBack } from './navigation/useHardwareBack'
 import { runViewTransition } from './viewTransition'
 import { usePressFeedback } from './usePressFeedback'
 
@@ -62,7 +67,18 @@ function App() {
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
 
+  // 홈에서 뒤로가기를 한 번 눌렀을 때의 종료 안내 (안드로이드 앱 전용).
+  const [exitNotice, setExitNotice] = useState(false)
+  const exitArmedUntil = useRef<number | null>(null)
+
+  const disarmExit = () => {
+    exitArmedUntil.current = null
+    setExitNotice(false)
+  }
+
   const goTo = (next: Screen) => {
+    // 하드웨어·탭·화면 버튼 어느 쪽으로 움직이든 종료 안내는 걷는다.
+    disarmExit()
     if (next === screen) return
     const intent = transitionFor(screen, next)
     runViewTransition(intent, () => {
@@ -70,6 +86,39 @@ function App() {
       setScreen(next)
     })
   }
+
+  // 안내 자동 숨김 — 결과 카드의 도장 토스트와 같은 패턴.
+  useEffect(() => {
+    if (!exitNotice) return
+    const timer = window.setTimeout(() => {
+      exitArmedUntil.current = null
+      setExitNotice(false)
+    }, EXIT_CONFIRM_WINDOW_MS)
+    return () => window.clearTimeout(timer)
+  }, [exitNotice])
+
+  /**
+   * 안드로이드 하드웨어 뒤로가기. ① 열린 오버레이 → ② 화면 스택 → ③ 홈에서 두 번 눌러 종료.
+   * 웹에서는 이 핸들러가 호출되지 않는다 (useHardwareBack이 네이티브에서만 리스너를 단다).
+   */
+  const handleHardwareBack = () => {
+    if (booting) return // 인트로 중에는 안내가 보이지 않으므로 삼킨다
+    if (runTopBackGuard()) return
+    const action = backActionFor({ screen, departureReturn, poiReturn, courseReturn, themeReturn })
+    if (action.kind === 'goTo') {
+      goTo(action.screen)
+      return
+    }
+    const decision = decideExit(Date.now(), exitArmedUntil.current)
+    if (decision.kind === 'exit') {
+      exitArmedUntil.current = null
+      void exitApp()
+      return
+    }
+    exitArmedUntil.current = decision.armedUntil
+    setExitNotice(true)
+  }
+  useHardwareBack(handleHardwareBack)
 
   // SPEC 6: 세션 시작 시 4개 구 areaBasedList2를 실시간 호출(메모리/세션 캐시만, 영속 저장 없음)
   // — 운영계정 호출 이력을 자연스럽게 축적한다. 실패해도 앱 동작에는 영향 없음(추천은 큐레이션 풀 기반).
@@ -369,9 +418,13 @@ function App() {
   })()
 
   return (
-    <div className="screen-transition" data-transition={transitionIntent} key={screen}>
-      {view}
-    </div>
+    <>
+      <div className="screen-transition" data-transition={transitionIntent} key={screen}>
+        {view}
+      </div>
+      {/* 화면 전환 래퍼 바깥 — key={screen} 리마운트에 휩쓸리지 않게 한다 */}
+      {exitNotice && <ExitNotice />}
+    </>
   )
 }
 

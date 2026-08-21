@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { failureCauseLine } from '../api/failureCopy'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { festivalBoardFor, type FestivalBoard } from '../engine/festival'
 import { BottomNav, type NavTab } from '../components/BottomNav'
@@ -12,7 +13,7 @@ interface Props {
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'error' }
+  | { kind: 'error'; error: unknown }
   | { kind: 'ready'; board: FestivalBoard }
 
 function shortDate(yyyymmdd: string): string {
@@ -35,8 +36,8 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
         // 진행 중이 하나도 없으면 같은 응답 안의 예정 축제로 대체한다 (추가 호출 없음).
         setState({ kind: 'ready', board: festivalBoardFor(list, today) })
       })
-      .catch(() => {
-        if (!cancelled) setState({ kind: 'error' })
+      .catch((error: unknown) => {
+        if (!cancelled) setState({ kind: 'error', error })
       })
     return () => {
       cancelled = true
@@ -72,7 +73,7 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
 
         {state.kind === 'error' && (
           <div style={{ marginTop: 40, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink-2)' }}>잠시 연결이 어려워요</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink-2)' }}>{failureCauseLine(state.error)}</div>
             <button
               onClick={() => setReloadKey((k) => k + 1)}
               className="btn"

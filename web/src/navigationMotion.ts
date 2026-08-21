@@ -1,9 +1,16 @@
-export type Screen = 'onboarding' | 'home' | 'spots' | 'spin' | 'stamp' | 'settings' | 'departure' | 'origin-pick' | 'reveal' | 'result' | 'course' | 'share' | 'theme' | 'festival'
+/** 모든 화면. 런타임 목록으로 두어야 뒤로가기 목적지가 전부 정의됐는지 테스트할 수 있다. */
+export const SCREENS = [
+  'onboarding', 'home', 'spots', 'spin', 'stamp', 'settings', 'departure',
+  'origin-pick', 'reveal', 'result', 'course', 'share', 'theme', 'festival',
+] as const
+
+export type Screen = (typeof SCREENS)[number]
 export type TransitionIntent = 'tab' | 'forward' | 'back' | 'ritual'
 
 const TABS = new Set<Screen>(['home', 'spots', 'spin', 'stamp', 'settings'])
 const RITUAL_EDGES = new Set(['spin>reveal', 'reveal>result'])
 const BACK_EDGES = new Set([
+  'reveal>spin', // 하드웨어 뒤로가기로 의식에서 빠져나올 때 (앞으로 가는 연출로 보이면 안 된다)
   'departure>home',
   'departure>spin',
   'departure>settings',
