@@ -128,7 +128,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   const congestionDate = useMemo(() => localYyyymmdd(), [])
 
   // 핀 시트가 열려 있으면 뒤로가기는 시트만 닫는다.
-  useBackGuard(selectedId !== null, () => setSelectedId(null))
+  // 시트는 지도 모드에서만 렌더된다 — 리스트로 바꿔도 selectedId는 남으므로, 모드까지 함께
+  // 보지 않으면 보이지도 않는 상태를 닫느라 뒤로가기가 조용히 먹힌다.
+  useBackGuard(mode === 'map' && selectedId !== null, () => setSelectedId(null))
 
   useEffect(() => {
     let active = true

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, primeOperationInfo } from './api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
@@ -32,7 +32,7 @@ import { ExitNotice } from './components/ExitNotice'
 import { transitionFor, type Screen, type TransitionIntent } from './navigationMotion'
 import { backActionFor } from './navigation/backAction'
 import { runTopBackGuard } from './navigation/backGuards'
-import { decideExit, EXIT_CONFIRM_WINDOW_MS } from './navigation/exitIntent'
+import { decideExit } from './navigation/exitIntent'
 import { exitApp, useHardwareBack } from './navigation/useHardwareBack'
 import { runViewTransition } from './viewTransition'
 import { usePressFeedback } from './usePressFeedback'
@@ -68,13 +68,12 @@ function App() {
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
 
   // 홈에서 뒤로가기를 한 번 눌렀을 때의 종료 안내 (안드로이드 앱 전용).
-  const [exitNotice, setExitNotice] = useState(false)
-  const exitArmedUntil = useRef<number | null>(null)
+  // "안내가 떠 있는가"와 "언제까지 유효한가"를 한 값으로 둔다 — 둘로 나누면 만료 시각과
+  // 숨김 타이머가 어긋나 안내가 깜빡 사라지고 다음 입력이 종료 대신 재무장이 된다.
+  const [exitArmedUntil, setExitArmedUntil] = useState<number | null>(null)
+  const exitNotice = exitArmedUntil !== null
 
-  const disarmExit = () => {
-    exitArmedUntil.current = null
-    setExitNotice(false)
-  }
+  const disarmExit = () => setExitArmedUntil(null)
 
   const goTo = (next: Screen) => {
     // 하드웨어·탭·화면 버튼 어느 쪽으로 움직이든 종료 안내는 걷는다.
@@ -87,15 +86,16 @@ function App() {
     })
   }
 
-  // 안내 자동 숨김 — 결과 카드의 도장 토스트와 같은 패턴.
+  // 안내 자동 숨김. 남은 시간을 만료 시각에서 되계산하므로, 다시 눌러 재무장하면
+  // 타이머도 그 시점 기준으로 다시 걸린다.
   useEffect(() => {
-    if (!exitNotice) return
-    const timer = window.setTimeout(() => {
-      exitArmedUntil.current = null
-      setExitNotice(false)
-    }, EXIT_CONFIRM_WINDOW_MS)
+    if (exitArmedUntil === null) return
+    const timer = window.setTimeout(
+      () => setExitArmedUntil(null),
+      Math.max(0, exitArmedUntil - Date.now()),
+    )
     return () => window.clearTimeout(timer)
-  }, [exitNotice])
+  }, [exitArmedUntil])
 
   /**
    * 안드로이드 하드웨어 뒤로가기. ① 열린 오버레이 → ② 화면 스택 → ③ 홈에서 두 번 눌러 종료.
@@ -109,14 +109,13 @@ function App() {
       goTo(action.screen)
       return
     }
-    const decision = decideExit(Date.now(), exitArmedUntil.current)
+    const decision = decideExit(Date.now(), exitArmedUntil)
     if (decision.kind === 'exit') {
-      exitArmedUntil.current = null
+      setExitArmedUntil(null)
       void exitApp()
       return
     }
-    exitArmedUntil.current = decision.armedUntil
-    setExitNotice(true)
+    setExitArmedUntil(decision.armedUntil)
   }
   useHardwareBack(handleHardwareBack)
 
