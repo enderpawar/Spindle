@@ -269,6 +269,11 @@ CSV 업로드는 같은 목록의 기존 주소를 덮어쓸 수 있다. 지인 
 | 적용 화면 | 혼잡 예측·방문 정보·축제 — 기존 시각 처리를 그대로 두고 사유 절만 덧붙였다 |
 | 신설 | 명소 지도 '관광공사 등록 명소' 실패에 사유 + [다시 시도] (기존에는 `console.warn`뿐이고 재시도 수단이 없었다) |
 
+`npx cap update android`로 네이티브 프로젝트에 플러그인을 물려 뒀다 —
+`web/android/capacitor.settings.gradle`의 `:capacitor-app` include와
+`web/android/app/capacitor.build.gradle`의 dependency가 커밋에 포함돼 있다.
+**이 두 파일이 빠지면 빌드는 되지만 뒤로가기가 동작하지 않는다** (네이티브 구현을 못 찾는다).
+
 확인해 둔 것: `@capacitor/app` 8.x의 `AppPlugin.handleOnBackPressed()`는 **JS 리스너가 있으면
 `backButton` 이벤트만 던지고 `webView.goBack()`도 액티비티 종료도 하지 않는다**(설치본 소스 확인).
 리스너가 없을 때 액티비티가 그대로 finish 되는 것이 지금 앱이 죽는 원인이다. 종료는 `App.exitApp()`으로

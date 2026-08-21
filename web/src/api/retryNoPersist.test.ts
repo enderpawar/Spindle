@@ -55,12 +55,22 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/** 쓰기 가능한 모든 표면을 하나도 빠짐없이 확인한다 — 하나만 보면 다른 경로로 새어 나간다. */
 function expectNothingPersisted(): void {
-  expect(storage.setItem).not.toHaveBeenCalled();
-  expect(storage.removeItem).not.toHaveBeenCalled();
-  expect(caches.open).not.toHaveBeenCalled();
-  expect(cacheStore.put).not.toHaveBeenCalled();
-  expect(indexedDB.open).not.toHaveBeenCalled();
+  for (const [name, spy] of [
+    ["localStorage.setItem", storage.setItem],
+    ["localStorage.removeItem", storage.removeItem],
+    ["localStorage.clear", storage.clear],
+    ["caches.open", caches.open],
+    ["caches.keys", caches.keys],
+    ["cache.put", cacheStore.put],
+    ["cache.add", cacheStore.add],
+    ["cache.addAll", cacheStore.addAll],
+    ["indexedDB.open", indexedDB.open],
+    ["indexedDB.deleteDatabase", indexedDB.deleteDatabase],
+  ] as const) {
+    expect(spy, `${name}이 호출됐다 — TourAPI 응답이 영속 저장소로 새고 있다`).not.toHaveBeenCalled();
+  }
 }
 
 describe("재시도 경로 — 영속 저장 금지 (절대 원칙 3)", () => {

@@ -3193,7 +3193,7 @@ button.is-pressing:not(:disabled) {
 }
 
 .extra-spots-status--error button {
-  min-height: 32px;
+  min-height: 44px;
   margin-left: 6px;
   padding: 0;
   border: 0;

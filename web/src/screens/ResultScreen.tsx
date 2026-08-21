@@ -109,8 +109,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       .then((d) => {
         if (!cancelled) {
           setFullDetail(d)
-          // 소개정보만 실패한 부분 성공 — 에러 객체가 없어 기본 문구로 떨어진다.
+          // 소개정보만 실패한 부분 성공 — 원인은 detail이 실어 온다.
           setFullDetailError(d.visitFactsStatus === 'error')
+          setFullDetailErrorCause(d.visitFactsError ?? null)
         }
       })
       .catch((error: unknown) => {
@@ -231,6 +232,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       .then((d) => {
         setFullDetail(d)
         setFullDetailError(d.visitFactsStatus === 'error')
+        setFullDetailErrorCause(d.visitFactsError ?? null)
       })
       .catch((error: unknown) => {
         setFullDetail(null)

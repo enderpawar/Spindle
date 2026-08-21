@@ -121,6 +121,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   const [extraSpots, setExtraSpots] = useState<ExtraSpot[] | null>(null)
   const [extraSpotsError, setExtraSpotsError] = useState<unknown>(null)
   const [extraSpotsRetry, setExtraSpotsRetry] = useState(0)
+  // 재시도 중에는 오류 줄이 잠깐 사라져 "눌러도 반응이 없는" 것처럼 보인다 — 진행 중임을 남긴다.
+  const [extraSpotsRetrying, setExtraSpotsRetrying] = useState(false)
   const [congestion, setCongestion] = useState<CongestionLoadState>({ status: 'loading' })
   const [congestionRetry, setCongestionRetry] = useState(0)
   const congestionDate = useMemo(() => localYyyymmdd(), [])
@@ -146,6 +148,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   useEffect(() => {
     let active = true
     setExtraSpotsError(null)
+    setExtraSpotsRetrying(extraSpotsRetry > 0)
     fetchExtraSpots(CURATED_CONTENT_IDS)
       .then((spots) => {
         if (!active) return
@@ -157,6 +160,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         // 조용히 큐레이션 35곳만 남기지 않는다 — 사유를 알리고 다시 시도할 길을 준다.
         // 재시도는 실패한 구만 다시 호출한다(성공한 구는 세션 캐시 히트).
         if (active) setExtraSpotsError(error)
+      })
+      .finally(() => {
+        if (active) setExtraSpotsRetrying(false)
       })
     return () => {
       active = false
@@ -342,7 +348,10 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                 큐레이션 {list.length}곳 + 관광공사 등록 명소 {filteredExtraSpots.length}곳
               </div>
             )}
-            {!extraSpots && extraSpotsError !== null && (
+            {!extraSpots && extraSpotsRetrying && (
+              <div className="extra-spots-status" role="status">관광공사 등록 명소를 다시 불러오는 중</div>
+            )}
+            {!extraSpots && !extraSpotsRetrying && extraSpotsError !== null && (
               <div className="extra-spots-status extra-spots-status--error" role="alert">
                 관광공사 등록 명소를 더 불러오지 못했어요 · {failureCauseLine(extraSpotsError)}
                 <button type="button" onClick={() => setExtraSpotsRetry((value) => value + 1)}>다시 시도</button>

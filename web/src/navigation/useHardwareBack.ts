@@ -7,7 +7,9 @@ import { useEffect, useRef } from 'react'
  * 그래서 `@capacitor/core`조차 정적으로 import하지 않는다. 브라우저에서는 어차피 아무 일도
  * 못 하는 코드인데 웹 번들이 7.5KB(gzip 2.8KB) 무거워진다. 판정은 네이티브 브리지가
  * 페이지 스크립트보다 먼저 주입하는 `window.Capacitor`로 하고, 플러그인은 그 뒤에서
- * 동적 import 한다 — 웹은 이 청크를 내려받지도, 평가하지도 않는다.
+ * 동적 import 한다. 웹 빌드에서는 `vite.config.ts`가 `@capacitor/app`을
+ * `capacitorAppStub.ts`로 바꿔 끼우므로 실물이 산출물에 남지도, service worker에
+ * precache 되지도 않는다.
  *
  * ⚠ 리스너를 등록하면 뒤로가기 처리 전체가 우리에게 넘어온다. `@capacitor/app` 8.x의
  * `AppPlugin.handleOnBackPressed()`는 JS 리스너가 있으면 `backButton` 이벤트만 던지고
@@ -48,8 +50,15 @@ export function useHardwareBack(handler: () => void): void {
     let remove: (() => void) | undefined
 
     void import('@capacitor/app')
-      .then(({ App }) => App.addListener('backButton', () => handlerRef.current()))
+      .then(({ App }) => {
+        // 이미 정리된 뒤라면 아예 등록하지 않는다 — 등록한 뒤 지우면 두 리스너가
+        // 겹치는 짧은 구간이 생기고, 그 사이 뒤로가기가 오면 한 번의 입력이 두 단계를
+        // 진행시킨다(홈에서는 안내 없이 곧바로 종료).
+        if (cancelled) return null
+        return App.addListener('backButton', () => handlerRef.current())
+      })
       .then((handle) => {
+        if (!handle) return
         if (cancelled) void handle.remove()
         else remove = () => void handle.remove()
       })

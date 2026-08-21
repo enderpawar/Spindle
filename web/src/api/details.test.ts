@@ -233,6 +233,32 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     expect(detail.visitFactsStatus).toBe("error");
   });
 
+  it("소개정보만 실패한 부분 성공에서도 원인을 잃지 않는다", async () => {
+    // 방문 정보에서 가장 흔한 실패 경로다. Promise는 resolve되므로 catch에 걸리지 않아
+    // 원인을 detail에 실어 보내지 않으면 화면이 이유를 알 길이 없다.
+    const common = { contentid: "102-cause", contenttypeid: "12", title: "원인" };
+    const fetchMock = vi.fn((url: string | URL) => {
+      const u = String(url);
+      if (u.includes("/api/detailCommon2")) return Promise.resolve(jsonResponse(envelope(common)));
+      if (u.includes("/api/detailIntro2")) {
+        return Promise.reject(new DOMException("The operation timed out.", "TimeoutError"));
+      }
+      return Promise.resolve(jsonResponse(envelope(null)));
+    });
+
+    const detail = await fetchPoiDetailCached("102-cause", fetchMock as typeof fetch);
+    expect(detail.visitFactsStatus).toBe("error");
+    expect(detail.visitFactsError).toBeInstanceOf(TourApiError);
+    expect((detail.visitFactsError as TourApiError).kind).toBe("timeout");
+  });
+
+  it("소개정보가 성공하면 원인을 남기지 않는다", async () => {
+    const common = { contentid: "102-ok", contenttypeid: "12", title: "정상" };
+    const detail = await fetchPoiDetailCached("102-ok", makeFetch({ common }) as typeof fetch);
+    expect(detail.visitFactsStatus).toBe("ready");
+    expect(detail.visitFactsError).toBeUndefined();
+  });
+
   it("소개정보 부분 실패는 캐시하지 않아 다음 호출에서 재시도한다", async () => {
     const common = { contentid: "102-retry", contenttypeid: "12", title: "재시도" };
     const fetchMock = makeFetch({ common, introReject: true });

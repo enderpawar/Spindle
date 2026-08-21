@@ -73,7 +73,8 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
 
         {state.kind === 'error' && (
           <div style={{ marginTop: 40, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink-2)' }}>{failureCauseLine(state.error)}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink-2)' }}>축제 정보를 불러오지 못했어요</div>
+            <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{failureCauseLine(state.error)}</div>
             <button
               onClick={() => setReloadKey((k) => k + 1)}
               className="btn"

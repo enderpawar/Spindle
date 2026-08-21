@@ -139,6 +139,8 @@ export interface PoiDetail {
   visitFacts: PoiVisitFact[];
   /** 카드 경량 조회는 not-requested, 상세 소개 성공/실패는 ready/error */
   visitFactsStatus: "not-requested" | "ready" | "error";
+  /** visitFactsStatus === "error"일 때의 원인. 화면이 사유를 문구로 옮긴다(api/failureCopy.ts). */
+  visitFactsError?: unknown;
 }
 
 /** TourAPI 텍스트 필드의 HTML 태그·엔티티 정리 */
@@ -414,6 +416,9 @@ async function fetchDetail(contentId: string, fetchImpl: FetchLike): Promise<Poi
     restdate,
     visitFacts,
     visitFactsStatus: introResult.status === "fulfilled" ? "ready" : "error",
+    // 소개정보만 실패한 부분 성공이라 Promise는 resolve되지만, 원인은 버리지 않는다 —
+    // 이게 방문 정보에서 가장 흔한 실패 경로다.
+    visitFactsError: introResult.status === "rejected" ? introResult.reason : undefined,
   };
 }
 
