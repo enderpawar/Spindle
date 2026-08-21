@@ -25,4 +25,9 @@ describe('transitionFor', () => {
     expect(transitionFor('spin', 'reveal')).toBe('ritual')
     expect(transitionFor('reveal', 'result')).toBe('ritual')
   })
+
+  it('treats leaving the reveal as a return, not a drill-down', () => {
+    // 하드웨어 뒤로가기로만 생기는 경로 (navigation/backAction.ts)
+    expect(transitionFor('reveal', 'spin')).toBe('back')
+  })
 })

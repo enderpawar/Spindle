@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useBackGuard } from '../navigation/useBackGuard'
 
 interface GuideStep {
   target: string
@@ -42,6 +43,8 @@ interface TargetRect {
 }
 
 export function HomeGuide({ onClose }: { onClose: () => void }) {
+  // 코치마크가 떠 있으면 하드웨어 뒤로가기는 화면을 옮기지 않고 이것부터 닫는다.
+  useBackGuard(true, onClose)
   const [index, setIndex] = useState(0)
   const [targetRect, setTargetRect] = useState<TargetRect | null>(null)
   const step = STEPS[index]

@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   TourApiError,
+  callTourApi,
   clearSessionCache,
   fetchAreaPois,
   fetchAreaPoisCached,
@@ -108,5 +109,66 @@ describe("toNumber — 문자열 응답 필드 변환", () => {
     expect(toNumber("")).toBeUndefined();
     expect(toNumber(undefined)).toBeUndefined();
     expect(toNumber("abc")).toBeUndefined();
+  });
+});
+
+describe("callTourApi — 실패 원인 분류", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const params = { areaCode: "6", sigunguCode: "15" };
+
+  it("일반 네트워크 실패는 network", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(callTourApi("areaBasedList2", params, fetchMock as typeof fetch)).rejects.toMatchObject({
+      name: "TourApiError",
+      kind: "network",
+    });
+  });
+
+  it("타임아웃(AbortSignal.timeout)은 timeout", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new DOMException("The operation timed out.", "TimeoutError"));
+    await expect(callTourApi("areaBasedList2", params, fetchMock as typeof fetch)).rejects.toMatchObject({
+      kind: "timeout",
+    });
+  });
+
+  it("단말이 오프라인이면 offline이 우선한다", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(callTourApi("areaBasedList2", params, fetchMock as typeof fetch)).rejects.toMatchObject({
+      kind: "offline",
+    });
+  });
+
+  it("navigator.onLine이 true여도 단정하지 않는다", async () => {
+    // onLine은 "랜선이 꽂혀 있다" 수준의 신호라 true를 신뢰하지 않는다.
+    vi.stubGlobal("navigator", { onLine: true });
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(callTourApi("areaBasedList2", params, fetchMock as typeof fetch)).rejects.toMatchObject({
+      kind: "network",
+    });
+  });
+
+  it("비정상 상태 코드는 http + status", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("bad gateway", { status: 502 }));
+    await expect(callTourApi("areaBasedList2", params, fetchMock as typeof fetch)).rejects.toMatchObject({
+      kind: "http",
+      status: 502,
+    });
+  });
+
+  it("TourAPI 오류 응답은 api + resultCode", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const body = { response: { header: { resultCode: "22", resultMsg: "LIMITED_NUMBER_OF_SERVICE_REQUESTS" } } };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(body));
+    await expect(callTourApi("areaBasedList2", params, fetchMock as typeof fetch)).rejects.toMatchObject({
+      kind: "api",
+      resultCode: "22",
+    });
+  });
+
+  it("옵션 없이 만든 오류는 api로 취급한다", () => {
+    // details.ts의 "상세 정보가 없어요"처럼 응답은 왔지만 내용이 빈 경우.
+    expect(new TourApiError("상세 정보가 없어요").kind).toBe("api");
   });
 });

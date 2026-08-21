@@ -12,14 +12,56 @@ const NUM_OF_ROWS = 100;
 
 type FetchLike = typeof fetch;
 
+/**
+ * 실패 원인. 사용자에게 보여줄 문구를 고르는 데만 쓴다 (api/failureCopy.ts).
+ * 원격 전송·수집은 하지 않는다 (절대 원칙 5).
+ */
+export type TourApiFailureKind =
+  | "offline" // 단말이 오프라인
+  | "timeout" // 요청 타임아웃
+  | "network" // 그 밖의 네트워크 실패 (DNS·차단 등)
+  | "http" // 프록시/업스트림이 비정상 상태 코드로 응답
+  | "api"; // 응답은 왔지만 TourAPI가 오류를 알림
+
+export interface TourApiErrorOptions {
+  kind?: TourApiFailureKind;
+  resultCode?: string;
+  status?: number;
+}
+
 export class TourApiError extends Error {
+  readonly kind: TourApiFailureKind;
   readonly resultCode?: string;
-  constructor(message: string, resultCode?: string) {
+  readonly status?: number;
+  constructor(message: string, options: TourApiErrorOptions = {}) {
     super(message);
     this.name = "TourApiError";
-    this.resultCode = resultCode;
+    this.kind = options.kind ?? "api";
+    this.resultCode = options.resultCode;
+    this.status = options.status;
   }
 }
+
+/**
+ * fetch가 던진 값에서 원인을 추린다.
+ * `AbortSignal.timeout()`은 `TimeoutError` DOMException으로 reject하고,
+ * 오프라인·DNS 실패는 보통 TypeError로 온다.
+ */
+function classifyFetchFailure(err: unknown): TourApiFailureKind {
+  // navigator.onLine은 false일 때만 신뢰한다 — true여도 실제로는 끊겨 있을 수 있다
+  // (components/AppErrorBoundary.tsx와 같은 판단).
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+  if (err instanceof DOMException && (err.name === "TimeoutError" || err.name === "AbortError")) {
+    return "timeout";
+  }
+  return "network";
+}
+
+const FETCH_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
+  offline: "네트워크 연결 없음",
+  timeout: "요청 시간 초과",
+  network: "네트워크 요청 실패",
+};
 
 /** TourAPI 응답 필드는 숫자·좌표 포함 전부 문자열로 온다 — 변환은 이 유틸로만 */
 export function toNumber(value: string | undefined): number | undefined {
@@ -67,10 +109,18 @@ export async function callTourApi<B>(
     res = await fetchImpl(`${API_BASE}/${endpoint}?${qs.toString()}`, {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-  } catch {
-    throw new TourApiError("네트워크 요청 실패"); // 타임아웃 포함 — 에러 UI에서 재시도 (빈 화면 금지)
+  } catch (err) {
+    // 오프라인·타임아웃·차단을 구분해 실어 보낸다 — 에러 UI가 사유를 알려주고
+    // 재시도 버튼을 띄운다 (빈 화면 금지).
+    const kind = classifyFetchFailure(err);
+    throw new TourApiError(FETCH_FAILURE_MESSAGES[kind], { kind });
   }
-  if (!res.ok) throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`);
+  if (!res.ok) {
+    throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`, {
+      kind: "http",
+      status: res.status,
+    });
+  }
 
   const data = (await res.json()) as TourApiEnvelope<B>;
   const header = data.response?.header;
@@ -78,7 +128,10 @@ export async function callTourApi<B>(
   if (header?.resultCode !== "0000" || body === undefined) {
     // 규약: resultCode !== "0000"이면 콘솔에 resultMsg 로깅 + 사용자 재시도 UI
     console.error("TourAPI 오류:", header?.resultCode, header?.resultMsg);
-    throw new TourApiError(header?.resultMsg ?? "TourAPI 응답 형식 오류", header?.resultCode);
+    throw new TourApiError(header?.resultMsg ?? "TourAPI 응답 형식 오류", {
+      kind: "api",
+      resultCode: header?.resultCode,
+    });
   }
   return body;
 }

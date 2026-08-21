@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { failureCauseLine } from '../api/failureCopy'
 import {
   fetchOldTownCongestionCached,
   localYyyymmdd,
@@ -24,6 +25,7 @@ import {
   type CongestionVisualStatus,
 } from '../map/congestionStatus'
 import { evaluateOperation } from '../engine/operation'
+import { useBackGuard } from '../navigation/useBackGuard'
 import { directionOf, POI_POOL, type Departure, type Poi } from '../mock/pois'
 
 const FILTERS = ['전체', '중구', '동구', '서구', '영도구']
@@ -39,7 +41,7 @@ interface Props {
 type CongestionLoadState =
   | { status: 'loading' }
   | { status: 'loaded'; forecasts: CongestionForecast[] }
-  | { status: 'error' }
+  | { status: 'error'; error: unknown }
 
 function CongestionBadge({ status, count }: { status: CongestionVisualStatus; count?: number }) {
   return (
@@ -62,7 +64,7 @@ function CongestionStatus({ state, busyCount, goodCount, onRetry }: {
   if (state.status === 'error') {
     return (
       <div className="congestion-status congestion-status--error" role="alert">
-        <span>혼잡 예측을 불러오지 못했어요</span>
+        <span>혼잡 예측을 불러오지 못했어요 · {failureCauseLine(state.error)}</span>
         <button type="button" onClick={onRetry}>다시 시도</button>
       </div>
     )
@@ -117,9 +119,18 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
   const [filter, setFilter] = useState('전체')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [extraSpots, setExtraSpots] = useState<ExtraSpot[] | null>(null)
+  const [extraSpotsError, setExtraSpotsError] = useState<unknown>(null)
+  const [extraSpotsRetry, setExtraSpotsRetry] = useState(0)
+  // 재시도 중에는 오류 줄이 잠깐 사라져 "눌러도 반응이 없는" 것처럼 보인다 — 진행 중임을 남긴다.
+  const [extraSpotsRetrying, setExtraSpotsRetrying] = useState(false)
   const [congestion, setCongestion] = useState<CongestionLoadState>({ status: 'loading' })
   const [congestionRetry, setCongestionRetry] = useState(0)
   const congestionDate = useMemo(() => localYyyymmdd(), [])
+
+  // 핀 시트가 열려 있으면 뒤로가기는 시트만 닫는다.
+  // 시트는 지도 모드에서만 렌더된다 — 리스트로 바꿔도 selectedId는 남으므로, 모드까지 함께
+  // 보지 않으면 보이지도 않는 상태를 닫느라 뒤로가기가 조용히 먹힌다.
+  useBackGuard(mode === 'map' && selectedId !== null, () => setSelectedId(null))
 
   useEffect(() => {
     let active = true
@@ -128,8 +139,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
       .then((forecasts) => {
         if (active) setCongestion({ status: 'loaded', forecasts })
       })
-      .catch(() => {
-        if (active) setCongestion({ status: 'error' })
+      .catch((error: unknown) => {
+        if (active) setCongestion({ status: 'error', error })
       })
     return () => {
       active = false
@@ -138,17 +149,27 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
 
   useEffect(() => {
     let active = true
+    setExtraSpotsError(null)
+    setExtraSpotsRetrying(extraSpotsRetry > 0)
     fetchExtraSpots(CURATED_CONTENT_IDS)
       .then((spots) => {
-        if (active) setExtraSpots(spots)
+        if (!active) return
+        setExtraSpots(spots)
+        setExtraSpotsError(null)
       })
       .catch((error: unknown) => {
         console.warn('[명소 지도] 전체 명소를 불러오지 못했습니다.', error)
+        // 조용히 큐레이션 35곳만 남기지 않는다 — 사유를 알리고 다시 시도할 길을 준다.
+        // 재시도는 실패한 구만 다시 호출한다(성공한 구는 세션 캐시 히트).
+        if (active) setExtraSpotsError(error)
+      })
+      .finally(() => {
+        if (active) setExtraSpotsRetrying(false)
       })
     return () => {
       active = false
     }
-  }, [])
+  }, [extraSpotsRetry])
 
   const list = useMemo(() => {
     const pool = filter === '전체' ? POI_POOL : POI_POOL.filter((p) => p.district === filter)
@@ -327,6 +348,15 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             {extraSpots && (
               <div className="extra-spots-status" role="status">
                 큐레이션 {list.length}곳 + 관광공사 등록 명소 {filteredExtraSpots.length}곳
+              </div>
+            )}
+            {!extraSpots && extraSpotsRetrying && (
+              <div className="extra-spots-status" role="status">관광공사 등록 명소를 다시 불러오는 중</div>
+            )}
+            {!extraSpots && !extraSpotsRetrying && extraSpotsError !== null && (
+              <div className="extra-spots-status extra-spots-status--error" role="alert">
+                관광공사 등록 명소를 더 불러오지 못했어요 · {failureCauseLine(extraSpotsError)}
+                <button type="button" onClick={() => setExtraSpotsRetry((value) => value + 1)}>다시 시도</button>
               </div>
             )}
           </div>

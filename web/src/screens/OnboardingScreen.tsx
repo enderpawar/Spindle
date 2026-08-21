@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useBackGuard } from '../navigation/useBackGuard'
 import spinningImg from '../assets/poses/별이_spin.webp'
 import pointingImg from '../assets/poses/별이_pointing.webp'
 import { ScreenFrame } from '../components/ScreenFrame'
@@ -18,6 +19,9 @@ const slides = [
 
 export function OnboardingScreen({ onDone }: { onDone: () => void }) {
   const [index, setIndex] = useState(0)
+
+  // 슬라이드도 내부 스택이다 — 2번째 슬라이드에서 뒤로가면 앱을 닫지 않고 1번째로 돌아간다.
+  useBackGuard(index > 0, () => setIndex((i) => Math.max(0, i - 1)))
   const slide = slides[index]
   const last = index === slides.length - 1
 

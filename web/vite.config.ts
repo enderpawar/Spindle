@@ -4,6 +4,12 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { API_NETWORK_ONLY_CACHE_NAME } from './src/pwa/cachePolicy.ts'
 
+function buildAlias(isAppBuild: boolean): Record<string, string> {
+  return isAppBuild
+    ? { 'virtual:pwa-register': fileURLToPath(new URL('./src/pwa/virtualPwaRegisterStub.ts', import.meta.url)) }
+    : { '@capacitor/app': fileURLToPath(new URL('./src/navigation/capacitorAppStub.ts', import.meta.url)) }
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   /**
@@ -68,14 +74,11 @@ export default defineConfig(({ mode }) => {
       },
     })]),
   ],
-  resolve: isAppBuild
-    ? {
-        // VitePWA를 끄면 가상 모듈이 사라지므로 no-op 스텁으로 대체한다.
-        alias: {
-          'virtual:pwa-register': fileURLToPath(new URL('./src/pwa/virtualPwaRegisterStub.ts', import.meta.url)),
-        },
-      }
-    : {},
+  // 빌드 대상에 없는 모듈은 서로 반대 방향으로 no-op 스텁을 물린다.
+  //  - 앱 빌드: VitePWA를 끄면 `virtual:pwa-register` 가상 모듈이 사라진다.
+  //  - 웹 빌드: 하드웨어 뒤로가기 플러그인은 브라우저에서 아무 일도 못 하는데,
+  //    두면 별도 청크로 남아 service worker가 precache 한다.
+  resolve: { alias: buildAlias(isAppBuild) },
   server: {
     // 로컬 개발: /api → wrangler dev (proxy/) — 클라이언트는 TourAPI를 직접 호출하지 않는다
     proxy: {

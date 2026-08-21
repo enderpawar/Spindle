@@ -6,6 +6,7 @@ import { StampNotice } from '../components/StampNotice'
 import { MapView } from '../map/MapView'
 import { kakaoMapCourseWalkUrl, kakaoMapDirectionsUrl, kakaoMapFirstStopDirectionsUrl } from '../lib/mapLinks'
 import { markVisited, useVisited } from '../lib/visited'
+import { useBackGuard } from '../navigation/useBackGuard'
 import type { Departure } from '../mock/pois'
 import type { CourseStopView, ReadyCourse } from '../engine/spinCourse'
 
@@ -42,6 +43,9 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stampToast, setStampToast] = useState<string | null>(null)
   const [stage, setStage] = useState<GuideStage>('idle')
+
+  // 안내 단계가 열려 있으면 뒤로가기는 '안내 종료'와 같게 동작한다.
+  useBackGuard(stage !== 'idle', () => setStage('idle'))
   const visited = useVisited()
   const firstStop = stops[0]
 

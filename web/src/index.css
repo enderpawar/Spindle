@@ -3186,6 +3186,43 @@ button.is-pressing:not(:disabled) {
   text-shadow: 0 1px 3px #fff, 0 0 8px #fff;
 }
 
+/* 추가 명소를 못 불러왔을 때 — 같은 자리, 같은 조용한 글줄에 사유와 재시도만 얹는다.
+   .map-status-stack은 지도를 끌 수 있게 pointer-events:none이라 이 줄만 되살린다. */
+.extra-spots-status--error {
+  pointer-events: auto;
+}
+
+.extra-spots-status--error button {
+  min-height: 44px;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--l-primary);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* 홈에서 뒤로가기 한 번 — 알약·색 배경 없이 조용한 한 줄로만 알린다 (docs/ui.md 디자인 톤). */
+.exit-notice {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h, calc(88px + env(safe-area-inset-bottom))) + 14px);
+  z-index: 20;
+  margin: 0;
+  transform: translateX(-50%);
+  max-width: min(90vw, 420px);
+  color: var(--l-ink-2);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  text-shadow: 0 1px 3px #fff, 0 0 8px #fff, 0 0 14px #fff;
+  pointer-events: none;
+}
+
 .congestion-status {
   display: flex;
   min-height: 36px;
