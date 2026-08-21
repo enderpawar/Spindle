@@ -58,14 +58,18 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 
 ## 2. 현재 상태
 
-- [x] 서명된 릴리스 AAB 생성 — **2026-08-17 재빌드본을 올린다**
-  - 파일: `web/android/spindle-1.0-vc2-release.aab`
-  - versionCode: `2` / versionName: `1.0`
-  - 크기: 8,497,606 bytes
+- [x] **R2 서명 AAB 생성 완료 (2026-08-21) — 지금 올릴 파일은 이것**
+  - 파일: **`web/android/spindle-1.0-vc3-release.aab`**
+  - versionCode: `3` / versionName: `1.0` (병합 매니페스트로 확인)
+  - 크기: 8,505,764 bytes
   - `jarsigner -verify`: `jar verified.`
-  - 빌드 기준: `main` `c1d15bc` (웹 배포본과 동일 코드)
-  - ⚠ `superseded-do-not-upload_spindle-1.0-vc1.aab`(8/14 빌드)는 올리지 않는다 —
-    출처 표기 정리·설정 문구 변경·현 위치 출발점이 빠져 있어 웹과 어긋난다
+  - **서명키 지문이 vc2와 일치** — `SHA256:8B:45:7A:99:8D:AE:8E:FB:1B:C5:FB:98:AD:44:9D:BF:03:B2:7F:D1:CE:0E:0C:1F:27:43:83:62:52:32:50:1C`
+    (키가 바뀌면 업로드가 거부되므로 매 릴리스 확인한다)
+  - 빌드 기준: `main` `d755cdf` (Cloudflare 배포본과 동일 코드)
+  - 번들 내용 검증: `AppPlugin` 네이티브 클래스 포함, `capacitor.plugins.json` 등록,
+    번들된 웹 자산에 R2 문구 3종(뒤로가기 안내·실패 사유·명소 재시도) 포함
+  - 이전 번들은 올리지 않는다: `spindle-1.0-vc2-release.aab`(게시 완료),
+    `superseded-do-not-upload_spindle-1.0-vc1.aab`(웹과 어긋남)
 - [x] 릴리스 키스토어와 설정 파일이 Git에서 제외됨
   - `web/android/spindle-release.jks`
   - `web/android/keystore.properties`
@@ -90,7 +94,9 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 - [x] **Doply 테스트 시작** — 진행 중 (사용자 확인, 2026-08-21)
 - [ ] **테스트 기간 릴리스 R2(vc3, D+4)·R3(vc4, D+8) 게시** — 3절 E-2
       - [x] R2 코드·테스트·문서 완료 (2026-08-21) — 아래 "R2 구현 완료" 참고
-      - [ ] R2 AAB 빌드 → 비공개 트랙 게시 (사람 작업)
+      - [x] R2 웹 배포 완료 (2026-08-21, Actions `32438710860` 3잡 성공)
+      - [x] **R2 AAB(vc3) 빌드·서명 검증 완료** (2026-08-21)
+      - [ ] R2 AAB를 비공개 트랙에 게시 (**사람 작업 — 남은 것은 이것뿐**)
 - [ ] 피드백 로그 작성 (3절 E-2) — 프로덕션 액세스 설문의 원천
 - [ ] 12명 이상, 14일 연속 요건 충족
 - [ ] 프로덕션 액세스 신청
@@ -101,12 +107,13 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 (3절 E의 금지 항목 — 트랙 일시중지·테스터 목록 교체·국가 제거·패키지명/서명키 변경 금지).
 
 1. Doply 대시보드에서 매일 설치 유지 12대 이상을 확인한다.
-2. **R2(vc3) 게시 — 예정일이 오늘(8/21, D+4)이다.** 코드는 완료됐고 남은 것은 사람 작업뿐이다.
-   Doply 테스터의 업데이트 수행 시각 **전에** 게시해야 당일 반영된다 (대시보드에서 시각 확인):
-   - `npm run check` 통과 확인 → `versionCode 3`으로 AAB 빌드 → `jarsigner -verify`
-   - 비공개 트랙에 **새 출시 추가** (트랙을 건드리지 않는다)
-   - 릴리스 노트는 `fastlane/metadata/android/ko-KR/changelogs/3.txt`에 준비돼 있다
-   - 웹에도 함께 나가는 개선이므로 `main` 푸시로 Cloudflare 배포까지 같이 한다 (웹·앱 내용 일치)
+2. **R2(vc3) 게시 — 빌드까지 끝났다. Play Console 업로드만 남았다.**
+   Doply 테스터의 업데이트 수행 시각 **전에** 게시해야 당일 반영된다 (대시보드에서 시각 확인).
+   - 올릴 파일: **`web/android/spindle-1.0-vc3-release.aab`** (8,505,764 B, vc3, `jar verified.`)
+   - `테스트 및 출시 > 테스트 > 비공개 테스트`에서 **새 출시 만들기**
+     — 트랙 일시중지·테스터 목록 변경은 절대 하지 않는다 (14일 카운터가 끊긴다)
+   - 출시 노트: `fastlane/metadata/android/ko-KR/changelogs/3.txt` 내용을 그대로 붙여넣는다
+   - 웹(Cloudflare Pages)은 이미 같은 코드로 배포 완료 — 웹·앱 내용 일치 상태다
 3. 지인 테스터 2~3명에게 실기기 확인을 부탁하고 피드백 로그에 적는다 (3절 E-2).
 
 배포본을 다시 검증해야 할 때:
