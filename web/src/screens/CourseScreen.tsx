@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { MapFallbackNote } from '../components/MapFallbackNote'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
@@ -24,6 +25,14 @@ interface Props {
  */
 type GuideStage = 'idle' | 'first' | 'course'
 
+/**
+ * 안내 단계의 CTA는 POI 카드와 **다른 키**를 쓴다.
+ * 같은 키를 쓰면 1단계에서 길찾기를 누른 뒤 안내를 닫았을 때, 누른 적 없는 스트립 카드에도
+ * 폴백 한 줄이 돋아난다 (그리고 flex 카드가 모두 늘어나 위 지도가 줄어든다).
+ */
+const COURSE_LINK_ID = '__course__'
+const FIRST_STOP_LINK_ID = '__first-stop__'
+
 /** 이동수단별 라벨 (zones.ts TravelEstimate.method) */
 const METHOD_LABEL: Record<CourseStopView['method'], string> = {
   walk: '도보',
@@ -43,6 +52,9 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [stampToast, setStampToast] = useState<string | null>(null)
   const [stage, setStage] = useState<GuideStage>('idle')
+  // 카카오맵 링크를 실제로 누른 장소만 폴백 한 줄을 띄운다 (MapFallbackNote 주석).
+  const [triedMapIds, setTriedMapIds] = useState<readonly string[]>([])
+  const markMapTried = (id: string) => setTriedMapIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
 
   // 안내 단계가 열려 있으면 뒤로가기는 '안내 종료'와 같게 동작한다.
   useBackGuard(stage !== 'idle', () => setStage('idle'))
@@ -190,12 +202,14 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                   onClick={(e) => {
                     e.stopPropagation()
                     recordNavigation(stop)
+                    markMapTried(stop.poi.id)
                   }}
                   className="btn"
                   style={{ marginTop: 11, height: 42, width: '100%', background: 'var(--l-bg)', border: '1.5px solid var(--l-line)', color: 'var(--l-primary)', fontSize: 13.5, textDecoration: 'none' }}
                 >
                   카카오맵 길찾기
                 </a>
+                <MapFallbackNote placeName={stop.poi.name} visible={triedMapIds.includes(stop.poi.id)} />
               </div>
             </div>
           )
@@ -232,11 +246,17 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                   target="_blank"
                   rel="noreferrer"
                   className="btn"
-                  onClick={() => recordNavigation(firstStop)}
+                  onClick={() => {
+                    recordNavigation(firstStop)
+                    markMapTried(FIRST_STOP_LINK_ID)
+                  }}
                   style={{ height: 48, width: '100%', background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
                 >
                   카카오맵으로 길찾기
                 </a>
+              )}
+              {firstStop && (
+                <MapFallbackNote placeName={firstStop.poi.name} visible={triedMapIds.includes(FIRST_STOP_LINK_ID)} />
               )}
               <button
                 type="button"
@@ -260,10 +280,15 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                   target="_blank"
                   rel="noreferrer"
                   className="btn"
+                  onClick={() => markMapTried(COURSE_LINK_ID)}
                   style={{ height: 48, width: '100%', background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
                 >
                   카카오맵에서 전체 코스 보기
                 </a>
+              )}
+              {/* 전체 코스 링크가 열리지 않으면 1번 장소부터 모바일 웹으로 이어 간다 */}
+              {firstStop && (
+                <MapFallbackNote placeName={firstStop.poi.name} visible={triedMapIds.includes(COURSE_LINK_ID)} />
               )}
               <button
                 type="button"

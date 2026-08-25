@@ -8,6 +8,7 @@ import { StampNotice } from '../components/StampNotice'
 import { CuratedCopy } from '../components/CuratedCopy'
 import { copyOf } from '../engine/curation'
 import { evaluateOperation, type OperationStatus } from '../engine/operation'
+import { MapFallbackNote } from '../components/MapFallbackNote'
 import { kakaoMapSearchUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
@@ -33,6 +34,14 @@ interface Props {
 }
 
 /** S4 결과 카드 · 의미 레이어 (디자인 3a-4) — 이야기 · 왜 여기? · 도장 힌트 */
+/**
+ * 하단 액션 바는 absolute라 스크롤 영역이 그 높이만큼 아래 여백을 직접 확보해야 한다.
+ * 폴백 한 줄이 붙으면 바가 그만큼 높아지므로, 그 경우까지 덮는 값을 하나로 쓴다
+ * (한 줄이 두 줄로 접히는 좁은 화면도 포함해 넉넉히 잡는다).
+ */
+const FALLBACK_NOTE_HEIGHT = 44
+const ACTION_BAR_CLEARANCE = 132 + FALLBACK_NOTE_HEIGHT
+
 export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse, initialCourseNotice = null }: Props) {
   const { direction } = rec
   const poi = rec.candidates[candidateIndex]
@@ -42,6 +51,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [detailLoading, setDetailLoading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
   const [stampToast, setStampToast] = useState<string | null>(null)
+  // 카카오맵 길찾기를 실제로 누른 뒤에만 모바일 웹 폴백 한 줄을 띄운다 (MapFallbackNote 주석).
+  const [mapTried, setMapTried] = useState(false)
   const [festival, setFestival] = useState<Festival | null>(null)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [galleryImages, setGalleryImages] = useState<string[]>([])
@@ -95,6 +106,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     setFullDetailLoading(false)
     setFullDetailError(false)
     setCourseNotice(initialCourseNotice)
+    setMapTried(false)
   }, [initialCourseNotice, poi.contentId])
 
   // 프리뷰 카드의 주소·운영·휴무 표를 위해 결과 시점에 상세 소개도 실시간 조회한다.
@@ -259,7 +271,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
         <div style={{ width: 40 }} />
       </header>
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px 132px' }}>
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: `14px 18px ${ACTION_BAR_CLEARANCE}px` }}>
         {festival && <FestivalBanner festival={festival} />}
         {loading ? (
           <ResultSkeleton />
@@ -435,36 +447,50 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       </div>
 
       {/* 하단 액션 바 */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', display: 'flex', gap: 12, background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
-        <a
-          href={kakaoMapSearchUrl(poi.name)}
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-blue"
-          style={{ flex: 1, height: 56, fontSize: 16, textDecoration: 'none', pointerEvents: loading ? 'none' : undefined, opacity: loading ? 0.55 : undefined }}
-          aria-disabled={loading}
-          onClick={recordNavigation}
-        >
-          길찾기
-        </a>
-        <button onClick={onShare} aria-label="공유 카드 만들기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }} disabled={loading}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
-            <circle cx="6" cy="12" r="2.5" />
-            <circle cx="18" cy="6" r="2.5" />
-            <circle cx="18" cy="18" r="2.5" />
-            <path d="M8.2 10.8 L15.8 7.2 M8.2 13.2 L15.8 16.8" />
-          </svg>
-        </button>
-        {!rec.theme && <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
-            <path d="M3 12 a9 9 0 1 1 3 6.7" />
-            <path d="M3 20 v-4 h4" />
-          </svg>
-        </button>}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
+        {/*
+          액션 바의 그라디언트는 40% 지점부터 불투명해진다. 폴백 한 줄은 그 위쪽 투명 구간에
+          놓이므로, 자체 배경을 깔지 않으면 스크롤되는 본문 위에 글자가 겹쳐 읽히지 않는다.
+        */}
+        <MapFallbackNote
+          placeName={poi.name}
+          visible={mapTried}
+          style={{ margin: '0 0 10px', textAlign: 'center', background: 'var(--l-bg)', borderRadius: 12, padding: '6px 10px' }}
+        />
+        <div style={{ display: 'flex', gap: 12 }}>
+          <a
+            href={kakaoMapSearchUrl(poi.name)}
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-blue"
+            style={{ flex: 1, height: 56, fontSize: 16, textDecoration: 'none', pointerEvents: loading ? 'none' : undefined, opacity: loading ? 0.55 : undefined }}
+            aria-disabled={loading}
+            onClick={() => {
+              recordNavigation()
+              setMapTried(true)
+            }}
+          >
+            길찾기
+          </a>
+          <button onClick={onShare} aria-label="공유 카드 만들기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }} disabled={loading}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+              <circle cx="6" cy="12" r="2.5" />
+              <circle cx="18" cy="6" r="2.5" />
+              <circle cx="18" cy="18" r="2.5" />
+              <path d="M8.2 10.8 L15.8 7.2 M8.2 13.2 L15.8 16.8" />
+            </svg>
+          </button>
+          {!rec.theme && <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+              <path d="M3 12 a9 9 0 1 1 3 6.7" />
+              <path d="M3 20 v-4 h4" />
+            </svg>
+          </button>}
+        </div>
       </div>
 
       {stampToast && (
-        <div style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(90px + env(safe-area-inset-bottom))', zIndex: 4 }}>
+        <div style={{ position: 'absolute', left: 20, right: 20, bottom: `calc(${mapTried ? 90 + FALLBACK_NOTE_HEIGHT : 90}px + env(safe-area-inset-bottom))`, zIndex: 4 }}>
           <StampNotice district={stampToast} />
         </div>
       )}
@@ -602,7 +628,7 @@ function shortDate(yyyymmdd: string): string {
 
 /** 축제 특별 카드 — 방위+기간 일치 시 일반 결과 위에 (Phase 7) */
 function FestivalBanner({ festival }: { festival: Festival }) {
-  const mapHref = `https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${festival.title}`)}`
+  const mapHref = kakaoMapSearchUrl(festival.title)
   return (
     <a
       href={mapHref}

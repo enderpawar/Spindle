@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, poiImageProxyUrl } from '../api/details'
 import { ScreenFrame, Stars } from '../components/ScreenFrame'
+import { SourceLine } from '../components/SourceLine'
 import { buildShareCardBlob } from '../lib/shareCard'
+import { canUseNativeShareSheet, shareCardViaNativeSheet } from '../lib/shareCardDelivery'
 import type { Poi, Recommendation } from '../mock/pois'
 
 interface Props {
@@ -12,14 +14,21 @@ interface Props {
 
 type BusyState = 'idle' | 'saving' | 'sharing'
 
-/** S5 공유 카드 — Web Share API + 다운로드 폴백 */
+/**
+ * S5 공유 카드 — 웹은 Web Share API + 다운로드 폴백, 앱은 안드로이드 공유 시트.
+ *
+ * 앱에서는 `navigator.share`도 `<a download>`도 동작하지 않아 카드를 밖으로 내보낼 수 없었다
+ * (이유는 `lib/shareCardDelivery.ts` 주석). 그래서 앱에서는 버튼을 하나로 합치고 공유 시트에
+ * PNG 파일을 넘긴다 — 저장도 시트의 사진·파일 대상이 처리한다.
+ */
 export function ShareScreen({ rec, poi, onBack }: Props) {
   const { direction } = rec
   const [busy, setBusy] = useState<BusyState>('idle')
   const [notice, setNotice] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [previewFailed, setPreviewFailed] = useState(false)
-  const canShare = typeof navigator.share === 'function'
+  const isApp = canUseNativeShareSheet()
+  const canShare = isApp || typeof navigator.share === 'function'
 
   // 결과 카드에서 이미 조회한 상세(세션 캐시 히트)로 대표 이미지 유무를 확인한다.
   // 미리보기 <img>는 직접 URL로 표시하고, 내려받는 PNG(canvas)는 CORS 회피용 프록시 URL을 쓴다.
@@ -41,6 +50,11 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
 
   const showImage = Boolean(imageUrl) && !previewFailed
 
+  const shareText = `오늘의 방향은 ${direction.label}쪽 — ${poi.name}`
+  // 웹 다운로드 전용 파일명. 앱 공유는 캐시 사본을 한 장으로 묶기 위해 고정 이름을 쓴다
+  // (`lib/shareCardDelivery.ts`의 SHARE_CARD_PATH 주석 참고).
+  const cardFileName = `spindle-${direction.id.toLowerCase()}-${poi.id}.png`
+
   const makeBlob = () =>
     buildShareCardBlob({
       poiName: poi.name,
@@ -60,7 +74,7 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `spindle-${direction.id.toLowerCase()}-${poi.id}.png`
+      a.download = cardFileName
       a.click()
       URL.revokeObjectURL(url)
       setNotice('갤러리(다운로드)에 저장했어요')
@@ -76,11 +90,17 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
     setNotice(null)
     try {
       const blob = await makeBlob()
+      if (isApp) {
+        const result = await shareCardViaNativeSheet({ blob, title: 'Spindle', text: shareText })
+        // 시트를 그냥 닫은 것은 실패가 아니다 — 문구를 띄우지 않는다.
+        if (result === 'failed') setNotice('공유 시트를 열지 못했어요. 다시 시도해 주세요')
+        return
+      }
       const file = new File([blob], 'spindle.png', { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Spindle', text: `오늘의 방향은 ${direction.label}쪽 — ${poi.name}` })
+        await navigator.share({ files: [file], title: 'Spindle', text: shareText })
       } else {
-        await navigator.share({ title: 'Spindle', text: `오늘의 방향은 ${direction.label}쪽 — ${poi.name}` })
+        await navigator.share({ title: 'Spindle', text: shareText })
       }
     } catch {
       // 사용자가 공유 시트를 닫은 경우 포함 — 조용히 무시
@@ -164,15 +184,34 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       </div>
 
       <div style={{ padding: '0 24px calc(26px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 10, zIndex: 2 }}>
+        {/*
+          이 화면도 TourAPI 데이터(관광지명·대표 이미지)를 보여 준다 — 출처 표기는 생성된 PNG뿐
+          아니라 화면에도 필요하다 (절대 원칙 6). 어두운 배경이라 색만 맞춰 준다.
+        */}
+        <SourceLine style={{ margin: 0, color: 'rgba(255,255,255,.5)' }} />
         {notice && <div style={{ textAlign: 'center', fontSize: 12.5, fontWeight: 700, color: 'var(--ink-2)' }}>{notice}</div>}
         {canShare && (
           <button className="btn btn-primary" onClick={handleShare} disabled={busy !== 'idle'}>
             {busy === 'sharing' ? '카드 만드는 중…' : '공유하기'}
           </button>
         )}
-        <button className={`btn ${canShare ? 'btn-ghost' : 'btn-primary'}`} style={{ height: canShare ? 52 : 58 }} onClick={handleSave} disabled={busy !== 'idle'}>
-          {busy === 'saving' ? '카드 만드는 중…' : '이미지로 저장'}
-        </button>
+        {/*
+          앱에서는 '이미지로 저장'을 두지 않는다. Capacitor WebView에는 다운로드 리스너가 없어
+          `<a download>`이 아무 일도 하지 않기 때문이다 — 눌러도 반응이 없는 버튼이 된다.
+
+          문구로 저장을 약속하지는 않는다. 안드로이드 공유 시트는 OS의 저장 기능이 아니라
+          `ACTION_SEND`를 받겠다고 선언한 **설치된 앱** 목록일 뿐이라, 사진·파일 앱이 뜬다는
+          보장이 없다. 그래서 "보낼 수 있다"까지만 말한다.
+        */}
+        {isApp ? (
+          <p style={{ margin: 0, textAlign: 'center', fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--ink-2)' }}>
+            공유할 앱을 고르면 카드 이미지가 그대로 전달돼요
+          </p>
+        ) : (
+          <button className={`btn ${canShare ? 'btn-ghost' : 'btn-primary'}`} style={{ height: canShare ? 52 : 58 }} onClick={handleSave} disabled={busy !== 'idle'}>
+            {busy === 'saving' ? '카드 만드는 중…' : '이미지로 저장'}
+          </button>
+        )}
       </div>
     </ScreenFrame>
   )

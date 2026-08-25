@@ -54,3 +54,28 @@ export function kakaoMapCourseWalkUrl(stops: CourseWaypoint[]): string | null {
   const path = usable.map((s) => `${encodeURIComponent(s.name)},${s.lat},${s.lon}`).join('/')
   return `${KAKAO_MAP_COURSE_WALK_BASE}${path}`
 }
+
+/**
+ * 카카오맵 앱이 열리지 않을 때 이어갈 **카카오 모바일 웹** 주소 (R3).
+ *
+ * `map.kakao.com/link/*`는 모바일에서 `applink.map.kakao.com`으로 넘어가 앱을 먼저 띄우려 한다.
+ * 앱이 없으면 설치 안내에서 멈추고, 브라우저가 새 탭을 막으면 아무 일도 일어나지 않는다 —
+ * 코스 안내가 끊기는 유일한 지점이다. 이 주소는 모바일 웹 호스트를 직접 가리키므로 앱 없이도
+ * 장소 화면까지 도달하고, 거기서 카카오맵 길찾기를 그대로 이어갈 수 있다.
+ *
+ * 다른 지도 서비스로 넘기지 않는다 — 폴백도 카카오 안에서 끝낸다.
+ * 공개 관광지 이름만 담는다. 사용자 GPS·방위각은 넣지 않는다 (절대 원칙 1).
+ *
+ * ⚠ `m.map.kakao.com/scheme/search`로 바꾸지 말 것. 더 "공식"으로 보이지만 실제로 확인한 결과
+ * `applink.map.kakao.com`(앱 설치 유도 페이지)으로 리디렉션된다 — 이 폴백이 벗어나려던 바로 그
+ * 화면이다. 모바일 UA로 확인한 응답 (2026-08-25):
+ *   /scheme/search   → applink.map.kakao.com, 10,565B, 장소명 없음, 본문에 "설치"
+ *   /actions/searchView → 리디렉션 없음, 83,348B, 장소명 59회 노출, 스토어 유도 없음
+ * 주소를 바꾸려면 앱을 지운 실기기에서 장소 화면까지 도달하는지 먼저 확인한다.
+ */
+const KAKAO_MAP_MOBILE_SEARCH_BASE = 'https://m.map.kakao.com/actions/searchView'
+
+export function kakaoMapMobileSearchUrl(placeName: string): string {
+  const q = encodeURIComponent(`부산 ${placeName}`)
+  return `${KAKAO_MAP_MOBILE_SEARCH_BASE}?q=${q}`
+}
