@@ -8,6 +8,7 @@ import { StampNotice } from '../components/StampNotice'
 import { CuratedCopy } from '../components/CuratedCopy'
 import { copyOf } from '../engine/curation'
 import { evaluateOperation, type OperationStatus } from '../engine/operation'
+import { MapFallbackNote } from '../components/MapFallbackNote'
 import { kakaoMapSearchUrl } from '../lib/mapLinks'
 import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
@@ -42,6 +43,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
   const [detailLoading, setDetailLoading] = useState(false)
   const [imageFailed, setImageFailed] = useState(false)
   const [stampToast, setStampToast] = useState<string | null>(null)
+  // 카카오맵 길찾기를 실제로 누른 뒤에만 모바일 웹 폴백 한 줄을 띄운다 (MapFallbackNote 주석).
+  const [mapTried, setMapTried] = useState(false)
   const [festival, setFestival] = useState<Festival | null>(null)
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [galleryImages, setGalleryImages] = useState<string[]>([])
@@ -95,6 +98,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
     setFullDetailLoading(false)
     setFullDetailError(false)
     setCourseNotice(initialCourseNotice)
+    setMapTried(false)
   }, [initialCourseNotice, poi.contentId])
 
   // 프리뷰 카드의 주소·운영·휴무 표를 위해 결과 시점에 상세 소개도 실시간 조회한다.
@@ -435,32 +439,38 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       </div>
 
       {/* 하단 액션 바 */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', display: 'flex', gap: 12, background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
-        <a
-          href={kakaoMapSearchUrl(poi.name)}
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-blue"
-          style={{ flex: 1, height: 56, fontSize: 16, textDecoration: 'none', pointerEvents: loading ? 'none' : undefined, opacity: loading ? 0.55 : undefined }}
-          aria-disabled={loading}
-          onClick={recordNavigation}
-        >
-          길찾기
-        </a>
-        <button onClick={onShare} aria-label="공유 카드 만들기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }} disabled={loading}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
-            <circle cx="6" cy="12" r="2.5" />
-            <circle cx="18" cy="6" r="2.5" />
-            <circle cx="18" cy="18" r="2.5" />
-            <path d="M8.2 10.8 L15.8 7.2 M8.2 13.2 L15.8 16.8" />
-          </svg>
-        </button>
-        {!rec.theme && <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
-            <path d="M3 12 a9 9 0 1 1 3 6.7" />
-            <path d="M3 20 v-4 h4" />
-          </svg>
-        </button>}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
+        <MapFallbackNote placeName={poi.name} visible={mapTried} style={{ margin: '0 0 10px', textAlign: 'center' }} />
+        <div style={{ display: 'flex', gap: 12 }}>
+          <a
+            href={kakaoMapSearchUrl(poi.name)}
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-blue"
+            style={{ flex: 1, height: 56, fontSize: 16, textDecoration: 'none', pointerEvents: loading ? 'none' : undefined, opacity: loading ? 0.55 : undefined }}
+            aria-disabled={loading}
+            onClick={() => {
+              recordNavigation()
+              setMapTried(true)
+            }}
+          >
+            길찾기
+          </a>
+          <button onClick={onShare} aria-label="공유 카드 만들기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }} disabled={loading}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+              <circle cx="6" cy="12" r="2.5" />
+              <circle cx="18" cy="6" r="2.5" />
+              <circle cx="18" cy="18" r="2.5" />
+              <path d="M8.2 10.8 L15.8 7.2 M8.2 13.2 L15.8 16.8" />
+            </svg>
+          </button>
+          {!rec.theme && <button onClick={onRespin} aria-label="다시 돌리기" className="btn" style={{ width: 56, height: 56, borderRadius: 20, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', padding: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+              <path d="M3 12 a9 9 0 1 1 3 6.7" />
+              <path d="M3 20 v-4 h4" />
+            </svg>
+          </button>}
+        </div>
       </div>
 
       {stampToast && (

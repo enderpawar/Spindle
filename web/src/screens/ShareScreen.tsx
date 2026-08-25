@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, poiImageProxyUrl } from '../api/details'
 import { ScreenFrame, Stars } from '../components/ScreenFrame'
 import { buildShareCardBlob } from '../lib/shareCard'
+import { canUseNativeShareSheet, shareCardViaNativeSheet } from '../lib/shareCardDelivery'
 import type { Poi, Recommendation } from '../mock/pois'
 
 interface Props {
@@ -12,14 +13,21 @@ interface Props {
 
 type BusyState = 'idle' | 'saving' | 'sharing'
 
-/** S5 공유 카드 — Web Share API + 다운로드 폴백 */
+/**
+ * S5 공유 카드 — 웹은 Web Share API + 다운로드 폴백, 앱은 안드로이드 공유 시트.
+ *
+ * 앱에서는 `navigator.share`도 `<a download>`도 동작하지 않아 카드를 밖으로 내보낼 수 없었다
+ * (이유는 `lib/shareCardDelivery.ts` 주석). 그래서 앱에서는 버튼을 하나로 합치고 공유 시트에
+ * PNG 파일을 넘긴다 — 저장도 시트의 사진·파일 대상이 처리한다.
+ */
 export function ShareScreen({ rec, poi, onBack }: Props) {
   const { direction } = rec
   const [busy, setBusy] = useState<BusyState>('idle')
   const [notice, setNotice] = useState<string | null>(null)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [previewFailed, setPreviewFailed] = useState(false)
-  const canShare = typeof navigator.share === 'function'
+  const isApp = canUseNativeShareSheet()
+  const canShare = isApp || typeof navigator.share === 'function'
 
   // 결과 카드에서 이미 조회한 상세(세션 캐시 히트)로 대표 이미지 유무를 확인한다.
   // 미리보기 <img>는 직접 URL로 표시하고, 내려받는 PNG(canvas)는 CORS 회피용 프록시 URL을 쓴다.
@@ -41,6 +49,9 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
 
   const showImage = Boolean(imageUrl) && !previewFailed
 
+  const shareText = `오늘의 방향은 ${direction.label}쪽 — ${poi.name}`
+  const cardFileName = `spindle-${direction.id.toLowerCase()}-${poi.id}.png`
+
   const makeBlob = () =>
     buildShareCardBlob({
       poiName: poi.name,
@@ -60,7 +71,7 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `spindle-${direction.id.toLowerCase()}-${poi.id}.png`
+      a.download = cardFileName
       a.click()
       URL.revokeObjectURL(url)
       setNotice('갤러리(다운로드)에 저장했어요')
@@ -76,11 +87,17 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
     setNotice(null)
     try {
       const blob = await makeBlob()
+      if (isApp) {
+        const result = await shareCardViaNativeSheet({ blob, fileName: cardFileName, title: 'Spindle', text: shareText })
+        // 시트를 그냥 닫은 것은 실패가 아니다 — 문구를 띄우지 않는다.
+        if (result === 'failed') setNotice('공유 시트를 열지 못했어요. 다시 시도해 주세요')
+        return
+      }
       const file = new File([blob], 'spindle.png', { type: 'image/png' })
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: 'Spindle', text: `오늘의 방향은 ${direction.label}쪽 — ${poi.name}` })
+        await navigator.share({ files: [file], title: 'Spindle', text: shareText })
       } else {
-        await navigator.share({ title: 'Spindle', text: `오늘의 방향은 ${direction.label}쪽 — ${poi.name}` })
+        await navigator.share({ title: 'Spindle', text: shareText })
       }
     } catch {
       // 사용자가 공유 시트를 닫은 경우 포함 — 조용히 무시
@@ -170,9 +187,20 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
             {busy === 'sharing' ? '카드 만드는 중…' : '공유하기'}
           </button>
         )}
-        <button className={`btn ${canShare ? 'btn-ghost' : 'btn-primary'}`} style={{ height: canShare ? 52 : 58 }} onClick={handleSave} disabled={busy !== 'idle'}>
-          {busy === 'saving' ? '카드 만드는 중…' : '이미지로 저장'}
-        </button>
+        {/*
+          앱에서는 '이미지로 저장'을 두지 않는다. Capacitor WebView에는 다운로드 리스너가 없어
+          `<a download>`이 아무 일도 하지 않기 때문이다 — 눌러도 반응이 없는 버튼이 된다.
+          저장은 공유 시트의 사진·파일 대상이 대신 처리하므로 그 사실만 한 줄로 알린다.
+        */}
+        {isApp ? (
+          <p style={{ margin: 0, textAlign: 'center', fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--ink-2)' }}>
+            공유 시트에서 사진 앱이나 파일로 저장할 수 있어요
+          </p>
+        ) : (
+          <button className={`btn ${canShare ? 'btn-ghost' : 'btn-primary'}`} style={{ height: canShare ? 52 : 58 }} onClick={handleSave} disabled={busy !== 'idle'}>
+            {busy === 'saving' ? '카드 만드는 중…' : '이미지로 저장'}
+          </button>
+        )}
       </div>
     </ScreenFrame>
   )

@@ -34,7 +34,7 @@
 - 프론트: React(Vite) + TypeScript, PWA (manifest + service worker 오프라인 셸)
 - 프록시: Cloudflare Workers (키 주입·요청 중계만, 로그 미저장)
 - 배포: Cloudflare Pages — 심사 제출용 고정 URL
-- 지도: 명소·코스 지도는 카카오맵 JS SDK 베이스맵 + 자체 CustomOverlay 핀(실패 시 `LocalMapView` 폴백), 길안내는 카카오맵·네이버지도 딥링크. 지도 요청은 브라우저↔카카오 직접 통신 — 프록시 경유 금지(절대 원칙 1)
+- 지도: 명소·코스 지도는 카카오맵 JS SDK 베이스맵 + 자체 CustomOverlay 핀(실패 시 `LocalMapView` 폴백), 길안내는 카카오맵 딥링크만 사용한다(앱이 열리지 않으면 카카오 모바일 웹으로 폴백 — 타 지도 서비스로 넘기지 않는다). 지도 요청은 브라우저↔카카오 직접 통신 — 프록시 경유 금지(절대 원칙 1)
 
 ## 명령어
 

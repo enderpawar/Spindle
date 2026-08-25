@@ -3,6 +3,7 @@ import {
   kakaoMapCourseWalkUrl,
   kakaoMapDirectionsUrl,
   kakaoMapFirstStopDirectionsUrl,
+  kakaoMapMobileSearchUrl,
   kakaoMapSearchUrl,
 } from './mapLinks'
 
@@ -107,5 +108,24 @@ describe('kakaoMapFirstStopDirectionsUrl', () => {
         다음장소,
       ]),
     ).toBeNull()
+  })
+})
+
+describe('kakaoMapMobileSearchUrl', () => {
+  it('앱을 거치지 않는 카카오 모바일 웹 호스트를 가리킨다', () => {
+    const url = kakaoMapMobileSearchUrl('흰여울문화마을')
+    expect(url.startsWith('https://m.map.kakao.com/actions/searchView?q=')).toBe(true)
+    // applink으로 넘어가면 앱 미설치 기기에서 다시 막힌다 — 폴백의 존재 이유가 사라진다
+    expect(url).not.toContain('applink')
+  })
+
+  it('장소명만 담고 좌표는 담지 않는다 (절대 원칙 1)', () => {
+    const url = kakaoMapMobileSearchUrl('자갈치시장')
+    expect(decodeURIComponent(url)).toBe('https://m.map.kakao.com/actions/searchView?q=부산 자갈치시장')
+    expect(url).not.toMatch(/3[45]\.\d/)
+  })
+
+  it('장소명의 특수문자를 쿼리에 안전하게 인코딩한다', () => {
+    expect(kakaoMapMobileSearchUrl('시장 & 골목')).not.toContain('&')
   })
 })

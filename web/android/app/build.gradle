@@ -19,10 +19,11 @@ android {
         applicationId "kr.spindle.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // 2026-08-21: R2 (GOOGLE_PLAY_RELEASE.md 3절 E-2). 비공개 테스트 중 새 출시를
-        // 추가하는 것이므로 versionCode를 반드시 올린다 — 안드로이드 하드웨어 뒤로가기 처리와
-        // 네트워크 실패 원인 안내가 들어간다. 서명키·패키지명은 vc2와 동일하게 유지한다.
-        versionCode 3
+        // 2026-08-25: R3 (GOOGLE_PLAY_RELEASE.md 3절 E-2). 비공개 테스트 중 새 출시를
+        // 추가하는 것이므로 versionCode를 반드시 올린다 — 안드로이드 공유 시트로 공유 카드
+        // 내보내기와 카카오맵 길찾기 모바일 웹 폴백이 들어간다.
+        // 서명키·패키지명은 vc2·vc3과 동일하게 유지한다.
+        versionCode 4
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

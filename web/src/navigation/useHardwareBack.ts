@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { isNativeShell } from '../native/shell'
 
 /**
  * 안드로이드 하드웨어 뒤로가기를 앱이 직접 처리한다.
@@ -22,18 +23,6 @@ import { useEffect, useRef } from 'react'
  *
  * 이벤트는 `retainUntilConsumed`로 전달되므로, 등록 전에 누른 뒤로가기는 등록 직후 재생된다.
  */
-interface CapacitorGlobal {
-  isNativePlatform?: () => boolean
-  isNative?: boolean
-}
-
-/** 네이티브 셸 안에서 실행 중인가. 브라우저에는 이 전역이 없다. */
-function isNativeShell(): boolean {
-  const cap = (globalThis as { Capacitor?: CapacitorGlobal }).Capacitor
-  // native-bridge.js가 isNativePlatform을 정의한다. isNative는 구버전 대비 폴백.
-  return cap?.isNativePlatform?.() === true || cap?.isNative === true
-}
-
 export function useHardwareBack(handler: () => void): void {
   const handlerRef = useRef(handler)
 
