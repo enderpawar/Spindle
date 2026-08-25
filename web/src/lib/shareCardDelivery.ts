@@ -1,14 +1,17 @@
-import { isNativeShell } from '../native/shell'
+import { nativePlatform } from '../native/shell'
 
 /**
  * 공유 카드 PNG를 어디로 내보낼지 결정하고 실행한다.
  *
  * 웹과 앱은 내보내는 수단이 완전히 다르다.
  *  - 웹(브라우저·PWA): Web Share API(`navigator.share`) + `<a download>` 저장 폴백. 지금까지의 경로.
- *  - 앱(Capacitor WebView): **둘 다 동작하지 않는다.** 안드로이드 WebView는 Web Share API를
- *    구현하지 않아 `navigator.share`가 아예 없고, Capacitor는 `setDownloadListener`를 걸지
- *    않으므로 `<a download>`의 blob 저장이 조용히 무시된다(설치본 소스 확인). 즉 앱에서는
- *    공유 카드가 화면 밖으로 나갈 방법이 없었다.
+ *  - **안드로이드 앱**(Capacitor WebView): **둘 다 동작하지 않는다.** 안드로이드 WebView는
+ *    Web Share API를 구현하지 않아 `navigator.share`가 아예 없고, Capacitor는
+ *    `setDownloadListener`를 걸지 않으므로 `<a download>`의 blob 저장이 조용히 무시된다
+ *    (설치본 소스 확인). 즉 안드로이드 앱에서는 공유 카드가 화면 밖으로 나갈 방법이 없었다.
+ *  - **iOS 앱**: WKWebView는 Web Share API를 파일까지 구현한다 — 기존 경로가 정상 동작하므로
+ *    건드리지 않는다. 게다가 `@capacitor/share`는 안드로이드 프로젝트에만 물려 있어
+ *    (`ios/App/CapApp-SPM/Package.swift`에 없다) 네이티브 경로로 보내면 오히려 기능이 죽는다.
  *
  * 그래서 앱에서는 PNG를 캐시 디렉터리에 파일로 쓴 뒤 **안드로이드 공유 시트**로 넘긴다.
  * 사진 앱·메신저·드라이브·파일 등 저장까지 시트가 한 번에 처리한다.
@@ -27,9 +30,14 @@ import { isNativeShell } from '../native/shell'
  * 파일명이 POI별로 다르면 이 상한이 깨지므로 파일명을 인자로 받지 않는다.
  */
 
-/** 앱에서 공유 시트를 쓸 수 있는가 — 웹에서는 항상 false다. */
+/**
+ * 네이티브 공유 시트를 써야 하는가.
+ *
+ * **안드로이드에서만 true다.** 웹은 `navigator.share`가 있고, iOS도 WKWebView가 Web Share를
+ * 구현하므로 기존 경로가 더 낫다 — 그리고 iOS에는 `@capacitor/share`가 설치돼 있지도 않다.
+ */
 export function canUseNativeShareSheet(): boolean {
-  return isNativeShell()
+  return nativePlatform() === 'android'
 }
 
 export type NativeShareResult = 'shared' | 'dismissed' | 'failed'
@@ -46,8 +54,16 @@ interface NativeShareInput {
  */
 const SHARE_CARD_PATH = 'spindle-share-card.png'
 
-/** 쓰기→공유→정리 구간을 직렬화한다. 연타·중복 호출이 서로의 파일을 지우지 못하게 막는다. */
-let inFlight: Promise<NativeShareResult> | null = null
+/**
+ * 쓰기→공유→정리 구간을 직렬화한다. 파일 경로가 하나뿐이라 두 호출이 겹치면 늦은 쪽이
+ * 진행 중인 공유의 파일을 지워 버린다.
+ *
+ * ⚠ 진행 중인 Promise를 **그대로 돌려주지 않는다.** 그렇게 하면 다른 카드로 호출했을 때
+ * 앞 카드의 결과를 받는다 — 안드로이드 공유 시트는 사용자가 고를 때까지 resolve되지 않으므로,
+ * 시트를 열어 둔 채 뒤로 나가 다른 POI를 공유하면 B는 쓰이지도 공유되지도 않았는데 `'shared'`가
+ * 돌아온다. 그래서 **앞 작업이 끝난 뒤에 이어서 실행**한다.
+ */
+let inFlight: Promise<unknown> = Promise.resolve()
 
 /**
  * `FileReader`가 주는 `data:image/png;base64,....`에서 본문만 떼어낸다.
@@ -91,14 +107,13 @@ export function isShareDismissal(error: unknown): boolean {
 }
 
 export function shareCardViaNativeSheet(input: NativeShareInput): Promise<NativeShareResult> {
-  if (!isNativeShell()) return Promise.resolve('failed')
-  // 앞선 공유가 아직 진행 중이면 그 결과를 그대로 돌려준다. 새로 파일을 쓰면 진행 중인
-  // 공유가 참조하는 파일을 지워 버린다 (플러그인도 두 번째 share를 거절한다).
-  if (inFlight) return inFlight
+  if (!canUseNativeShareSheet()) return Promise.resolve('failed')
 
-  const run = deliver(input).finally(() => {
-    inFlight = null
-  })
+  // 앞 작업의 실패는 이 호출을 막지 않는다 — 성공/실패 무관하게 끝나기만 기다린다.
+  const run = inFlight.then(
+    () => deliver(input),
+    () => deliver(input),
+  )
   inFlight = run
   return run
 }

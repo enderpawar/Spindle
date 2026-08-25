@@ -25,9 +25,12 @@ vi.mock('@capacitor/share', () => ({
 }))
 
 interface Global {
-  Capacitor?: { isNativePlatform?: () => boolean }
+  Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string }
   FileReader?: unknown
 }
+
+const androidShell = { isNativePlatform: () => true, getPlatform: () => 'android' }
+const iosShell = { isNativePlatform: () => true, getPlatform: () => 'ios' }
 
 /** base64 변환은 FileReader에 기대는데 node 환경에는 없다 — 계약만 맞춰 세운다. */
 class FakeFileReader {
@@ -47,7 +50,7 @@ beforeEach(() => {
   writeFile.mockReset().mockResolvedValue({ uri: 'file:///data/cache/spindle-share-card.png' })
   deleteFile.mockReset().mockResolvedValue(undefined)
   share.mockReset().mockResolvedValue({ activityType: 'com.kakao.talk' })
-  ;(globalThis as Global).Capacitor = { isNativePlatform: () => true }
+  ;(globalThis as Global).Capacitor = androidShell
   ;(globalThis as Global).FileReader = FakeFileReader
 })
 
@@ -57,9 +60,17 @@ afterEach(() => {
 })
 
 describe('canUseNativeShareSheet', () => {
-  it('네이티브 셸 안에서만 true다 — 웹은 기존 Web Share 경로를 쓴다', () => {
+  it('안드로이드 앱에서만 true다', () => {
     expect(canUseNativeShareSheet()).toBe(true)
+  })
+
+  it('웹은 false — navigator.share 경로를 그대로 쓴다', () => {
     delete (globalThis as Global).Capacitor
+    expect(canUseNativeShareSheet()).toBe(false)
+  })
+
+  it('iOS도 false — WKWebView는 Web Share를 구현하고, @capacitor/share가 설치돼 있지도 않다', () => {
+    ;(globalThis as Global).Capacitor = iosShell
     expect(canUseNativeShareSheet()).toBe(false)
   })
 })
@@ -69,6 +80,12 @@ describe('shareCardViaNativeSheet', () => {
     delete (globalThis as Global).Capacitor
     await expect(shareCardViaNativeSheet(input)).resolves.toBe('failed')
     expect(writeFile).not.toHaveBeenCalled()
+    expect(share).not.toHaveBeenCalled()
+  })
+
+  it('iOS에서도 네이티브 경로를 타지 않는다 — 플러그인이 없어 기능이 죽는다', async () => {
+    ;(globalThis as Global).Capacitor = iosShell
+    await expect(shareCardViaNativeSheet(input)).resolves.toBe('failed')
     expect(share).not.toHaveBeenCalled()
   })
 
@@ -120,15 +137,27 @@ describe('shareCardViaNativeSheet', () => {
     expect(share).not.toHaveBeenCalled()
   })
 
-  it('연타해도 파일 작업이 겹치지 않는다 — 진행 중인 공유 결과를 그대로 돌려준다', async () => {
-    const [a, b] = await Promise.all([shareCardViaNativeSheet(input), shareCardViaNativeSheet(input)])
+  it('겹쳐 호출해도 파일 작업이 서로를 덮지 않는다 — 앞 작업이 끝난 뒤에 이어서 실행한다', async () => {
+    // 첫 공유의 시트가 아직 열려 있는 상태를 흉내 낸다 (플러그인은 사용자가 고를 때까지 resolve하지 않는다)
+    let releaseFirst: (() => void) | null = null
+    share.mockImplementationOnce(() => new Promise<{ activityType?: string }>((resolve) => {
+      releaseFirst = () => resolve({ activityType: 'com.kakao.talk' })
+    }))
 
-    expect(a).toBe('shared')
-    expect(b).toBe('shared')
-    // 두 번째 호출이 진행 중인 공유의 파일을 지우거나 덮어쓰지 않았다
+    const first = shareCardViaNativeSheet(input)
+    const second = shareCardViaNativeSheet({ ...input, text: '다른 카드' })
+
+    await vi.waitFor(() => expect(releaseFirst).not.toBeNull())
+    // 첫 공유가 끝나기 전에는 두 번째가 파일을 건드리지 않는다
     expect(writeFile).toHaveBeenCalledTimes(1)
-    expect(deleteFile).toHaveBeenCalledTimes(1)
-    expect(share).toHaveBeenCalledTimes(1)
+    releaseFirst!()
+
+    expect(await first).toBe('shared')
+    expect(await second).toBe('shared')
+    // 두 번째도 자기 카드를 실제로 쓰고 공유했다 — 앞 결과를 빌려 쓰지 않는다
+    expect(writeFile).toHaveBeenCalledTimes(2)
+    expect(share).toHaveBeenCalledTimes(2)
+    expect(share.mock.calls[1][0]).toMatchObject({ text: '다른 카드' })
   })
 
   it('앞선 공유가 끝난 뒤에는 다시 공유할 수 있다 (잠금이 풀린다)', async () => {

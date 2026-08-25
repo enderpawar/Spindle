@@ -25,8 +25,13 @@ interface Props {
  */
 type GuideStage = 'idle' | 'first' | 'course'
 
-/** 코스 전체 링크는 POI가 아니라서 폴백 표시를 위한 자체 키를 쓴다 */
+/**
+ * 안내 단계의 CTA는 POI 카드와 **다른 키**를 쓴다.
+ * 같은 키를 쓰면 1단계에서 길찾기를 누른 뒤 안내를 닫았을 때, 누른 적 없는 스트립 카드에도
+ * 폴백 한 줄이 돋아난다 (그리고 flex 카드가 모두 늘어나 위 지도가 줄어든다).
+ */
 const COURSE_LINK_ID = '__course__'
+const FIRST_STOP_LINK_ID = '__first-stop__'
 
 /** 이동수단별 라벨 (zones.ts TravelEstimate.method) */
 const METHOD_LABEL: Record<CourseStopView['method'], string> = {
@@ -243,7 +248,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                   className="btn"
                   onClick={() => {
                     recordNavigation(firstStop)
-                    markMapTried(firstStop.poi.id)
+                    markMapTried(FIRST_STOP_LINK_ID)
                   }}
                   style={{ height: 48, width: '100%', background: 'var(--l-primary)', color: '#fff', fontSize: 14, textDecoration: 'none' }}
                 >
@@ -251,7 +256,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
                 </a>
               )}
               {firstStop && (
-                <MapFallbackNote placeName={firstStop.poi.name} visible={triedMapIds.includes(firstStop.poi.id)} />
+                <MapFallbackNote placeName={firstStop.poi.name} visible={triedMapIds.includes(FIRST_STOP_LINK_ID)} />
               )}
               <button
                 type="button"

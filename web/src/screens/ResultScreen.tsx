@@ -448,7 +448,15 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
 
       {/* 하단 액션 바 */}
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 20px calc(18px + env(safe-area-inset-bottom))', background: 'linear-gradient(transparent, var(--l-bg) 40%)', zIndex: 3 }}>
-        <MapFallbackNote placeName={poi.name} visible={mapTried} style={{ margin: '0 0 10px', textAlign: 'center' }} />
+        {/*
+          액션 바의 그라디언트는 40% 지점부터 불투명해진다. 폴백 한 줄은 그 위쪽 투명 구간에
+          놓이므로, 자체 배경을 깔지 않으면 스크롤되는 본문 위에 글자가 겹쳐 읽히지 않는다.
+        */}
+        <MapFallbackNote
+          placeName={poi.name}
+          visible={mapTried}
+          style={{ margin: '0 0 10px', textAlign: 'center', background: 'var(--l-bg)', borderRadius: 12, padding: '6px 10px' }}
+        />
         <div style={{ display: 'flex', gap: 12 }}>
           <a
             href={kakaoMapSearchUrl(poi.name)}
@@ -620,7 +628,7 @@ function shortDate(yyyymmdd: string): string {
 
 /** 축제 특별 카드 — 방위+기간 일치 시 일반 결과 위에 (Phase 7) */
 function FestivalBanner({ festival }: { festival: Festival }) {
-  const mapHref = `https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${festival.title}`)}`
+  const mapHref = kakaoMapSearchUrl(festival.title)
   return (
     <a
       href={mapHref}

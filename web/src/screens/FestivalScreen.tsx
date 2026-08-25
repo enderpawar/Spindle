@@ -3,8 +3,10 @@ import { failureCauseLine } from '../api/failureCopy'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
 import { festivalBoardFor, type FestivalBoard } from '../engine/festival'
 import { BottomNav, type NavTab } from '../components/BottomNav'
+import { MapFallbackNote } from '../components/MapFallbackNote'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
+import { kakaoMapSearchUrl } from '../lib/mapLinks'
 
 interface Props {
   onNavigate: (tab: NavTab) => void
@@ -25,6 +27,9 @@ function shortDate(yyyymmdd: string): string {
 export function FestivalScreen({ onNavigate, onBack }: Props) {
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [reloadKey, setReloadKey] = useState(0)
+  // 카카오맵 링크를 실제로 누른 축제만 폴백 한 줄을 띄운다 (MapFallbackNote 주석).
+  const [triedMapIds, setTriedMapIds] = useState<readonly string[]>([])
+  const markMapTried = (id: string) => setTriedMapIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
 
   useEffect(() => {
     let cancelled = false
@@ -105,31 +110,34 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
         {state.kind === 'ready' && state.board.festivals.length > 0 && (
           <div className="motion-card-list" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {state.board.festivals.map((f) => (
-              <a
-                key={f.contentId}
-                href={`https://map.kakao.com/link/search/${encodeURIComponent(`부산 ${f.title}`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="btn motion-card motion-card-enter"
-                style={{ padding: 0, height: 'auto', display: 'flex', alignItems: 'stretch', gap: 0, background: '#fff', border: '1px solid var(--l-line)', borderRadius: 18, overflow: 'hidden', textDecoration: 'none' }}
-              >
-                <div style={{ width: 92, flex: 'none', background: f.imageUrl ? `center/cover no-repeat url(${f.imageUrl})` : 'linear-gradient(145deg,#ff9e7a,#e0603f)', display: 'grid', placeItems: 'center' }}>
-                  {!f.imageUrl && (
-                    <span aria-hidden style={{ fontSize: 30 }}>
-                      🎉
-                    </span>
-                  )}
-                </div>
-                <div style={{ flex: 1, padding: '12px 14px', textAlign: 'left' }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)', lineHeight: 1.3 }}>{f.title}</div>
-                  <div style={{ marginTop: 5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
-                    {f.district ? `${f.district} · ` : ''}
-                    {state.board.kind === 'upcoming' ? '곧 열려요 · ' : ''}
-                    {shortDate(f.startDate)}–{shortDate(f.endDate)}
+              <div key={f.contentId}>
+                <a
+                  href={kakaoMapSearchUrl(f.title)}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => markMapTried(f.contentId)}
+                  className="btn motion-card motion-card-enter"
+                  style={{ padding: 0, height: 'auto', display: 'flex', alignItems: 'stretch', gap: 0, background: '#fff', border: '1px solid var(--l-line)', borderRadius: 18, overflow: 'hidden', textDecoration: 'none' }}
+                >
+                  <div style={{ width: 92, flex: 'none', background: f.imageUrl ? `center/cover no-repeat url(${f.imageUrl})` : 'linear-gradient(145deg,#ff9e7a,#e0603f)', display: 'grid', placeItems: 'center' }}>
+                    {!f.imageUrl && (
+                      <span aria-hidden style={{ fontSize: 30 }}>
+                        🎉
+                      </span>
+                    )}
                   </div>
-                  <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: 'var(--l-primary)' }}>지도에서 보기 ›</div>
-                </div>
-              </a>
+                  <div style={{ flex: 1, padding: '12px 14px', textAlign: 'left' }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)', lineHeight: 1.3 }}>{f.title}</div>
+                    <div style={{ marginTop: 5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                      {f.district ? `${f.district} · ` : ''}
+                      {state.board.kind === 'upcoming' ? '곧 열려요 · ' : ''}
+                      {shortDate(f.startDate)}–{shortDate(f.endDate)}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: 'var(--l-primary)' }}>지도에서 보기 ›</div>
+                  </div>
+                </a>
+                <MapFallbackNote placeName={f.title} visible={triedMapIds.includes(f.contentId)} />
+              </div>
             ))}
           </div>
         )}
