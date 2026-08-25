@@ -65,6 +65,13 @@ export function kakaoMapCourseWalkUrl(stops: CourseWaypoint[]): string | null {
  *
  * 다른 지도 서비스로 넘기지 않는다 — 폴백도 카카오 안에서 끝낸다.
  * 공개 관광지 이름만 담는다. 사용자 GPS·방위각은 넣지 않는다 (절대 원칙 1).
+ *
+ * ⚠ `m.map.kakao.com/scheme/search`로 바꾸지 말 것. 더 "공식"으로 보이지만 실제로 확인한 결과
+ * `applink.map.kakao.com`(앱 설치 유도 페이지)으로 리디렉션된다 — 이 폴백이 벗어나려던 바로 그
+ * 화면이다. 모바일 UA로 확인한 응답 (2026-08-25):
+ *   /scheme/search   → applink.map.kakao.com, 10,565B, 장소명 없음, 본문에 "설치"
+ *   /actions/searchView → 리디렉션 없음, 83,348B, 장소명 59회 노출, 스토어 유도 없음
+ * 주소를 바꾸려면 앱을 지운 실기기에서 장소 화면까지 도달하는지 먼저 확인한다.
  */
 const KAKAO_MAP_MOBILE_SEARCH_BASE = 'https://m.map.kakao.com/actions/searchView'
 

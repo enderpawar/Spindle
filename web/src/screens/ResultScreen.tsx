@@ -34,6 +34,14 @@ interface Props {
 }
 
 /** S4 결과 카드 · 의미 레이어 (디자인 3a-4) — 이야기 · 왜 여기? · 도장 힌트 */
+/**
+ * 하단 액션 바는 absolute라 스크롤 영역이 그 높이만큼 아래 여백을 직접 확보해야 한다.
+ * 폴백 한 줄이 붙으면 바가 그만큼 높아지므로, 그 경우까지 덮는 값을 하나로 쓴다
+ * (한 줄이 두 줄로 접히는 좁은 화면도 포함해 넉넉히 잡는다).
+ */
+const FALLBACK_NOTE_HEIGHT = 44
+const ACTION_BAR_CLEARANCE = 132 + FALLBACK_NOTE_HEIGHT
+
 export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse, initialCourseNotice = null }: Props) {
   const { direction } = rec
   const poi = rec.candidates[candidateIndex]
@@ -263,7 +271,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
         <div style={{ width: 40 }} />
       </header>
 
-      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px 132px' }}>
+      <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: `14px 18px ${ACTION_BAR_CLEARANCE}px` }}>
         {festival && <FestivalBanner festival={festival} />}
         {loading ? (
           <ResultSkeleton />
@@ -474,7 +482,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       </div>
 
       {stampToast && (
-        <div style={{ position: 'absolute', left: 20, right: 20, bottom: 'calc(90px + env(safe-area-inset-bottom))', zIndex: 4 }}>
+        <div style={{ position: 'absolute', left: 20, right: 20, bottom: `calc(${mapTried ? 90 + FALLBACK_NOTE_HEIGHT : 90}px + env(safe-area-inset-bottom))`, zIndex: 4 }}>
           <StampNotice district={stampToast} />
         </div>
       )}
