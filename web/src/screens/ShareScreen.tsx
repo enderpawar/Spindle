@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, poiImageProxyUrl } from '../api/details'
 import { ScreenFrame, Stars } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
-import { buildShareCardBlob } from '../lib/shareCard'
 import { canUseNativeShareSheet, shareCardViaNativeSheet } from '../lib/shareCardDelivery'
 import type { Poi, Recommendation } from '../mock/pois'
 
@@ -55,8 +54,11 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
   // (`lib/shareCardDelivery.ts`의 SHARE_CARD_PATH 주석 참고).
   const cardFileName = `spindle-${direction.id.toLowerCase()}-${poi.id}.png`
 
-  const makeBlob = () =>
-    buildShareCardBlob({
+  // 카드 그리기(1080×1920 Canvas)는 저장·공유를 누른 뒤에야 필요하다 — 화면을 여는 데는
+  // 쓰이지 않으므로 초기 번들에서 빼고 이 시점에 받는다.
+  const makeBlob = async () => {
+    const { buildShareCardBlob } = await import('../lib/shareCard')
+    return buildShareCardBlob({
       poiName: poi.name,
       districtLine: `부산 ${poi.district} · 걸어서 약 ${poi.walkMinutes}분`,
       message: direction.message,
@@ -65,6 +67,7 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       // 대표 이미지가 있을 때만 프록시 경유 same-origin URL을 넘긴다 (없으면 별 폴백)
       imageUrl: showImage ? poiImageProxyUrl(poi.contentId) : undefined,
     })
+  }
 
   const handleSave = async () => {
     setBusy('saving')

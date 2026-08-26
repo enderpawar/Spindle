@@ -16,6 +16,12 @@ export const COURSE_PIN_SIZE = 26
 export const DEFAULT_PIN_COLOR = '#5b7cb4'
 export const SELECTED_PIN_COLOR = '#2f5cff'
 
+/**
+ * 운영 중단·운영시간 외 핀의 투명도. 지우거나 숨기지 않는다 —
+ * 그 장소가 거기 있다는 사실은 그대로 보여주되 지금은 선택지가 아님을 조용히 알린다.
+ */
+export const CLOSED_PIN_OPACITY = 0.38
+
 export function pinColorOf(_poi: Poi): string {
   return DEFAULT_PIN_COLOR
 }

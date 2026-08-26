@@ -3,7 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BRIDGES, GEO, LAND_PATH, ROADS_MAJOR, ROADS_MINOR, project } from './busanGeo'
 import { type Departure, type Poi } from '../mock/pois'
 import { MapPoiPreview } from '../components/MapPoiPreview'
-import { COURSE_PIN_SIZE, MAP_PIN_SIZE, MapClusterPin, MapPin, pinColorOf } from './MapPin'
+import { CLOSED_PIN_OPACITY, COURSE_PIN_SIZE, MAP_PIN_SIZE, MapClusterPin, MapPin, pinColorOf } from './MapPin'
 import type { GeoPoint } from '../engine/geo'
 import { mapPinLabel, type CongestionVisualStatus } from './congestionStatus'
 import { buildPinLayout, densityModeForLocal, pinLayerOf } from './pinLayout'
@@ -102,12 +102,6 @@ const Z_MAX = 6
 const SEA_MARGIN = 1500
 const CANVAS_DPR_MAX = 1.5
 const EMPTY_EXTRA_SPOTS: NonNullable<MapViewProps['extraSpots']> = []
-
-/**
- * 운영 중단·운영시간 외 핀의 투명도. 지우거나 숨기지 않는다 —
- * 그 장소가 거기 있다는 사실은 그대로 보여주되 지금은 선택지가 아님을 조용히 알린다.
- */
-export const CLOSED_PIN_OPACITY = 0.38
 
 function ease(t: number) {
   return 1 - Math.pow(1 - t, 3)
