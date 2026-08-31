@@ -18,3 +18,12 @@ web/ios/App/App.xcodeproj/xcuserdata/
 web/ios/App/App.xcworkspace/xcuserdata/
 
 *.log
+
+# fastlane iOS 빌드 산출물 (IPA·dSYM)과 실행 리포트
+build/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output/
+
+# App Store Connect API 키(.p8)는 절대 커밋하지 않는다 — GitHub secret으로만 전달한다
+*.p8

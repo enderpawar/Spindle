@@ -1,0 +1,130 @@
+# Spindle iOS 릴리스 워크플로 (App Store / TestFlight)
+#
+# deploy.yml(웹·프록시)과 달리 push로 자동 실행하지 않는다. macOS 러너는 분당 과금이
+# ubuntu의 10배라 커밋마다 돌릴 대상이 아니고, 스토어 업로드는 되돌리기 어렵기 때문에
+# 사람이 명시적으로 실행하는 workflow_dispatch 전용으로 둔다.
+#
+# 필요한 GitHub repo secrets (Settings → Secrets and variables → Actions):
+#   ASC_KEY_ID          — App Store Connect API 키 ID (예: 2X9R4HXF34)
+#   ASC_ISSUER_ID       — API 키 발급자 ID (UUID 형식)
+#   ASC_KEY_P8_BASE64   — .p8 개인키 파일 전체를 base64로 인코딩한 문자열 (줄바꿈 없이)
+#   APPLE_TEAM_ID       — Apple Developer 팀 ID (10자 영숫자)
+#   VITE_KAKAO_JS_KEY   — 카카오맵 JS 키. deploy.yml과 같은 secret을 재사용한다
+#
+# 사람이 먼저 해야 하는 일(App Store Connect 앱 레코드 생성, API 키 발급, 스크린샷
+# 업로드 등)은 APP_STORE_RELEASE.md에 있다. 앱 레코드가 없으면 이 워크플로는 실패한다.
+
+name: iOS Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "실행할 fastlane 레인"
+        type: choice
+        required: true
+        default: beta
+        options:
+          - build     # 서명된 IPA만 생성 (업로드 없음) — 파이프라인 점검용
+          - beta      # TestFlight 업로드
+          - metadata  # 스토어 등록정보·스크린샷만 갱신
+          - release   # App Store 업로드
+      version:
+        description: "마케팅 버전 (CFBundleShortVersionString, 예: 1.0.0)"
+        type: string
+        required: true
+        default: "1.0.0"
+      submit_for_review:
+        description: "release 레인에서 심사 제출까지 진행할지 (다른 레인에서는 무시됨)"
+        type: boolean
+        required: false
+        default: false
+
+# 스토어 업로드가 겹치면 빌드 번호가 꼬인다. 동시 실행을 막되 진행 중인 건 취소하지 않는다.
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  ios:
+    name: "iOS ${{ inputs.lane }} (v${{ inputs.version }})"
+    # macos-latest는 러너 이미지가 바뀔 때 Xcode 버전도 같이 바뀐다.
+    # 서명·빌드 재현성을 위해 버전을 고정한다.
+    runs-on: macos-15
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          # Gemfile은 저장소 루트에 있다
+          bundler-cache: true
+
+      - name: Show toolchain versions
+        run: |
+          echo "Xcode: $(xcodebuild -version | tr '\n' ' ')"
+          echo "Node:  $(node --version)"
+          echo "Ruby:  $(ruby --version)"
+
+      # Fastfile 문법 오류는 30초 만에 잡을 수 있다. 40분짜리 빌드 뒤에
+      # 알게 되는 것보다 낫다 (개발 머신이 Windows라 로컬 검증이 불가능하다).
+      - name: Validate Fastfile
+        run: bundle exec fastlane lanes
+
+      - name: Run fastlane ${{ inputs.lane }}
+        run: |
+          if [ "${{ inputs.lane }}" = "release" ]; then
+            bundle exec fastlane ios release submit:${{ inputs.submit_for_review }}
+          else
+            bundle exec fastlane ios "${{ inputs.lane }}"
+          fi
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # web/.env.app에는 프록시 URL만 있다. 카카오맵 키는 .env.local(gitignore)에
+          # 있어 CI 체크아웃에 포함되지 않으므로 secret으로 주입한다.
+          VITE_KAKAO_JS_KEY: ${{ secrets.VITE_KAKAO_JS_KEY }}
+          MARKETING_VERSION: ${{ inputs.version }}
+          # 빌드 번호는 Fastfile이 TestFlight 최신값 + 1로 정한다.
+          # 조회 실패 시 이 값으로 폴백한다 (재실행마다 증가).
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          # fastlane이 CI에서 대화형 프롬프트를 띄우지 않게 한다
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+          FASTLANE_HIDE_CHANGELOG: "1"
+          # Xcode 빌드 로그를 그대로 남긴다 (실패 원인 추적용)
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: "120"
+
+      - name: Upload IPA artifact
+        # metadata 레인은 바이너리를 만들지 않는다
+        if: ${{ success() && inputs.lane != 'metadata' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: spindle-ios-${{ inputs.version }}-${{ github.run_number }}
+          path: |
+            build/ios/*.ipa
+            build/ios/*.app.dSYM.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+      # 실패 원인의 대부분은 서명과 프로비저닝이다. 로그가 있어야 진단이 된다.
+      - name: Upload fastlane logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fastlane-logs-${{ github.run_number }}
+          path: |
+            ~/Library/Logs/gym/
+            ~/Library/Logs/fastlane/
+            fastlane/report.xml
+          if-no-files-found: ignore
+          retention-days: 7

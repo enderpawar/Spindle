@@ -1,0 +1,17 @@
+# fastlane 앱 식별 정보 (iOS 전용).
+#
+# Android(supply) 자동 업로드는 아직 연결하지 않았다 — fastlane/metadata/android는
+# 텍스트·그래픽 보관처일 뿐이고, AAB는 Play Console에 수동 업로드한다.
+# 여기에 package_name/json_key_file을 넣지 않는 이유가 그것이다.
+
+app_identifier("kr.spindle.app")
+
+# Apple Developer 멤버십의 Team ID (10자 영숫자, 예: ABCDE12345).
+# App Store Connect → 사용자 및 액세스 → 통합 → 팀 ID, 또는
+# developer.apple.com → Membership details에서 확인한다.
+# CI에서는 APPLE_TEAM_ID secret으로 주입한다.
+team_id(ENV["APPLE_TEAM_ID"])
+
+# 인증은 Apple ID 비밀번호가 아니라 App Store Connect API 키(.p8)로 한다.
+# 2FA 프롬프트가 없어 CI에서 무인 실행이 가능하다. 키 주입은 Fastfile의
+# `app_store_connect_api_key`가 담당한다 (ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_P8_BASE64).
