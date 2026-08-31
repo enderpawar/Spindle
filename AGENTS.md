@@ -81,6 +81,9 @@ Spring 백엔드(익명 토큰 기반 "도장깨기" 서버 전환 — 현재는
 - `docs/curation.md` — POI 인기도 티어 큐레이션 표 (분산 가중치의 원천 데이터)
 - `docs/pitch.md` — 기획력·발전성 설득 근거 데이터 (기능설명서 배경·발전방향, 2차 발표 스크립트의 원천)
 - `docs/deploy.md` — Cloudflare Pages/Workers 프로덕션 배포 절차 (사람 체크리스트 + GitHub Actions 연동)
+- `docs/store-listing.md` — 스토어 등록 문안과 심사 양식 답변(Data Safety·App Privacy·콘텐츠 등급)의 원천
+- `GOOGLE_PLAY_RELEASE.md` — Google Play 출시 인계 문서 (비공개 테스트·프로덕션 액세스 절차)
+- `APP_STORE_RELEASE.md` — App Store 출시 인계 문서 (Apple 콘솔 준비 + GitHub Actions macOS 빌드)
 - `docs/(양식1)…제안서_Spindule(이진우).pdf` — 최초 제안서 원문 (전국형)
 
 ## 작업 시 유의
@@ -88,4 +91,5 @@ Spring 백엔드(익명 토큰 기반 "도장깨기" 서버 전환 — 현재는
 - 우선순위는 SPEC.md 10장을 따른다: MVP(스핀→8방위→추천→결과 카드→공유 카드, 여행 모드)가 끝나기 전에 2순위(방향 기반 여행 코스·테마 덱·축제 카드·도장깨기)를 시작하지 않는다.
 - 심사위원은 서울에서 URL만 열어 시연한다 → **여행 모드(센서 불필요)가 항상 완전 동작해야 한다.**
 - iOS Safari가 1차 검증 대상 (DeviceOrientation 권한 프롬프트, `webkitCompassHeading`).
+- **Windows에서 `npm run app:sync:ios`를 돌린 뒤 `web/ios/App/CapApp-SPM/Package.swift`를 커밋하지 않는다.** Capacitor CLI가 플러그인 경로를 OS 구분자(`..\..\..\node_modules\...`)로 써서 macOS 빌드가 깨진다. 커밋 전 `git diff`로 백슬래시가 없는지 본다 (`APP_STORE_RELEASE.md` 1절).
 - 여러 에이전트가 이 저장소에서 작업한다: 작업 단위마다 커밋하고, 커밋되지 않은 다른 에이전트의 변경(git status 확인)이 있으면 해당 파일은 건드리지 않는다.
