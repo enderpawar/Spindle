@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spindle 지원</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --background: #ffffff;
+        --text: #1d1d1f;
+        --muted-text: #5f6368;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #151515;
+          --text: #f2f2f2;
+          --muted-text: #b8b8b8;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.75;
+      }
+
+      main {
+        width: min(100% - 40px, 720px);
+        margin: 0 auto;
+        padding: 48px 0 64px;
+      }
+
+      h1 {
+        margin: 0 0 32px;
+        font-size: clamp(1.75rem, 6vw, 2.25rem);
+        line-height: 1.3;
+      }
+
+      h2 {
+        margin: 40px 0 12px;
+        font-size: 1.25rem;
+        line-height: 1.4;
+      }
+
+      h3 {
+        margin: 24px 0 8px;
+        font-size: 1.05rem;
+        line-height: 1.5;
+      }
+
+      p,
+      ul {
+        margin: 0 0 16px;
+      }
+
+      ul {
+        padding-left: 1.35rem;
+      }
+
+      .summary {
+        font-size: 1.05rem;
+      }
+
+      .updated {
+        margin-top: 48px;
+        color: var(--muted-text);
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Spindle 지원</h1>
+
+      <section aria-labelledby="about">
+        <h2 id="about">Spindle은 어떤 앱인가요?</h2>
+        <p class="summary">
+          휴대폰을 돌리거나 흔들면 나침반이 가리키는 방향에 있는 부산
+          원도심·영도의 관광지를 추천하는 관광 탐색 앱입니다. 회원가입과
+          로그인 없이 실행 즉시 사용할 수 있습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="contact">
+        <h2 id="contact">문의</h2>
+        <p>
+          사용 중 문제가 생겼거나 관광지 정보에 오류를 발견하셨다면 아래 주소로
+          연락해 주세요. 확인 후 회신드립니다.
+        </p>
+        <p>
+          이메일: <a href="mailto:enderpawar@gmail.com">enderpawar@gmail.com</a>
+        </p>
+        <p>
+          문의하실 때 사용 중인 기기 모델과 앱 버전(설정 화면 하단에 표시)을 함께
+          적어 주시면 원인을 더 빨리 찾을 수 있습니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="faq">
+        <h2 id="faq">자주 묻는 질문</h2>
+
+        <h3>나침반이 반응하지 않아요</h3>
+        <p>
+          방향 추천은 기기의 모션·방위 센서를 사용합니다. 자력계가 없는 기기이거나
+          센서 권한을 거부한 경우에는 방향을 읽을 수 없습니다. 이때는
+          <strong>여행 모드</strong>에서 출발점을 직접 선택하면 같은 방향 탐색을
+          그대로 이용할 수 있습니다.
+        </p>
+        <p>
+          센서가 있는데도 방향이 부정확하다면 기기를 8자 모양으로 몇 차례 움직여
+          나침반을 보정한 뒤 다시 시도해 주세요. 금속 구조물이나 자석 근처에서는
+          방위 오차가 커집니다.
+        </p>
+
+        <h3>위치 권한을 꼭 허용해야 하나요?</h3>
+        <p>
+          아니요. 위치 권한을 거부해도 지도에서 출발점을 직접 선택해 모든 기능을
+          이용할 수 있습니다. 권한을 허용하면 현재 위치를 출발점으로 자동
+          설정하는 편의가 추가될 뿐입니다.
+        </p>
+
+        <h3>부산 밖에 있어도 쓸 수 있나요?</h3>
+        <p>
+          네. <strong>여행 모드</strong>에서 부산역, 남포동, 영도 흰여울 등의
+          출발점을 직접 고르면 현재 어디에 있든 방향 기반 추천과 코스를 체험할 수
+          있습니다.
+        </p>
+
+        <h3>도장깨기 기록이 사라졌어요</h3>
+        <p>
+          방문 기록과 앱 설정은 서버가 아니라 기기 내부에만 저장됩니다. 앱을
+          삭제하거나 브라우저 저장소를 비우면 기록도 함께 지워지며 복구할 수
+          없습니다. 계정이 없기 때문에 다른 기기로 기록을 옮기는 기능도 제공하지
+          않습니다.
+        </p>
+
+        <h3>관광지 정보가 실제와 달라요</h3>
+        <p>
+          관광지 정보는 한국관광공사 TourAPI에서 실시간으로 받아옵니다. 원본
+          데이터가 갱신되지 않았을 수 있으므로, 방문 전 해당 시설의 공식 안내를
+          함께 확인해 주세요. 오류를 알려주시면 확인 후 원 제공처에 전달합니다.
+        </p>
+      </section>
+
+      <section aria-labelledby="privacy">
+        <h2 id="privacy">개인정보 처리</h2>
+        <p>
+          위치와 방위 정보는 기기 안에서만 계산되며 어떤 서버로도 전송되지
+          않습니다. 자세한 내용은
+          <a href="/privacy">개인정보처리방침</a>을 참고해 주세요.
+        </p>
+      </section>
+
+      <p class="updated">
+        출처: ⓒ한국관광공사 · 최종 갱신: 2026-08-31
+      </p>
+    </main>
+  </body>
+</html>
