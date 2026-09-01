@@ -2,7 +2,7 @@
 
 > iOS 배포를 진행하기 전에 이 문서를 먼저 읽는다. Google Play 쪽은 `GOOGLE_PLAY_RELEASE.md`에 있다.
 >
-> 마지막 갱신: 2026-08-31 (Asia/Seoul)
+> 마지막 갱신: 2026-09-01 (Asia/Seoul)
 
 ## 0. 지금 상황 요약
 
@@ -28,16 +28,19 @@
 | CI | `.github/workflows/ios-release.yml` (수동 실행 전용) |
 | 스토어 등록정보 | `fastlane/metadata/ios/ko/` — 이름·부제·설명·키워드·심사 노트 |
 | 지원 페이지 | `web/public/support.html` → `https://spindle-6vp.pages.dev/support` |
+| 스크린샷 | `fastlane/screenshots/ios/ko/` 6장 (1320x2868, RGB). `npm run export:ios`로 재생성 |
 
 ### 남은 것 (사람이 해야 함)
 
 1. Bundle ID 등록 → 2절 A
 2. App Store Connect 앱 레코드 생성 → 2절 B
 3. App Store Connect API 키 발급 → 2절 C
-4. GitHub secrets 5개 등록 → 2절 D
-5. 스크린샷 익스포트 → 3절
-6. 콘솔 수동 입력 항목(연령 등급·App Privacy·심사 연락처) → 5절
-7. 워크플로 실행 → 4절
+4. GitHub secrets 4개 등록 → 2절 D
+5. 콘솔 수동 입력 항목(연령 등급·App Privacy·심사 연락처) → 5절
+6. 워크플로 실행 → 4절
+
+스크린샷은 익스포트해서 커밋해 뒀다(3절). 다만 **상태바가 Android인 채**라
+`beta` 실기기 확인 때 iOS 캡처로 갈아 끼우는 편이 안전하다 — 3절 참고.
 
 ### 일정 감각
 
@@ -161,26 +164,53 @@ CI는 macOS 러너에서 `cap sync ios`를 다시 돌리므로 이 파일을 알
 
 ## 3. 스크린샷
 
-**iPhone 6.9" 1290x2796 세로** 한 세트만 있으면 된다. iPad는 필요 없다(1절 참고).
+**커밋 완료.** `fastlane/screenshots/ios/ko/`에 iPhone 6.9" **1320x2868 세로** 6장이
+들어 있다(알파 채널 없는 RGB PNG). iPad는 필요 없다(1절 참고).
 
-원본 캡처와 카피·레이아웃이 `tools/store-screenshots`에 이미 구성돼 있어
-**Mac 없이 Windows에서 만들 수 있다.**
+| 파일 | 화면 | 카피 |
+|---|---|---|
+| `01_splash.png` | 스플래시 | (없음) |
+| `02_spin.png` | 스핀 | 어디 갈지 고민될 땐 / 휴대폰만 돌리세요! |
+| `03_map.png` | 명소 지도 | 붐비는 명소 말고 / 오늘 한산한 부산! |
+| `04_home.png` | 홈 | 반나절 코스 짜기 / 탭 한 번이면 끝! |
+| `05_stamp.png` | 도장깨기 | 원도심 55곳 / 도장깨기 시작! |
+| `06_settings.png` | 설정 | 켜자마자 바로 / 부산 여행 시작! |
+
+### 다시 만들려면 (Mac 불필요)
 
 ```bash
 cd tools/store-screenshots
 npm install
-npm run dev          # http://localhost:3000
+npx playwright install chromium   # 최초 1회
+npm run export:ios
 ```
 
-에디터에서 플랫폼 탭을 **iPhone**으로 바꾸고, 익스포트 크기를 **1290x2796**으로 골라
-**Export bundle**을 누른다. 받은 PNG를 `fastlane/screenshots/ios/ko/`에 넣는다
-(파일명 알파벳 순으로 스토어에 올라가므로 `1_spin.png` 식으로 번호를 붙인다).
+`export-ios.mjs`가 next dev를 띄우고 헤드리스 Chromium으로 에디터의 **Export bundle**을
+눌러, zip에서 `ios/iphone/1320x2868/ko/`만 골라 `fastlane/screenshots/ios/ko/`에
+`01_…` 순번으로 넣는다. 알파 채널은 sharp로 떼어 낸다 —
+**App Store Connect는 알파 채널이 있는 스크린샷을 거부한다**
+("Invalid Screenshot ... can't contain an alpha channel"). 에디터의 html-to-image는
+항상 RGBA로 굽기 때문에 이 후처리가 없으면 업로드 단계에서 막힌다.
 
-자세한 규격과 제출 전 확인 항목은 `fastlane/screenshots/ios/README.md`에 있다.
+카피·레이아웃을 바꾸려면 `npm run dev`로 에디터를 열어 고친 뒤 `export:ios`를 다시 돈다.
+
+### ⚠ 업로드 전에 판단할 것 2가지
+
+1. **상태바가 아직 Android다.** 소스 캡처가 Android 에뮬레이터(Pixel 7) 것이라
+   iPhone 프레임 안의 상태바에 Android식 신호/배터리·알림 아이콘이 그대로 보인다.
+   Apple은 다른 기기의 UI가 섞인 스토어 이미지를 리젝 사유로 삼는다(2.3.3).
+   Android **내비게이션 바**는 없다(하단은 앱 자체 탭바) — 가장 위험한 요소는 피했다.
+   4절의 `beta` 실기기 확인 때 **iOS 릴리스 빌드로 재촬영해 갈아 끼우는 것이 원칙**이다.
+   (`fastlane/screenshots/ios/README.md`의 "릴리스 서명 빌드로 다시 촬영" 항목과 같은 작업)
+2. **첫 장이 카피 없는 스플래시다.** 검색 결과에서 가장 크게 보이는 것이 첫 장이라
+   카피가 있는 `02_spin`을 앞세우는 편이 낫다. Play 덱은 실제로 splash를 빼고
+   spin부터 시작한다(`app-store-screenshots.json`의 `android` 덱은 5장).
+   바꾸려면 에디터에서 iphone 덱의 첫 슬라이드를 지우고 `export:ios`를 다시 돈다.
+
+자세한 규격과 확인 항목은 `fastlane/screenshots/ios/README.md`에 있다.
 
 > 디렉터리가 비어 있으면 `release`/`metadata` 레인은 스크린샷 업로드를 **건너뛴다.**
 > 빈 디렉터리를 그대로 반영하면 스토어에 올라가 있던 이미지가 지워지기 때문이다.
-> 즉 스크린샷 없이 먼저 파이프라인을 돌려봐도 안전하다.
 
 ---
 
@@ -337,6 +367,24 @@ curl -s -o /dev/null -w "%{http_code}\n" https://spindle-6vp.pages.dev/support
 
 4번이 404라면 `support.html`이 든 커밋이 `origin/main`에 푸시되지 않아
 `deploy.yml`이 돌지 않은 것이다 (Play 때 `privacy.html`에서 똑같은 일이 있었다).
+
+### 2026-09-01 점검 결과 — 저장소 쪽은 전부 통과
+
+| 항목 | 결과 |
+|---|---|
+| 1) 파이프라인 파일 5종 | ✅ 전부 존재 |
+| 2) 메타데이터 | ✅ ko 9개 파일 + 심사 노트. 글자수 제한 전부 여유 (name 7, subtitle 14, keywords 46/100, promo 92/170, description 370/4000) |
+| 3) 스크린샷 | ✅ 6장 1320x2868 RGB (알파 없음) |
+| 4) 지원 페이지 | ✅ 200. `/privacy`·루트도 200 |
+| `Package.swift` 경로 구분자 | ✅ 슬래시. `@capacitor/app`·`filesystem`·`share` 3개 |
+| `Info.plist` | ✅ 위치·모션 문구, `ITSAppUsesNonExemptEncryption=false` |
+| `PrivacyInfo.xcprivacy` | ✅ 수집·추적 없음 |
+| `TARGETED_DEVICE_FAMILY` | ✅ `1` (iPhone 전용) |
+| `capacitor.config.ts`의 `server.url` | ✅ 없음 (원격 코드 로드 금지 유지) |
+
+남은 것은 2절(Apple 콘솔 4가지)과 5절(콘솔 수동 입력)뿐이다.
+빌드 자체는 Apple 콘솔 준비가 끝나기 전에는 돌릴 수 없다 —
+`build` 레인도 서명에 API 키가 필요하기 때문이다.
 
 ---
 
