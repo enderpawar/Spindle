@@ -26,6 +26,36 @@ export default defineConfig(({ mode }) => {
   return {
   plugins: [
     react(),
+    /**
+     * 앱 빌드에만 Referer 전송을 끈다.
+     *
+     * 카카오는 Referer로 도메인 제한을 검사하는데 커스텀 스킴의 호스트를 파싱하지 못한다.
+     * iOS 앱(capacitor://localhost)의 요청을 `caller=capacitor:` 로 읽고 401로 거절하며,
+     * 콘솔에 capacitor://localhost 를 등록해도 비교할 문자열이 만들어지지 않아 통과할 수 없다.
+     * Referer가 없으면 200으로 내려준다(카카오 서버 응답으로 확인).
+     *
+     * 반드시 **파싱 시점에 있는 정적 meta**여야 한다. JS로 head에 삽입하는 방식은 실기기에서
+     * 무시되는 것을 확인했다(빌드 3). 그리고 SDK script 요소에 referrerPolicy를 주는 것만으로도
+     * 부족하다 — autoload=false 라서 maps.load()가 지도 라이브러리를 다시 받아오는데, 그 요청은
+     * SDK 내부가 만들어 문서 정책을 따르기 때문이다. 빌드 4에서 부트스트랩은 통과했지만
+     * maps.load() 콜백이 오지 않아 10초 타임아웃으로 실패했다.
+     *
+     * 웹·PWA 빌드는 이 분기를 타지 않으므로 도메인 제한이 그대로 유지된다.
+     */
+    ...(isAppBuild
+      ? [
+          {
+            name: 'spindle-app-no-referrer',
+            transformIndexHtml: () => [
+              {
+                tag: 'meta',
+                attrs: { name: 'referrer', content: 'no-referrer' },
+                injectTo: 'head-prepend' as const,
+              },
+            ],
+          },
+        ]
+      : []),
     ...(isAppBuild ? [] : [VitePWA({
       registerType: 'autoUpdate', // 심사 기간 중 구버전 방지 (pwa 스킬)
       injectRegister: false,
