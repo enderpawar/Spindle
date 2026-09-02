@@ -32,12 +32,45 @@
 
 ### 남은 것 (사람이 해야 함)
 
-1. Bundle ID 등록 → 2절 A
-2. App Store Connect 앱 레코드 생성 → 2절 B
-3. App Store Connect API 키 발급 → 2절 C
-4. GitHub secrets 4개 등록 → 2절 D
-5. 콘솔 수동 입력 항목(연령 등급·App Privacy·심사 연락처) → 5절
-6. 워크플로 실행 → 4절
+~~1. Bundle ID 등록~~ · ~~2. 앱 레코드 생성~~ · ~~3. API 키 발급~~ · ~~4. GitHub secrets 4개~~
+— **2026-09-02 완료.** TestFlight 업로드까지 검증했다(0절 "실행 기록").
+
+5. 콘솔 수동 입력 항목(연령 등급·App Privacy·심사 연락처) → 5절 ← **남은 유일한 선행 작업**
+6. `release` 레인 실행 → 4절
+
+### 2026-09-02 실행 기록 — 파이프라인이 TestFlight까지 완주했다
+
+첫 실행부터 다섯 번 막혔고 전부 해소했다. **여기 적힌 것들은 문서를 읽는 것만으로는
+알 수 없고 실제로 돌려야 드러난 것들이라, 재현 조건과 함께 남긴다.**
+
+| # | 막힌 지점 | 원인 | 해소 |
+|---|---|---|---|
+| 1 | 워크플로 4번째 스텝, 11초 | `.ruby-version`·`.tool-versions`가 없어 `setup-ruby`가 버전을 못 정함 | `RUBY_VERSION: "3.3"` 을 `env`에 명시 (PR #8) |
+| 2 | `fastlane build` 진입 직후 | Apple secrets 4개 미등록 | 2절 C·D 수행 |
+| 3 | `build_app`, 36초 | Capacitor 템플릿이 **프로젝트 레벨**에 `CODE_SIGN_IDENTITY`를 박아둠. 타깃은 `CODE_SIGN_STYLE = Automatic` → 충돌 | 프로젝트 레벨 두 줄 제거 (PR #9) |
+| 4 | 프로파일 발급, 63초 | 팀에 등록된 기기 0대 → Apple이 개발용 프로파일 발급 거부 | 개발자 포털에 iPhone 1대 등록 |
+| 5 | **업로드 검증(409)** | `macos-15`의 Xcode 16.4 = iOS 18.5 SDK. Apple이 **iOS 26 SDK 이상**을 요구 | 러너를 `macos-26`으로 (PR #10) |
+
+**5번이 특히 함정이다.** 빌드·서명·프로비저닝이 전부 성공하고 IPA까지 정상 생성된 뒤,
+Apple 서버가 업로드 시점에만 SDK를 본다. 즉 `build` 레인은 아무리 돌려도 이 문제를
+발견하지 못한다. 그래서 워크플로의 "Show toolchain versions" 스텝에 SDK 버전과 설치된
+Xcode 목록을 찍게 해 뒀다 — Apple이 요구 SDK를 또 올리면 40분짜리 빌드가 아니라
+첫 10초에 드러난다.
+
+**4번은 자동 서명의 구조 때문이다.** 아카이브는 항상 Development 인증서로 서명하고
+배포용 서명은 export 때 다시 입힌다. 그래서 App Store 빌드인데도 개발용 프로파일이
+필요하고, 개발용 프로파일은 기기가 최소 1대 등록돼 있어야 발급된다.
+
+#### 실기기(TestFlight)에서만 드러난 것
+
+| 증상 | 원인 | 해소 |
+|---|---|---|
+| 하단 내비게이션이 59px 떠 있고 아래가 흰 띠 | `mobile-pwa.css`의 `#root`가 `bottom` 없이 높이에서 상단 inset을 뺌. 설치형 PWA용 보정인데 WKWebView에는 전제가 성립하지 않음 | 네이티브 셸에서만 뷰포트 양 끝에 고정 (PR #11) |
+| 카카오 베이스맵이 안 뜨고 자체 벡터 지도로 폴백 | 카카오 서버가 커스텀 스킴 Referer의 호스트를 파싱 못 함 — `capacitor://localhost/`를 `caller=capacitor:`로 읽고 401. **콘솔에 등록해도 통과 불가** | 네이티브에서만 Referer 전송 차단 (PR #12) |
+
+카카오 건은 앱에 담긴 키로 Referer만 바꿔 요청해 확정했다. Referer가 없으면 200이고,
+대조군 `https://example.com`은 `caller=https://example.com`으로 온전히 파싱된다.
+**등록 누락이 아니라 카카오 쪽 파싱 한계**이므로, 콘솔에서 해결하려 하면 시간만 버린다.
 
 스크린샷은 익스포트해서 커밋해 뒀다(3절). 이전에 남아 있던 두 가지 문제
 (Android 상태바, 카피 없는 스플래시가 첫 장)는 2026-09-02에 해결했다.
@@ -53,7 +86,9 @@ Play가 마감 내 공개를 보장하지 못하는 상황이므로, **iOS 쪽�
 
 ## 1. 확정된 결정
 
-- **빌드 환경은 GitHub Actions `macos-15` 러너.** 로컬 Mac을 쓰지 않는다.
+- **빌드 환경은 GitHub Actions `macos-26` 러너.** 로컬 Mac을 쓰지 않는다.
+  버전을 고정하는 이유는 재현성이고, **내리면 안 된다** — Apple이 iOS 26 SDK 이상으로
+  빌드한 바이너리만 받는다(0절 실행 기록 5번).
 - **서명은 App Store Connect API 키 기반 클라우드 서명**(`-allowProvisioningUpdates`).
   `fastlane match`를 쓰지 않으므로 인증서 보관용 비공개 저장소가 필요 없다.
 - **자동 배포하지 않는다.** `deploy.yml`(웹·프록시)은 main push마다 돌지만, iOS는
@@ -396,12 +431,16 @@ curl -s -o /dev/null -w "%{http_code}\n" https://spindle-6vp.pages.dev/support
 | `TARGETED_DEVICE_FAMILY` | ✅ `1` (iPhone 전용) |
 | `capacitor.config.ts`의 `server.url` | ✅ 없음 (원격 코드 로드 금지 유지) |
 | GitHub Actions 워크플로 | ✅ "iOS Release" 등록됨 (기본 브랜치 main에 존재) |
-| GitHub secrets | ❌ **Apple 관련 4개 전부 미등록** — 등록된 것은 `CLOUDFLARE_*`·`VITE_KAKAO_JS_KEY`뿐 (2절 D) |
-| iOS 워크플로 실행 이력 | — 아직 0건 |
+| GitHub secrets | ✅ Apple 4개(`ASC_KEY_ID`·`ASC_ISSUER_ID`·`ASC_KEY_P8_BASE64`·`APPLE_TEAM_ID`) 등록·검증 완료 |
+| iOS 워크플로 실행 이력 | ✅ `build` 성공(IPA 10.1MB), `beta` 성공(TestFlight `1.0.0` 업로드) |
+| 러너 | ✅ `macos-26` — Xcode 26.6 / **iOS 26.5 SDK**. `macos-15`는 업로드가 409로 거부된다 |
+| 등록 기기 | ✅ 1대 — 없으면 프로비저닝 프로파일 발급이 거부된다 |
 
-남은 것은 2절(Apple 콘솔 4가지)과 5절(콘솔 수동 입력)뿐이다.
-빌드 자체는 Apple 콘솔 준비가 끝나기 전에는 돌릴 수 없다 —
-`build` 레인도 서명에 API 키가 필요하기 때문이다.
+**남은 것은 5절(콘솔 수동 입력)뿐이고, 그다음이 `release` 레인이다.**
+
+`release`는 두 번에 나눠 돌린다: `submit_for_review=false`로 먼저 올려 스토어 페이지에
+메타데이터·스크린샷이 반영된 것을 콘솔에서 눈으로 확인하고, 그다음 `true`로 심사 제출한다.
+승인돼도 `automatic_release: false`라 자동 공개되지 않으므로 공개 시점은 사람이 정한다.
 
 ---
 
