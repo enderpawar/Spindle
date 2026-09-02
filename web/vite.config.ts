@@ -52,6 +52,27 @@ export default defineConfig(({ mode }) => {
                 attrs: { name: 'referrer', content: 'no-referrer' },
                 injectTo: 'head-prepend' as const,
               },
+              /*
+               * 카카오 SDK는 자기 리소스 주소를 이렇게 만든다:
+               *   var s = "https:" == location.protocol ? "https:" : "http:"
+               * iOS 앱의 location.protocol 은 "capacitor:" 라 조건이 거짓이 되어 http로 떨어진다.
+               * ATS가 평문 HTTP를 막으므로 후속 스크립트도, 지도 타일 이미지도 로드되지 않는다
+               * (타일은 URI_FUNC가 "mts.daumcdn.net/api/v1/tile/..." 처럼 프로토콜 없이 만든다).
+               *
+               * upgrade-insecure-requests 는 이 상황을 위한 표준 기능이다 — 문서의 모든 http
+               * 하위 요청을 https로 승격시킨다. 스크립트만 가로채는 것과 달리 이미지·XHR·CSS까지
+               * 한 번에 덮는다. capacitor:// 는 http가 아니므로 로컬 번들 로드에는 영향이 없다.
+               *
+               * 웹·PWA는 이미 https 문서라 이 분기를 타지 않아도 같은 문제가 없다.
+               */
+              {
+                tag: 'meta',
+                attrs: {
+                  'http-equiv': 'Content-Security-Policy',
+                  content: 'upgrade-insecure-requests',
+                },
+                injectTo: 'head-prepend' as const,
+              },
             ],
           },
         ]
