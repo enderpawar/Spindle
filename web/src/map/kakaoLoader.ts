@@ -98,10 +98,70 @@ let loaderPromise: Promise<KakaoMapsNs> | null = null
  * Windows라 Safari 웹 인스펙터로 콘솔을 볼 수 없다. 사유를 화면에 남기지 않으면 빌드를
  * 올려 가며 추측할 수밖에 없다. 지도가 내장 지도로 바뀐 이유는 사용자에게도 정당한 정보다.
  */
-let lastResult: { ok: boolean; reason?: string } | null = null
+let lastResult: { ok: boolean; reason?: string; detail?: string } | null = null
 
-export function kakaoLoadResult(): { ok: boolean; reason?: string } | null {
+export function kakaoLoadResult(): { ok: boolean; reason?: string; detail?: string } | null {
   return lastResult
+}
+
+/**
+ * 실패했을 때 카카오가 실제로 뭐라고 답하는지 기기에서 직접 받아 본다.
+ *
+ * 지금까지 세 번 "원인 추정 → 수정 → 빌드 → 실패"를 반복했다. 개발 머신이 Windows라
+ * 실기기 콘솔을 볼 수 없어 매번 추측으로 좁혔기 때문이다. 응답 본문과 상태 코드를
+ * 화면에 남기면 추측이 필요 없다.
+ *
+ * fetch 자체가 CORS로 막히면 그것도 답이다 — SDK 내부가 XHR을 쓴다면 같은 이유로
+ * 막히고 있다는 뜻이고, 그건 Referer와 무관한 별개 원인이다.
+ */
+async function probeKakao(url: string): Promise<string> {
+  const declared = document.querySelector('meta[name="referrer"]')?.getAttribute('content') ?? '(없음)'
+  try {
+    const res = await fetch(url, { referrerPolicy: 'no-referrer' })
+    const body = (await res.text()).slice(0, 100).replace(/\s+/g, ' ')
+    return `referrer=${declared} · HTTP ${res.status} · ${body}`
+  } catch (error) {
+    return `referrer=${declared} · fetch 실패: ${error instanceof Error ? error.message : String(error)}`
+  }
+}
+
+/**
+ * iOS 앱에서 SDK가 후속 라이브러리를 http로 받아오려는 것을 https로 바꿔 끼운다.
+ *
+ * 카카오 부트스트랩(sdk.js)은 후속 URL을 이렇게 만든다:
+ *
+ *     var s = "https:" == location.protocol ? "https:" : "http:"
+ *     p = { v3: s + "//t1.daumcdn.net/mapjsapi/js/main/4.5.26/kakao.js", ... }
+ *
+ * location.protocol 이 "https:" 와 정확히 같을 때만 https를 쓴다. iOS 앱은 "capacitor:" 라
+ * 조건이 거짓이 되어 http로 떨어지고, ATS가 평문 HTTP를 막아 그 스크립트는 영영 로드되지
+ * 않는다. onload가 오지 않으니 maps.load() 콜백도 오지 않아 10초 타임아웃으로 끝난다.
+ * 웹과 Android 앱(https://localhost)은 protocol이 https라 이 경로를 타지 않는다.
+ *
+ * s는 SDK 클로저 안의 지역 변수라 밖에서 못 고친다. 그래서 head에 script가 꽂히는 길목에서
+ * 주소를 바꾼다. **삽입 전에** 바꿔야 한다 — 삽입된 뒤 src를 고치면 이미 시작된 로드가
+ * 다시 시작되지 않는다. 그래서 MutationObserver가 아니라 appendChild를 감싼다.
+ *
+ * 되돌리지 않고 계속 걸어 둔다. services·drawing·clusterer 라이브러리는 나중에 필요할 때
+ * 같은 경로로 로드되므로, 한 번만 통과시키면 그때 다시 막힌다.
+ */
+function upgradeKakaoScriptsToHttps(): void {
+  const head = document.head as HTMLHeadElement & { __spindleHttpsPatch?: true }
+  if (head.__spindleHttpsPatch) return
+  head.__spindleHttpsPatch = true
+
+  const original = head.appendChild.bind(head)
+  head.appendChild = (<T extends Node>(node: T): T => {
+    const script = node as unknown as HTMLScriptElement
+    if (script?.tagName === 'SCRIPT' && script.src.startsWith('http://')) {
+      const host = script.src.slice('http://'.length).split('/')[0]
+      // 카카오·다음 자산에만 손댄다. 다른 도메인까지 바꿔 놓으면 무관한 로드를 깨뜨릴 수 있다.
+      if (host.endsWith('.daumcdn.net') || host.endsWith('.kakao.com')) {
+        script.src = `https://${script.src.slice('http://'.length)}`
+      }
+    }
+    return original(node)
+  }) as typeof head.appendChild
 }
 
 /** SDK 스크립트와 초기화를 한 번만 공유하고, 실패한 시도는 다음 호출에서 재시도한다. */
@@ -132,6 +192,9 @@ export function loadKakaoMaps(): Promise<KakaoMapsNs> {
       window.clearTimeout(timeoutId)
       script?.remove()
       lastResult = { ok: false, reason }
+      void probeKakao(`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${key}&autoload=false`).then((detail) => {
+        if (lastResult && !lastResult.ok) lastResult = { ...lastResult, detail }
+      })
       reject(new Error(reason))
     }
 
@@ -156,6 +219,9 @@ export function loadKakaoMaps(): Promise<KakaoMapsNs> {
       initialize()
       return
     }
+
+    // 부트스트랩이 실행되면 곧바로 후속 스크립트를 꽂으므로, 그 전에 길목을 잡아 둔다.
+    if (isNativeShell()) upgradeKakaoScriptsToHttps()
 
     const isNewScript = !script
     if (!script) {
