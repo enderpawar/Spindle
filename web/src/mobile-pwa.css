@@ -40,6 +40,17 @@ body:has(.bottom-nav) {
   overflow: hidden;
 }
 
+/* 네이티브 셸(Capacitor)에는 위 보정이 필요 없다 — WKWebView는 레이아웃 뷰포트를
+   실제로 보이는 높이와 같게 보고한다. 그런데도 상단 inset을 빼면 그만큼이 화면 아래
+   빈 띠로 남고, 프레임 기준 bottom:0인 하단 내비게이션이 그 높이만큼 떠 보인다
+   (iPhone 15 Pro 실기기에서 59px). 그래서 네이티브에서는 뷰포트 양 끝에 그대로 붙인다.
+   표시는 main.tsx가 붙인다. 세이프 에어리어 자체는 .screen의 padding-top과
+   BottomNav의 padding-bottom이 계속 처리하므로 노치·홈 인디케이터를 침범하지 않는다. */
+html.is-native-shell #root {
+  bottom: 0;
+  height: auto;
+}
+
 .screen-transition {
   height: 100%;
   min-height: 0;
