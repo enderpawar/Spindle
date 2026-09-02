@@ -10,7 +10,13 @@ function MapSourceNote() {
   if (!result) return null
   return (
     <div style={{ textAlign: 'center', padding: '4px 0 0', fontSize: 10.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>
-      {result.ok ? '지도: 카카오맵' : `지도: 내장 지도 — ${result.reason}`}
+      <div>{result.ok ? '지도: 카카오맵' : `지도: 내장 지도 — ${result.reason}`}</div>
+      {/* 실패 시 카카오가 실제로 뭐라고 답했는지. 원인 파악용이라 실패했을 때만 나온다. */}
+      {result.detail ? (
+        <div style={{ marginTop: 4, fontSize: 9.5, fontWeight: 500, lineHeight: 1.45, wordBreak: 'break-all' }}>
+          {result.detail}
+        </div>
+      ) : null}
     </div>
   )
 }
