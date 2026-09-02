@@ -158,18 +158,39 @@ async function main() {
     throw new Error(`zip에 ${prefix} 가 없다. 들어 있는 경로: ${available.join(", ")}`);
   }
 
-  await mkdir(OUT_DIR, { recursive: true });
+  // 에디터는 슬라이드 하나가 실패해도 나머지를 담아 zip을 내려준다(okCount > 0이면 다운로드).
+  // 헤드리스로 돌리면 그 실패 토스트를 볼 수 없으니 장수가 맞는지 여기서 직접 본다.
+  // 이 검사가 없으면 중간 한 장이 빠졌을 때 뒤 파일이 한 칸씩 밀려 엉뚱한 이름으로 저장되고,
+  // 그대로 스토어에 올라간다.
+  if (entries.length !== slides.length) {
+    throw new Error(
+      `렌더 결과가 ${entries.length}장인데 슬라이드는 ${slides.length}장이다 — ` +
+        "일부 슬라이드 렌더가 실패했다. 기존 산출물은 건드리지 않고 중단한다."
+    );
+  }
 
-  // 이전 산출물 제거 — 슬라이드 수가 줄었을 때 옛 파일이 남으면 스토어에 섞인다
+  // zip 파일명 앞의 순번(01-, 02-…)이 슬라이드 인덱스다. 배열 순서가 아니라 이 번호로
+  // 맞춰야 정렬이 어긋나도 이름이 밀리지 않는다.
+  const names = outputNames(project);
+  const planned = entries.map((entry) => {
+    const base = path.basename(entry);
+    const m = /^(\d+)-/.exec(base);
+    if (!m) throw new Error(`zip 항목 이름에서 순번을 못 읽었다: ${base}`);
+    const name = names[Number(m[1]) - 1];
+    if (!name) throw new Error(`순번 ${m[1]}에 대응하는 슬라이드가 없다: ${base}`);
+    return { entry, name };
+  });
+
+  // 검증을 통과한 뒤에야 기존 산출물을 지운다 — 슬라이드 수가 줄었을 때 옛 파일이
+  // 남으면 스토어에 섞이지만, 실패했을 때 멀쩡한 세트를 날려서도 안 된다.
+  await mkdir(OUT_DIR, { recursive: true });
   for (const f of await readdir(OUT_DIR)) {
     if (f.endsWith(".png")) await unlink(path.join(OUT_DIR, f));
   }
 
-  const names = outputNames(project);
   const written = [];
-  for (let i = 0; i < entries.length; i++) {
-    const buf = await zip.files[entries[i]].async("nodebuffer");
-    const name = names[i] ?? `${String(i + 1).padStart(2, "0")}_screen.png`;
+  for (const { entry, name } of planned) {
+    const buf = await zip.files[entry].async("nodebuffer");
     // 에디터(html-to-image)는 RGBA로 굽는데 App Store Connect는 알파 채널이 있는
     // 스크린샷을 거부한다("Invalid Screenshot ... can't contain an alpha channel").
     // 알파는 전부 255라 채널만 떼면 화면은 그대로다.
