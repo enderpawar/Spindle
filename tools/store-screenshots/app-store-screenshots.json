@@ -16,10 +16,14 @@
         "id": "iphone_0",
         "layout": "device-bottom",
         "label": {},
-        "headline": {},
-        "headlineAccent": {},
-        "screenshot": "/screenshots/android/phone/0_splash.png",
-        "inverted": true,
+        "headline": {
+          "ko": "어디 갈지 고민될 땐"
+        },
+        "headlineAccent": {
+          "ko": "휴대폰만 돌리세요!"
+        },
+        "screenshot": "/screenshots/ios/phone/1_spin.png",
+        "inverted": false,
         "transforms": {
           "device": {
             "x": 110,
@@ -44,12 +48,12 @@
         "layout": "device-bottom",
         "label": {},
         "headline": {
-          "ko": "어디 갈지 고민될 땐"
+          "ko": "붐비는 명소 말고"
         },
         "headlineAccent": {
-          "ko": "휴대폰만 돌리세요!"
+          "ko": "오늘 한산한 부산!"
         },
-        "screenshot": "/screenshots/android/phone/1_spin.png",
+        "screenshot": "/screenshots/ios/phone/2_map.png",
         "inverted": false,
         "transforms": {
           "device": {
@@ -75,12 +79,12 @@
         "layout": "device-bottom",
         "label": {},
         "headline": {
-          "ko": "붐비는 명소 말고"
+          "ko": "반나절 코스 짜기"
         },
         "headlineAccent": {
-          "ko": "오늘 한산한 부산!"
+          "ko": "탭 한 번이면 끝!"
         },
-        "screenshot": "/screenshots/android/phone/2_map.png",
+        "screenshot": "/screenshots/ios/phone/3_home.png",
         "inverted": false,
         "transforms": {
           "device": {
@@ -106,12 +110,12 @@
         "layout": "device-bottom",
         "label": {},
         "headline": {
-          "ko": "반나절 코스 짜기"
+          "ko": "원도심 55곳"
         },
         "headlineAccent": {
-          "ko": "탭 한 번이면 끝!"
+          "ko": "도장깨기 시작!"
         },
-        "screenshot": "/screenshots/android/phone/3_home.png",
+        "screenshot": "/screenshots/ios/phone/4_stamp.png",
         "inverted": false,
         "transforms": {
           "device": {
@@ -137,43 +141,12 @@
         "layout": "device-bottom",
         "label": {},
         "headline": {
-          "ko": "원도심 55곳"
-        },
-        "headlineAccent": {
-          "ko": "도장깨기 시작!"
-        },
-        "screenshot": "/screenshots/android/phone/4_stamp.png",
-        "inverted": false,
-        "transforms": {
-          "device": {
-            "x": 110,
-            "y": 680,
-            "width": 1100,
-            "height": 2241,
-            "rotation": 0,
-            "zIndex": 3
-          },
-          "caption": {
-            "x": 106,
-            "y": 210,
-            "width": 1108,
-            "height": 520,
-            "rotation": 0,
-            "zIndex": 4
-          }
-        }
-      },
-      {
-        "id": "iphone_5",
-        "layout": "device-bottom",
-        "label": {},
-        "headline": {
           "ko": "켜자마자 바로"
         },
         "headlineAccent": {
           "ko": "부산 여행 시작!"
         },
-        "screenshot": "/screenshots/android/phone/5_settings.png",
+        "screenshot": "/screenshots/ios/phone/5_settings.png",
         "inverted": true,
         "transforms": {
           "device": {

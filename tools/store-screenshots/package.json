@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "export:ios": "node export-ios.mjs"
+    "export:ios": "node export-ios.mjs",
+    "capture:ios": "node ios-status-bar.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

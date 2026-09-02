@@ -6,12 +6,11 @@
 ```
 fastlane/screenshots/ios/
 └── ko/
-    ├── 01_splash.png
-    ├── 02_spin.png
-    ├── 03_map.png
-    ├── 04_home.png
-    ├── 05_stamp.png
-    └── 06_settings.png
+    ├── 01_spin.png
+    ├── 02_map.png
+    ├── 03_home.png
+    ├── 04_stamp.png
+    └── 05_settings.png
 ```
 
 ## 규격
@@ -30,8 +29,13 @@ fastlane/screenshots/ios/
 ## 만드는 법 (Mac 불필요)
 
 원본 캡처와 카피·레이아웃이 `tools/store-screenshots`에 이미 준비돼 있다.
-`app-store-screenshots.json`의 `slidesByDevice.iphone`에 6장짜리 덱이 구성돼 있고,
-소스 이미지는 Android 실기기 캡처(`public/screenshots/android/phone/`)를 공유한다.
+`app-store-screenshots.json`의 `slidesByDevice.iphone`에 5장짜리 덱이 구성돼 있다.
+
+소스 이미지는 **iOS 상태바로 갈아 끼운 캡처**(`public/screenshots/ios/phone/`)를 쓴다.
+원본은 Play와 공유하는 Android 캡처(`public/screenshots/android/phone/`)지만, 그대로
+쓰면 iPhone 목업 안에 Android식 상태바가 보여 2.3.3 리젝 위험이 있다. `capture:ios`가
+상단 136px 띠만 iOS 규격으로 다시 그린다 — 앱 화면 자체는 건드리지 않는다.
+Play용 `android` 덱은 원본 Android 캡처를 그대로 본다.
 
 ### 자동 (권장)
 
@@ -39,8 +43,12 @@ fastlane/screenshots/ios/
 cd tools/store-screenshots
 npm install
 npx playwright install chromium   # 최초 1회
+npm run capture:ios               # Android 상태바 → iOS 상태바
 npm run export:ios
 ```
+
+`capture:ios`(`ios-status-bar.mjs`)는 소스 캡처가 1080x2400이 아니면 좌표가 어긋나므로
+바로 실패한다. 원본 캡처를 새로 찍어 넣었다면 이 스크립트의 `BAR_H`를 다시 재야 한다.
 
 `export-ios.mjs`가 next dev를 띄우고 헤드리스 Chromium으로 에디터의 **Export bundle**을
 눌러, zip에서 `ios/iphone/1320x2868/ko/`만 골라 이 디렉터리에 `01_…` 순번으로 넣는다.
@@ -67,20 +75,18 @@ npm run dev          # http://localhost:3000
 
 ## ⚠ 업로드 전 확인
 
-- [ ] **릴리스 서명 빌드로 다시 촬영한다.** 현재 소스 캡처는 Android 디버그 빌드를
-      에뮬레이터(Pixel 7)에서 찍은 것이다. 스토어 이미지와 실제 배포 앱이 달라지면 안 된다.
-      iOS 실기기 캡처로 교체하는 것이 원칙이나, 두 플랫폼의 화면이 동일하므로
-      최소한 **릴리스 빌드** 캡처로는 바꾼다.
+- [x] **상태바가 iOS다.** `capture:ios`가 Android 상태바 띠를 iOS 규격(9:41 · 셀룰러
+      4칸 · 와이파이 · 배터리)으로 교체한다. 2026-09-02 익스포트 결과에서 확인했다.
 - [x] Android **내비게이션 바**는 남아 있지 않다 (2026-09-01 익스포트 결과 확인 —
       하단은 앱 자체 탭바다).
-- [ ] **상태바가 아직 Android다.** iPhone 프레임 안의 상태바에 Android식 신호/배터리
-      아이콘과 알림 아이콘이 그대로 보인다(`02_spin.png` 상단). Apple은 스토어 이미지에
-      다른 기기의 UI가 섞이는 것을 리젝 사유로 삼는다(2.3.3). 해결책은 두 가지 —
-      (a) iOS 실기기/TestFlight 빌드로 재촬영, (b) 소스 캡처의 상태바 영역을 잘라
-      내고 재익스포트. (a)가 원칙이고, 위의 "릴리스 빌드 재촬영" 항목과 함께 처리하면 된다.
-- [ ] 첫 장이 `01_splash.png`(카피 없는 스플래시)다. App Store 검색 결과에서 가장 크게
-      보이는 것이 첫 장이라 카피가 있는 `02_spin`을 앞세우는 편이 낫다. Play 덱은
-      실제로 splash를 빼고 spin부터 시작한다(`app-store-screenshots.json`의 `android` 덱).
+- [x] 첫 장이 카피가 있는 `01_spin.png`다. 카피 없는 스플래시는 덱에서 뺐다
+      (Play의 `android` 덱과 같은 구성).
+- [ ] **릴리스 서명 빌드로 다시 촬영한다.** 상태바는 해결했지만 앱 화면 자체는 여전히
+      Android 디버그 빌드를 에뮬레이터(Pixel 7)에서 찍은 것이다. 두 플랫폼의 화면이
+      동일해 당장 문제가 되지는 않지만, TestFlight 빌드를 실기기에 깔았을 때
+      iOS 캡처로 갈아 끼우는 것이 원칙이다. 교체하려면 새 캡처를
+      `public/screenshots/ios/phone/`에 같은 파일명으로 넣고 `export:ios`만 다시 돈다
+      (이미 iOS 캡처라면 `capture:ios`는 건너뛴다).
 - [ ] 스크린샷 안의 카피가 실제 앱 문구와 어긋나지 않는지 본다.
 
 디렉터리가 비어 있으면 `ios release` 레인은 스크린샷 업로드를 **건너뛴다**
