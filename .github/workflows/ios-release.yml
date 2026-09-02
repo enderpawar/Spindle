@@ -57,7 +57,13 @@ jobs:
     name: "iOS ${{ inputs.lane }} (v${{ inputs.version }})"
     # macos-latest는 러너 이미지가 바뀔 때 Xcode 버전도 같이 바뀐다.
     # 서명·빌드 재현성을 위해 버전을 고정한다.
-    runs-on: macos-15
+    #
+    # macos-15(Xcode 16.4 / iOS 18.5 SDK)로는 업로드가 거부된다. App Store Connect가
+    # 검증 단계에서 409로 막는다:
+    #   "All iOS and iPadOS apps must be built with the iOS 26 SDK or later,
+    #    included in Xcode 26 or later"
+    # 빌드·서명은 멀쩡히 끝나고 업로드에서만 걸리므로 build 레인으로는 발견되지 않는다.
+    runs-on: macos-26
     timeout-minutes: 90
 
     steps:
@@ -78,6 +84,10 @@ jobs:
           echo "Xcode: $(xcodebuild -version | tr '\n' ' ')"
           echo "Node:  $(node --version)"
           echo "Ruby:  $(ruby --version)"
+          # App Store Connect는 업로드 검증에서 iOS SDK 버전을 본다. 낮으면 409로 거부되는데
+          # 빌드는 성공하므로 여기서 찍어두지 않으면 40분 뒤 업로드에서야 알게 된다.
+          echo "SDK:   $(xcodebuild -showsdks | grep -oE 'iphoneos[0-9.]+' | tail -1)"
+          echo "설치된 Xcode: $(ls -d /Applications/Xcode*.app 2>/dev/null | tr '\n' ' ')"
 
       # Fastfile 문법 오류는 30초 만에 잡을 수 있다. 40분짜리 빌드 뒤에
       # 알게 되는 것보다 낫다 (개발 머신이 Windows라 로컬 검증이 불가능하다).
