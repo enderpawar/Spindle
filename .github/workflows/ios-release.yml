@@ -47,6 +47,10 @@ concurrency:
 
 env:
   NODE_VERSION: "22"
+  # setup-ruby는 .ruby-version·.tool-versions가 없으면 버전을 못 정하고 즉시 실패한다.
+  # 저장소에는 Gemfile만 있으므로 여기서 명시한다. macos-15 러너에 프리빌드가 있어
+  # 설치가 빠르고, fastlane이 지원하는 범위 안이다.
+  RUBY_VERSION: "3.3"
 
 jobs:
   ios:
@@ -65,6 +69,7 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
+          ruby-version: ${{ env.RUBY_VERSION }}
           # Gemfile은 저장소 루트에 있다
           bundler-cache: true
 
