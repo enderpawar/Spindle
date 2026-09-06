@@ -410,6 +410,7 @@ function App() {
         <ThemeDeckScreen
           initialTheme={themeSeed}
           journeyTarget={themeJourneyTarget(dial)}
+          departure={origin}
           onStart={startThemeJourney}
           onSelect={(poi) => {
             setThemeJourney(null)

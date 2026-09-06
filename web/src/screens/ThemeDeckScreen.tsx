@@ -1,28 +1,91 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { THEMES, poisByTheme, representativePoiForTheme, themeInfo, type ThemeId } from '../engine/themes'
-import { directionOf, type Poi } from '../mock/pois'
+import { directionOf, type Departure, type Poi } from '../mock/pois'
 import { useVisited } from '../lib/visited'
+import { fetchThemeCafes } from './themeCafes'
 
 interface Props {
   initialTheme: ThemeId
   journeyTarget: number
+  departure: Departure
   onStart: (themeId: ThemeId) => void
   onSelect: (poi: Poi) => void
   onNavigate: (tab: NavTab) => void
   onBack: () => void
 }
 
+export function ThemeCafeSection({ themeId, spots, onSelect }: {
+  themeId: ThemeId
+  spots: readonly Poi[]
+  onSelect: (poi: Poi) => void
+}) {
+  const cafes = themeId === 'food' ? spots.filter((spot) => spot.category === '카페') : []
+  if (cafes.length === 0) return null
+
+  return (
+    <section aria-labelledby="theme-cafe-heading" style={{ marginTop: 24 }}>
+      <h2 id="theme-cafe-heading" className="theme-poi-heading">주변 카페</h2>
+      <div className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 14 }}>
+        {cafes.map((poi) => {
+          const dir = directionOf(poi.direction)
+          return (
+            <button
+              key={poi.id}
+              onClick={() => onSelect(poi)}
+              className="motion-card motion-card-enter"
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+            >
+              <div style={{ height: 112, borderRadius: 18, background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 135%)`, position: 'relative', overflow: 'hidden' }}>
+                <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -10, fontSize: 58, opacity: 0.28 }}>☕</div>
+                <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
+                {/* tour-* 방문 기록은 zone.slots 기반 StampScreen에 영향을 주지 않는다.
+                    markVisited 흐름은 유지하되 카페 카드에는 도장 배지를 표시하지 않는다. */}
+              </div>
+              <div style={{ padding: '9px 2px 0' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--l-ink)' }}>{poi.name}</div>
+                <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                  {poi.category} · {poi.district}
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 /** 테마 덱 (Phase 7) — 바다/골목·시장/근현대·역사/야간/먹거리로 POI를 둘러본다. */
-export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect, onNavigate, onBack }: Props) {
+export function ThemeDeckScreen({ initialTheme, journeyTarget, departure, onStart, onSelect, onNavigate, onBack }: Props) {
   const [themeId, setThemeId] = useState<ThemeId>(initialTheme)
+  const [cafeSpots, setCafeSpots] = useState<ExtraSpot[] | null>(null)
   const visited = useVisited()
   const theme = themeInfo(themeId)
   const pois = poisByTheme(themeId)
   const representative = representativePoiForTheme(themeId)
+  const extraDisplaySpots = useMemo(
+    () => cafeSpots?.map((spot) => toDisplayPoi(spot, departure)) ?? [],
+    [cafeSpots, departure],
+  )
+
+  useEffect(() => {
+    if (themeId !== 'food' || cafeSpots !== null) return
+
+    let active = true
+    // fetchThemeCafes는 명소 화면과 같은 fetchAllOldTownPois 세션 캐시를 재사용한다.
+    fetchThemeCafes()
+      .then((spots) => {
+        if (active) setCafeSpots(spots)
+      })
+    return () => {
+      active = false
+    }
+  }, [cafeSpots, themeId])
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
@@ -148,6 +211,7 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, onStart, onSelect
             )
           })}
           </div>
+          <ThemeCafeSection themeId={themeId} spots={extraDisplaySpots} onSelect={onSelect} />
           <SourceLine />
         </div>
       </div>
