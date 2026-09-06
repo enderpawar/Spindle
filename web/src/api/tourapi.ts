@@ -74,6 +74,7 @@ export function toNumber(value: string | undefined): number | undefined {
 export interface AreaPoi {
   contentid: string;
   contenttypeid: string;
+  cat3?: string;
   title: string;
   addr1: string;
   firstimage: string;

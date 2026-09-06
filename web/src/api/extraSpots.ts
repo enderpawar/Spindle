@@ -6,10 +6,16 @@ import { fetchAllOldTownPois, toEnginePoi, type AreaPoi } from './tourapi'
 const CATEGORY_LABELS: Readonly<Record<string, string>> = {
   '12': '관광지',
   '14': '문화시설',
+  '39': '음식점',
 }
 
 const DISTRICT_BY_CODE = new Map(OLD_TOWN_REGIONS.map((region) => [region.code, region.name]))
 const WALK_SPEED_METERS_PER_MINUTE = 67
+const CAFE_CAT3 = 'A05020900'
+
+// 음식점은 구마다 수백 건일 수 있어 지도의 핀 밀도를 제한한다. 30은 업스트림 장애로
+// 실건수를 재지 못한 초기값이며, 복구 후 구별 카페·식당 분포를 측정해 조정한다.
+export const FOOD_SPOTS_PER_DISTRICT_LIMIT = 30
 
 export interface ExtraSpot {
   id: string
@@ -23,6 +29,25 @@ export interface ExtraSpot {
   address?: string
 }
 
+interface FoodSpotCandidate {
+  districtCode: string
+  category: string
+  spot: ExtraSpot
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+function compareFoodCandidates(a: FoodSpotCandidate, b: FoodSpotCandidate): number {
+  return (
+    compareText(a.districtCode, b.districtCode) ||
+    Number(a.category !== '카페') - Number(b.category !== '카페') ||
+    compareText(a.spot.name, b.spot.name) ||
+    compareText(a.spot.contentId, b.spot.contentId)
+  )
+}
+
 /** areaBasedList2 목록을 명소 지도용 점 데이터로 정리한다. */
 export function transformExtraSpots(
   pois: readonly AreaPoi[],
@@ -30,21 +55,26 @@ export function transformExtraSpots(
 ): ExtraSpot[] {
   const seenContentIds = new Set<string>()
   const spots: ExtraSpot[] = []
+  const foodCandidates: FoodSpotCandidate[] = []
 
   for (const poi of pois) {
     const contentId = poi.contentid.trim()
     const name = poi.title.trim()
-    const category = CATEGORY_LABELS[poi.contenttypeid.trim()]
-    const district = DISTRICT_BY_CODE.get(poi.sigungucode.trim())
+    const contentTypeId = poi.contenttypeid.trim()
+    const districtCode = poi.sigungucode.trim()
+    const category =
+      contentTypeId === '39' && poi.cat3?.trim() === CAFE_CAT3
+        ? '카페'
+        : CATEGORY_LABELS[contentTypeId]
+    const district = DISTRICT_BY_CODE.get(districtCode)
 
     if (!contentId || !name || !category || !district) continue
-    if (excludeContentIds.has(contentId) || seenContentIds.has(contentId)) continue
+    if (excludeContentIds.has(contentId)) continue
 
     const enginePoi = toEnginePoi(poi)
     if (!enginePoi) continue
 
-    seenContentIds.add(contentId)
-    spots.push({
+    const spot: ExtraSpot = {
       id: `tour-${contentId}`,
       contentId,
       name,
@@ -53,7 +83,28 @@ export function transformExtraSpots(
       lat: enginePoi.point.lat,
       lon: enginePoi.point.lng,
       address: poi.addr1.trim() || undefined,
-    })
+    }
+
+    if (contentTypeId === '39') {
+      foodCandidates.push({ districtCode, category, spot })
+      continue
+    }
+
+    if (seenContentIds.has(contentId)) continue
+    seenContentIds.add(contentId)
+    spots.push(spot)
+  }
+
+  const foodCountByDistrict = new Map<string, number>()
+  for (const candidate of foodCandidates.sort(compareFoodCandidates)) {
+    const { districtCode, spot } = candidate
+    if (seenContentIds.has(spot.contentId)) continue
+    const count = foodCountByDistrict.get(districtCode) ?? 0
+    if (count >= FOOD_SPOTS_PER_DISTRICT_LIMIT) continue
+
+    seenContentIds.add(spot.contentId)
+    foodCountByDistrict.set(districtCode, count + 1)
+    spots.push(spot)
   }
 
   return spots
