@@ -133,7 +133,7 @@ function PoiListCard({ poi, status, notice, onSelect }: {
           <circle cx="12" cy="12" r="9" />
           <path d="M14.8 9.2 L11 11 L9.2 14.8 L13 13 Z" fill="rgba(255,255,255,.7)" />
         </svg>
-        <PoiPhoto contentId={poi.contentId} alt={poi.name} />
+        <PoiPhoto contentId={poi.contentId} alt={poi.name} variant="thumb" />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

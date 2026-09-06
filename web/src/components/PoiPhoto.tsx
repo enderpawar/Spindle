@@ -6,6 +6,7 @@ interface Props {
   alt: string
   /** 하단 스크림 — 이미지 위에 방위 칩·이름을 얹는 카드에서 가독성 확보 */
   scrim?: boolean
+  variant?: 'full' | 'thumb'
   style?: CSSProperties
 }
 
@@ -14,10 +15,10 @@ interface Props {
  * 부모는 position:relative + overflow:hidden 이어야 한다. 이미지가 없거나 로딩/실패면
  * 아무것도 렌더하지 않아 부모의 폴백 아트가 그대로 보인다 (배지 등은 이 뒤에 그린다).
  */
-export function PoiPhoto({ contentId, alt, scrim = false, style }: Props) {
+export function PoiPhoto({ contentId, alt, scrim = false, variant = 'full', style }: Props) {
   const markerRef = useRef<HTMLSpanElement | null>(null)
   const [active, setActive] = useState(false)
-  const url = usePoiImage(contentId, active)
+  const url = usePoiImage(contentId, active, variant)
   const [failed, setFailed] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -51,6 +52,7 @@ export function PoiPhoto({ contentId, alt, scrim = false, style }: Props) {
           src={url}
           alt={alt}
           loading="lazy"
+          decoding="async"
           onError={() => setFailed(true)}
           onLoad={() => setLoaded(true)}
           className={`poi-photo${loaded ? ' is-loaded' : ''}`}

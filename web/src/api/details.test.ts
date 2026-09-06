@@ -6,8 +6,10 @@ import {
   fetchPoiDetailCached,
   fetchPoiGalleryImagesCached,
   fetchPoiImageCached,
+  fetchPoiThumbCached,
   firstSentence,
   knownPoiImageUrl,
+  knownPoiThumbUrl,
   normalizeIntroValue,
   poiImageProxyUrl,
   selectPrimaryVisitFacts,
@@ -580,6 +582,88 @@ describe("썸네일 이미지 — 세션 목록 firstimage 재사용", () => {
   it("knownPoiImageUrl은 시설 사진뿐인 POI를 계속 제외한다", async () => {
     await warmImageIndex("3083767", "http://tong.visitkorea.or.kr/restroom.jpg");
     expect(knownPoiImageUrl("3083767")).toBeNull();
+  });
+});
+
+describe("목록 썸네일 firstimage2", () => {
+  async function warmThumbIndex(
+    contentid: string,
+    firstimage: string,
+    firstimage2?: string,
+  ): Promise<void> {
+    const listFetch = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(
+          envelope([{ contentid, contenttypeid: "12", title: "T", firstimage, firstimage2 }]),
+        ),
+      ),
+    );
+    await fetchAreaPois("15", listFetch as unknown as typeof fetch);
+  }
+
+  it("목록 응답의 firstimage2를 색인해 경량 URL을 돌려준다", async () => {
+    await warmThumbIndex("thumb-index", "https://img/full.jpg", "https://img/thumb.jpg");
+
+    expect(knownPoiThumbUrl("thumb-index")).toBe("https://img/thumb.jpg");
+  });
+
+  it("firstimage2가 비어 있으면 firstimage로 폴백한다", async () => {
+    await warmThumbIndex("thumb-fallback", "https://img/full.jpg", "");
+
+    expect(knownPoiThumbUrl("thumb-fallback")).toBe("https://img/full.jpg");
+  });
+
+  it("목록 인덱스만으로 응답하고 detailCommon2를 부르지 않는다", async () => {
+    await warmThumbIndex("thumb-no-detail", "https://img/full.jpg", "https://img/thumb.jpg");
+    const fetchMock = makeFetch({
+      common: { contentid: "thumb-no-detail", contenttypeid: "12", title: "T" },
+    });
+
+    await expect(fetchPoiThumbCached("thumb-no-detail", fetchMock as typeof fetch)).resolves.toBe(
+      "https://img/thumb.jpg",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("원본 경로는 firstimage를 유지해 썸네일 캐시에 오염되지 않는다", async () => {
+    await warmThumbIndex("full-isolated", "https://img/full.jpg", "https://img/thumb.jpg");
+    const fetchMock = makeFetch({
+      common: { contentid: "full-isolated", contenttypeid: "12", title: "T" },
+    });
+
+    await expect(fetchPoiThumbCached("full-isolated", fetchMock as typeof fetch)).resolves.toBe(
+      "https://img/thumb.jpg",
+    );
+    await expect(fetchPoiImageCached("full-isolated", fetchMock as typeof fetch)).resolves.toBe(
+      "https://img/full.jpg",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("목록에 없는 contentId는 상세 원본 폴백 경로를 탄다", async () => {
+    const fetchMock = makeFetch({
+      common: {
+        contentid: "thumb-detail-fallback",
+        contenttypeid: "12",
+        title: "T",
+        firstimage: "https://img/detail-full.jpg",
+      },
+    });
+
+    await expect(
+      fetchPoiThumbCached("thumb-detail-fallback", fetchMock as typeof fetch),
+    ).resolves.toBe("https://img/detail-full.jpg");
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+  });
+
+  it("firstimage2의 http URL을 https로 정규화한다", async () => {
+    await warmThumbIndex(
+      "thumb-https",
+      "http://tong.visitkorea.or.kr/full.jpg",
+      "http://tong.visitkorea.or.kr/thumb.jpg",
+    );
+
+    expect(knownPoiThumbUrl("thumb-https")).toBe("https://tong.visitkorea.or.kr/thumb.jpg");
   });
 });
 

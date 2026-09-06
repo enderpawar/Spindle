@@ -11,6 +11,7 @@ import {
   extractItems,
   getKnownContentTypeId,
   getKnownFirstImage,
+  getKnownThumbImage,
   whenAreaListsSettled,
   type ListBody,
 } from "./tourapi";
@@ -287,6 +288,7 @@ async function fetchRepresentativeImage(
 }
 
 const representativeImageCache = new Map<string, Promise<string | null>>();
+const thumbImageCache = new Map<string, Promise<string | null>>();
 const galleryImageCache = new Map<string, Promise<string[]>>();
 
 function fetchRepresentativeImageCached(
@@ -609,6 +611,7 @@ export function clearDetailCache(): void {
   cardDetailCache.clear();
   commonCache.clear();
   representativeImageCache.clear();
+  thumbImageCache.clear();
   galleryImageCache.clear();
   operationInfoIndex.clear();
 }
@@ -620,6 +623,17 @@ export function clearDetailCache(): void {
 export function knownPoiImageUrl(contentId: string): string | null {
   if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
   return normalizeImageUrl(getKnownFirstImage(contentId)) ?? null;
+}
+
+/**
+ * 목록 썸네일용 경량 이미지 URL. firstimage2가 없으면 원본(firstimage)으로 폴백한다.
+ * 940×626 원본을 76px 카드에 넣으면 장당 2.2MB가 디코딩돼 WKWebView 콘텐츠 프로세스가
+ * 메모리로 종료된다 (2026-09-06 실측). firstimage2는 같은 목록 응답에 이미 들어 있어
+ * 추가 호출이 없다.
+ */
+export function knownPoiThumbUrl(contentId: string): string | null {
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+  return normalizeImageUrl(getKnownThumbImage(contentId)) ?? knownPoiImageUrl(contentId);
 }
 
 // ── 목록·덱 썸네일용 경량 이미지 조회 ──
@@ -650,9 +664,34 @@ export function fetchPoiImageCached(
   return fetchPoiImage(contentId, fetchImpl).catch(() => null);
 }
 
+async function fetchPoiThumb(contentId: string, fetchImpl: FetchLike): Promise<string | null> {
+  const known = knownPoiThumbUrl(contentId);
+  if (known) return known;
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+
+  await whenAreaListsSettled(AREA_LIST_IMAGE_WARMUP_WAIT_MS);
+  const warmed = knownPoiThumbUrl(contentId);
+  if (warmed) return warmed;
+
+  return fetchRepresentativeImageInParallelCached(contentId, fetchImpl);
+}
+
+/** 목록용 경량 이미지 URL (없으면 null). 세션 메모리 캐시만 사용 (절대 원칙 3). */
+export function fetchPoiThumbCached(
+  contentId: string,
+  fetchImpl: FetchLike = fetch,
+): Promise<string | null> {
+  const cached = thumbImageCache.get(contentId);
+  if (cached) return cached;
+  const pending = fetchPoiThumb(contentId, fetchImpl).catch(() => null);
+  thumbImageCache.set(contentId, pending);
+  return pending;
+}
+
 /** 테스트용 */
 export function clearImageCache(): void {
   representativeImageCache.clear();
+  thumbImageCache.clear();
   galleryImageCache.clear();
   commonCache.clear();
 }

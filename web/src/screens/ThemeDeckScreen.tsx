@@ -42,7 +42,7 @@ export function ThemeCafeSection({ themeId, spots, onSelect }: {
             >
               <div style={{ height: 112, borderRadius: 18, background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 135%)`, position: 'relative', overflow: 'hidden' }}>
                 <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -10, fontSize: 58, opacity: 0.28 }}>☕</div>
-                <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
+                <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim variant="thumb" />
                 {/* tour-* 방문 기록은 zone.slots 기반 StampScreen에 영향을 주지 않는다.
                     markVisited 흐름은 유지하되 카페 카드에는 도장 배지를 표시하지 않는다. */}
               </div>
@@ -192,7 +192,7 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, departure, onStar
                   <div aria-hidden style={{ position: 'absolute', right: -8, bottom: -10, fontSize: 58, opacity: 0.28 }}>
                     {theme.emoji}
                   </div>
-                  <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
+                  <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim variant="thumb" />
                   {done && (
                     <div style={{ position: 'absolute', top: 9, right: 9, width: 22, height: 22, borderRadius: '50%', background: 'rgba(15,37,64,.72)', display: 'grid', placeItems: 'center' }} aria-label="방문함">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff" aria-hidden>

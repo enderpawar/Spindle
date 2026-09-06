@@ -78,6 +78,7 @@ export interface AreaPoi {
   title: string;
   addr1: string;
   firstimage: string;
+  firstimage2?: string;
   sigungucode: string;
   mapx: string; // guard-allow: TourAPI 응답의 POI 경도 읽기 — 사용자 좌표 아님, 요청 파라미터로 쓰지 않음
   mapy: string; // guard-allow: TourAPI 응답의 POI 위도 읽기 — 단말 내 방향·거리 계산 전용
@@ -151,11 +152,14 @@ export function extractItems<T>(body: ListBody<T>): T[] {
 //   - firstimage: 썸네일이 detailCommon2(실측 4~5초)를 건너뛰고 바로 이미지를 띄우는 데 사용
 const contentTypeIndex = new Map<string, string>();
 const firstImageIndex = new Map<string, string>();
+// 세션 메모리 전용 인덱스. 영속 저장하지 않는다 (절대 원칙 3).
+const thumbImageIndex = new Map<string, string>();
 
 function rememberContentTypeId(poi: AreaPoi): void {
   if (!poi.contentid) return;
   if (poi.contenttypeid) contentTypeIndex.set(poi.contentid, poi.contenttypeid);
   if (poi.firstimage) firstImageIndex.set(poi.contentid, poi.firstimage);
+  if (poi.firstimage2) thumbImageIndex.set(poi.contentid, poi.firstimage2);
 }
 
 /** 세션 목록 호출로 이미 알고 있는 contentTypeId (모르면 undefined) */
@@ -166,6 +170,11 @@ export function getKnownContentTypeId(contentId: string): string | undefined {
 /** 세션 목록 호출로 이미 알고 있는 대표 이미지 URL (모르면 undefined — 호출부가 상세로 폴백) */
 export function getKnownFirstImage(contentId: string): string | undefined {
   return firstImageIndex.get(contentId);
+}
+
+/** 세션 목록 호출로 이미 알고 있는 경량 썸네일 URL (모르면 undefined) */
+export function getKnownThumbImage(contentId: string): string | undefined {
+  return thumbImageIndex.get(contentId);
 }
 
 /** 한 구의 POI 전체를 페이징으로 수집 */
@@ -236,6 +245,7 @@ export function clearSessionCache(): void {
   sessionCache.clear();
   contentTypeIndex.clear();
   firstImageIndex.clear();
+  thumbImageIndex.clear();
 }
 
 /**
