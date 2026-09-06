@@ -62,6 +62,7 @@ export async function requestMotionPermission(): Promise<MotionPermission> {
 /**
  * 흔들기 구독. 콜백에는 데드존을 넘은 흔들림 세기만 전달하며, 해제 함수를 반환한다.
  * onSample은 값 없는 생존 신호일 뿐이며 devicemotion 이벤트가 올 때마다 호출한다.
+ * C7 런타임은 실기기 권한 동작이 확정돼 이 신호에 의존하지 않지만 진단·호환성을 위해 유지한다.
  * 가속도 원값은 이 모듈 밖으로 나가지 않는다.
  */
 export function subscribeShake(

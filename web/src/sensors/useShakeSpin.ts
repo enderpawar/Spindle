@@ -7,7 +7,8 @@
  *
  * 켜는 방식은 기기에 따라 다르다.
  * - 권한 개념이 없는 환경(안드로이드·데스크톱): 스핀 화면에 들어오면 바로 켠다.
- * - 네이티브 셸: 즉시 구독하고 실제 표본이 오지 않을 때만 아래 권한 요청 경로로 되돌아간다.
+ * - 네이티브 셸(WKWebView): requestPermission()은 팝업 없이 granted를 주지만, 호출 전에는
+ *   devicemotion 이벤트가 오지 않는다(TestFlight 1.0.1 실기기 확인). 따라서 진입 즉시 호출한다.
  * - iOS 13+ 브라우저: 권한을 사용자 제스처 안에서만 물을 수 있어, 별도 버튼을 두는 대신 스핀 화면에서
  *   일어나는 **첫 조작(탭·드래그·키 입력)** 에 요청을 얹는다. 화면에 들어와 아무거나 한 번
  *   건드리면 그때 프롬프트가 뜨고, 허용 이후로는 그냥 흔들기만 하면 된다.
@@ -34,10 +35,6 @@ export interface ShakeSpin {
   /** 명시적 트리거(버튼 등)를 붙이고 싶을 때 쓰는 수동 진입점 */
   enable: () => Promise<void>
 }
-
-// devicemotion은 보통 수십 Hz로 오므로 정지 상태여도 1.2초면 여러 표본이 도착한다.
-// 이 시간 동안 한 건도 없으면 WKWebView의 권한 경로가 막힌 것으로 보고 제스처 요청으로 폴백한다.
-export const NATIVE_MOTION_SAMPLE_WAIT_MS = 1_200
 
 /** 하단 내비게이션 탭처럼 화면을 떠나는 조작에는 권한 프롬프트를 얹지 않는다 */
 function leavesScreen(target: EventTarget | null): boolean {
@@ -66,13 +63,13 @@ export function installShakeActivation({
 }: ShakeActivationOptions): () => void {
   if (!supported) return () => {}
 
-  let sampleTimer: ReturnType<typeof setTimeout> | undefined
+  let cancelled = false
   let detached = false
 
   const arm = (event: Event) => {
     if (leavesScreen(event.target)) return
     detach()
-    void enable()
+    runEnable(false)
   }
   const detach = () => {
     if (detached) return
@@ -85,7 +82,11 @@ export function installShakeActivation({
     window.addEventListener('pointerup', arm, true)
     window.addEventListener('keydown', arm, true)
   }
-  const enterPermissionPath = () => {
+  const enterPermissionPath = (retryDenied = false) => {
+    if (retryDenied) {
+      armPermission()
+      return
+    }
     const known = knownPermission()
     if (known === 'granted') {
       subscribe()
@@ -98,22 +99,33 @@ export function installShakeActivation({
     armPermission()
   }
 
+  const runEnable = (fallbackAfterFailure: boolean) => {
+    void enable().then(
+      () => {
+        if (cancelled) {
+          stop()
+          return
+        }
+        if (fallbackAfterFailure && knownPermission() !== 'granted') {
+          enterPermissionPath(true)
+        }
+      },
+      () => {
+        if (cancelled) {
+          stop()
+        } else if (fallbackAfterFailure) {
+          enterPermissionPath(true)
+        }
+      },
+    )
+  }
+
   if (isNativeShell()) {
-    let sampled = false
-    subscribe(() => {
-      sampled = true
-      if (sampleTimer !== undefined) {
-        clearTimeout(sampleTimer)
-        sampleTimer = undefined
-      }
-    })
-    sampleTimer = setTimeout(() => {
-      sampleTimer = undefined
-      if (sampled || !needsPermission) return
-      stop()
-      setStatus('off')
-      enterPermissionPath()
-    }, NATIVE_MOTION_SAMPLE_WAIT_MS)
+    if (needsPermission) {
+      runEnable(true)
+    } else {
+      subscribe()
+    }
   } else if (!needsPermission) {
     subscribe()
   } else {
@@ -121,7 +133,7 @@ export function installShakeActivation({
   }
 
   return () => {
-    if (sampleTimer !== undefined) clearTimeout(sampleTimer)
+    cancelled = true
     detach()
     stop()
   }

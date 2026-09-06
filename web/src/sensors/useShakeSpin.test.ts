@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { requestMotionPermission, subscribeShake } from './motion'
-import {
-  installShakeActivation,
-  NATIVE_MOTION_SAMPLE_WAIT_MS,
-  type ShakeStatus,
-} from './useShakeSpin'
+import { requestMotionPermission, subscribeShake, type MotionPermission } from './motion'
+import { installShakeActivation, type ShakeStatus } from './useShakeSpin'
 
 interface CapacitorTestGlobal {
   Capacitor?: { isNativePlatform: () => boolean }
@@ -13,7 +9,6 @@ interface CapacitorTestGlobal {
 const originalCapacitor = Object.getOwnPropertyDescriptor(globalThis, 'Capacitor')
 
 afterEach(() => {
-  vi.useRealTimers()
   vi.unstubAllGlobals()
   if (originalCapacitor) {
     Object.defineProperty(globalThis, 'Capacitor', originalCapacitor)
@@ -22,11 +17,14 @@ afterEach(() => {
   }
 })
 
-function fakeMotionWindow(requestPermission?: () => Promise<'granted'>): EventTarget {
+function fakeMotionWindow(
+  permissionRequest?: () => Promise<'granted' | 'denied'>,
+): EventTarget {
   const host = new EventTarget()
   Object.assign(host, {
-    DeviceMotionEvent: Object.assign(function DeviceMotionEvent() {},
-      requestPermission ? { requestPermission } : {},
+    DeviceMotionEvent: Object.assign(
+      function DeviceMotionEvent() {},
+      permissionRequest ? { requestPermission: permissionRequest } : {},
     ),
   })
   vi.stubGlobal('window', host)
@@ -39,87 +37,116 @@ function nativeShell(): void {
 
 function activation(needsPermission: boolean) {
   const statuses: ShakeStatus[] = []
-  let onSample: (() => void) | undefined
-  const subscribe = vi.fn((sample?: () => void) => {
-    onSample = sample
+  let permission: MotionPermission | null = null
+  let active = false
+  const subscribe = vi.fn(() => {
+    active = true
     statuses.push('on')
   })
-  const stop = vi.fn()
+  const stop = vi.fn(() => {
+    active = false
+  })
   const enable = vi.fn(async () => {
-    await requestMotionPermission()
+    permission = await requestMotionPermission()
+    if (permission === 'granted') subscribe()
   })
   const cleanup = installShakeActivation({
     supported: true,
     needsPermission,
-    knownPermission: () => null,
+    knownPermission: () => permission,
     subscribe,
     stop,
     enable,
     setStatus: (status) => statuses.push(status),
   })
-  return { statuses, subscribe, stop, enable, cleanup, sample: () => onSample?.() }
+  return {
+    statuses,
+    subscribe,
+    stop,
+    enable,
+    cleanup,
+    permission: () => permission,
+    active: () => active,
+  }
 }
 
-describe('useShakeSpin 네이티브 권한 생존 확인', () => {
-  it('네이티브에서 표본이 오면 권한 요청 없이 즉시 켜진 상태를 유지한다', async () => {
-    vi.useFakeTimers()
+describe('useShakeSpin 네이티브 즉시 권한 요청', () => {
+  it('네이티브 진입 즉시 제스처 없이 권한을 요청하고 granted면 구독한다', async () => {
     const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
+    fakeMotionWindow(requestPermission)
+    nativeShell()
+
+    const runtime = activation(true)
+
+    expect(requestPermission).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
+    expect(runtime.statuses.at(-1)).toBe('on')
+    expect(runtime.active()).toBe(true)
+    runtime.cleanup()
+  })
+
+  it('네이티브 즉시 요청이 denied면 첫 조작 권한 경로로 폴백한다', async () => {
+    const requestPermission = vi
+      .fn<() => Promise<'granted' | 'denied'>>()
+      .mockResolvedValueOnce('denied')
+      .mockResolvedValueOnce('granted')
+    const host = fakeMotionWindow(requestPermission)
+    nativeShell()
+    const runtime = activation(true)
+
+    await vi.waitFor(() => expect(runtime.permission()).toBe('denied'))
+    expect(runtime.subscribe).not.toHaveBeenCalled()
+
+    host.dispatchEvent(new Event('pointerup'))
+    await vi.waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
+    runtime.cleanup()
+  })
+
+  it('needsPermission=false인 네이티브는 권한 API 없이 바로 구독한다', () => {
+    const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
+    fakeMotionWindow(requestPermission)
+    nativeShell()
+
+    const runtime = activation(false)
+
+    expect(requestPermission).not.toHaveBeenCalled()
+    expect(runtime.subscribe).toHaveBeenCalledTimes(1)
+    expect(runtime.active()).toBe(true)
+    runtime.cleanup()
+  })
+
+  it('권한 Promise 완료 전에 화면을 떠나면 뒤늦게 생긴 구독도 제거한다', async () => {
+    let resolvePermission!: (permission: 'granted') => void
+    const requestPermission = vi.fn(
+      () => new Promise<'granted'>((resolve) => {
+        resolvePermission = resolve
+      }),
+    )
     fakeMotionWindow(requestPermission)
     nativeShell()
     const runtime = activation(true)
 
-    expect(runtime.statuses.at(-1)).toBe('on')
-    runtime.sample()
-    await vi.advanceTimersByTimeAsync(NATIVE_MOTION_SAMPLE_WAIT_MS)
-
-    expect(requestPermission).not.toHaveBeenCalled()
-    expect(runtime.enable).not.toHaveBeenCalled()
-    expect(runtime.stop).not.toHaveBeenCalled()
     runtime.cleanup()
-    expect(runtime.stop).toHaveBeenCalledTimes(1)
+    expect(runtime.active()).toBe(false)
+    resolvePermission('granted')
+
+    await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(runtime.stop).toHaveBeenCalledTimes(2))
+    expect(runtime.active()).toBe(false)
   })
 
-  it('네이티브에서 1.2초간 표본이 없으면 첫 pointerup에 권한을 요청한다', async () => {
-    vi.useFakeTimers()
-    const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
-    const host = fakeMotionWindow(requestPermission)
-    nativeShell()
-    const runtime = activation(true)
-
-    await vi.advanceTimersByTimeAsync(NATIVE_MOTION_SAMPLE_WAIT_MS)
-    expect(runtime.stop).toHaveBeenCalledTimes(1)
-    expect(runtime.statuses.at(-1)).toBe('off')
-    expect(requestPermission).not.toHaveBeenCalled()
-
-    host.dispatchEvent(new Event('pointerup'))
-    await Promise.resolve()
-    expect(requestPermission).toHaveBeenCalledTimes(1)
-    runtime.cleanup()
-  })
-
-  it('네이티브에서 표본과 requestPermission이 모두 없으면 조용히 구독을 유지한다', async () => {
-    vi.useFakeTimers()
-    fakeMotionWindow()
-    nativeShell()
-    const runtime = activation(false)
-
-    await vi.advanceTimersByTimeAsync(NATIVE_MOTION_SAMPLE_WAIT_MS)
-    expect(runtime.statuses.at(-1)).toBe('on')
-    expect(runtime.enable).not.toHaveBeenCalled()
-    expect(runtime.stop).not.toHaveBeenCalled()
-    runtime.cleanup()
-  })
-
-  it('웹에서는 기존처럼 첫 조작에 권한을 요청한다', async () => {
+  it('웹에서는 기존처럼 첫 조작에만 권한을 요청한다', async () => {
     const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
     const host = fakeMotionWindow(requestPermission)
     const runtime = activation(true)
 
+    expect(requestPermission).not.toHaveBeenCalled()
     expect(runtime.subscribe).not.toHaveBeenCalled()
-    host.dispatchEvent(new Event('pointerup'))
-    await Promise.resolve()
 
-    expect(requestPermission).toHaveBeenCalledTimes(1)
+    host.dispatchEvent(new Event('pointerup'))
+    await vi.waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
     runtime.cleanup()
   })
 })
