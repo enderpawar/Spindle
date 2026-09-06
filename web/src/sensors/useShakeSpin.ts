@@ -7,12 +7,14 @@
  *
  * 켜는 방식은 기기에 따라 다르다.
  * - 권한 개념이 없는 환경(안드로이드·데스크톱): 스핀 화면에 들어오면 바로 켠다.
- * - iOS 13+: 권한을 사용자 제스처 안에서만 물을 수 있어, 별도 버튼을 두는 대신 스핀 화면에서
+ * - 네이티브 셸: 즉시 구독하고 실제 표본이 오지 않을 때만 아래 권한 요청 경로로 되돌아간다.
+ * - iOS 13+ 브라우저: 권한을 사용자 제스처 안에서만 물을 수 있어, 별도 버튼을 두는 대신 스핀 화면에서
  *   일어나는 **첫 조작(탭·드래그·키 입력)** 에 요청을 얹는다. 화면에 들어와 아무거나 한 번
  *   건드리면 그때 프롬프트가 뜨고, 허용 이후로는 그냥 흔들기만 하면 된다.
  *   (명시적 버튼을 다시 두고 싶으면 `enable()`을 onClick에 걸면 된다 — 옵션은 열어 둔다)
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isNativeShell } from '../native/shell'
 import {
   isMotionSupported,
   knownMotionPermission,
@@ -33,9 +35,96 @@ export interface ShakeSpin {
   enable: () => Promise<void>
 }
 
+// devicemotion은 보통 수십 Hz로 오므로 정지 상태여도 1.2초면 여러 표본이 도착한다.
+// 이 시간 동안 한 건도 없으면 WKWebView의 권한 경로가 막힌 것으로 보고 제스처 요청으로 폴백한다.
+export const NATIVE_MOTION_SAMPLE_WAIT_MS = 1_200
+
 /** 하단 내비게이션 탭처럼 화면을 떠나는 조작에는 권한 프롬프트를 얹지 않는다 */
 function leavesScreen(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest('nav') !== null
+  return typeof Element !== 'undefined' && target instanceof Element && target.closest('nav') !== null
+}
+
+interface ShakeActivationOptions {
+  supported: boolean
+  needsPermission: boolean
+  knownPermission: () => ReturnType<typeof knownMotionPermission>
+  subscribe: (onSample?: () => void) => void
+  stop: () => void
+  enable: () => Promise<void>
+  setStatus: (status: ShakeStatus) => void
+}
+
+/** 훅의 화면 진입/이탈 수명주기. DOM 렌더러 없이 권한 전환을 회귀 테스트할 수 있게 분리한다. */
+export function installShakeActivation({
+  supported,
+  needsPermission,
+  knownPermission,
+  subscribe,
+  stop,
+  enable,
+  setStatus,
+}: ShakeActivationOptions): () => void {
+  if (!supported) return () => {}
+
+  let sampleTimer: ReturnType<typeof setTimeout> | undefined
+  let detached = false
+
+  const arm = (event: Event) => {
+    if (leavesScreen(event.target)) return
+    detach()
+    void enable()
+  }
+  const detach = () => {
+    if (detached) return
+    detached = true
+    window.removeEventListener('pointerup', arm, true)
+    window.removeEventListener('keydown', arm, true)
+  }
+  const armPermission = () => {
+    detached = false
+    window.addEventListener('pointerup', arm, true)
+    window.addEventListener('keydown', arm, true)
+  }
+  const enterPermissionPath = () => {
+    const known = knownPermission()
+    if (known === 'granted') {
+      subscribe()
+      return
+    }
+    if (known !== null) {
+      setStatus('unavailable')
+      return
+    }
+    armPermission()
+  }
+
+  if (isNativeShell()) {
+    let sampled = false
+    subscribe(() => {
+      sampled = true
+      if (sampleTimer !== undefined) {
+        clearTimeout(sampleTimer)
+        sampleTimer = undefined
+      }
+    })
+    sampleTimer = setTimeout(() => {
+      sampleTimer = undefined
+      if (sampled || !needsPermission) return
+      stop()
+      setStatus('off')
+      enterPermissionPath()
+    }, NATIVE_MOTION_SAMPLE_WAIT_MS)
+  } else if (!needsPermission) {
+    subscribe()
+  } else {
+    enterPermissionPath()
+  }
+
+  return () => {
+    if (sampleTimer !== undefined) clearTimeout(sampleTimer)
+    detach()
+    stop()
+  }
 }
 
 export function useShakeSpin(onShake: (energy: number) => void): ShakeSpin {
@@ -51,9 +140,9 @@ export function useShakeSpin(onShake: (energy: number) => void): ShakeSpin {
     onShakeRef.current = onShake
   }, [onShake])
 
-  const subscribe = useCallback(() => {
+  const subscribe = useCallback((onSample?: () => void) => {
     unsubscribeRef.current?.()
-    unsubscribeRef.current = subscribeShake((energy) => onShakeRef.current(energy))
+    unsubscribeRef.current = subscribeShake((energy) => onShakeRef.current(energy), onSample)
     setStatus('on')
   }, [])
 
@@ -76,48 +165,19 @@ export function useShakeSpin(onShake: (energy: number) => void): ShakeSpin {
   }, [subscribe])
 
   useEffect(() => {
-    if (!supported) return
-
     const stop = () => {
       unsubscribeRef.current?.()
       unsubscribeRef.current = null
     }
-
-    // 권한 개념이 없는 환경 — 화면에 들어오는 즉시 켠다.
-    if (!needsPermission) {
-      subscribe()
-      return stop
-    }
-
-    // 같은 페이지 로드에서 이미 답을 받았다면 다시 묻지 않는다 (탭을 오갈 때 프롬프트 반복 방지).
-    const known = knownMotionPermission()
-    if (known === 'granted') {
-      subscribe()
-      return stop
-    }
-    if (known !== null) {
-      setStatus('unavailable')
-      return stop
-    }
-
-    // iOS — 화면에서 일어나는 첫 조작에 권한 요청을 얹는다. 조작 자체는 막지 않으므로
-    // 드래그 스핀이 그대로 진행되고, 손을 뗀 뒤(pointerup) 프롬프트가 뜬다.
-    const arm = (event: Event) => {
-      if (leavesScreen(event.target)) return
-      detach()
-      void enable()
-    }
-    const detach = () => {
-      window.removeEventListener('pointerup', arm, true)
-      window.removeEventListener('keydown', arm, true)
-    }
-    window.addEventListener('pointerup', arm, true)
-    window.addEventListener('keydown', arm, true)
-
-    return () => {
-      detach()
-      stop()
-    }
+    return installShakeActivation({
+      supported,
+      needsPermission,
+      knownPermission: knownMotionPermission,
+      subscribe,
+      stop,
+      enable,
+      setStatus,
+    })
   }, [enable, needsPermission, subscribe, supported])
 
   return { status, needsPermission, notice, enable }

@@ -28,6 +28,7 @@ description: 나침반(DeviceOrientation)·GPS(Geolocation) 관련 코드를 작
 ## 흔들기 (DeviceMotion) — 여행 모드 보조 입력
 
 - **iOS 13+**: `DeviceMotionEvent.requestPermission()`도 방위 권한과 **별개**다. 나침반 권한을 이미 받았어도 따로 요청해야 하고, 마찬가지로 사용자 제스처 핸들러 안에서만 호출한다.
+- **네이티브 셸(Capacitor)**: Safari의 설정 > 동작 및 방향 접근이 아니라 앱의 `Info.plist`에 선언한 `NSMotionUsageDescription`이 권한 모델을 관장한다. 스핀 화면 진입 즉시 모션 이벤트를 구독하고, 1.2초 동안 실제 표본이 한 건도 오지 않으면서 `requestPermission`이 존재할 때만 Safari와 같은 제스처 기반 권한 요청으로 폴백한다. WKWebView의 실제 이벤트 제공 방식은 실기기에서 확인한다.
 - 전용 버튼 없이 켠다: 스핀 화면에서 일어나는 **첫 조작(`pointerup`·`keydown`)** 에 요청을 얹고, 그 조작을 가로채지 않는다(preventDefault 금지 — 첫 드래그 스핀이 그대로 완주돼야 한다). 화면을 떠나는 조작(하단 `nav` 내부 타깃)에는 얹지 않는다.
 - 응답은 **페이지 로드 단위 메모리**에 기억해 화면을 오갈 때 프롬프트가 반복되지 않게 한다. 같은 로드에서 이미 허용됐다면 제스처 없이 바로 구독해도 된다 (영속 저장은 하지 않는다).
 - 권한 개념이 없는 환경(안드로이드·데스크톱)은 스핀 화면 진입 시 바로 구독하고, 화면을 떠나면 반드시 해제한다.
@@ -51,4 +52,5 @@ description: 나침반(DeviceOrientation)·GPS(Geolocation) 관련 코드를 작
 - [ ] iPhone Safari: 스핀 화면 첫 조작에서 동작 권한 프롬프트 → 허용 → 흔드는 동안 원판 지속 회전 → 멈추면 감속·정착
 - [ ] iPhone Safari: 다른 탭에 갔다가 스핀으로 돌아와도 프롬프트가 다시 뜨지 않고 흔들기가 계속 동작
 - [ ] iPhone Safari: 동작 권한 거부 → 안내 한 줄 + 드래그 스핀 정상
+- [ ] iPhone 네이티브 앱(TestFlight): Safari의 동작 접근을 따로 설정하지 않은 상태에서 스핀 화면 진입 직후 흔들기 동작. 표본이 오지 않는 기기에서는 첫 조작 권한 요청으로 폴백하고 드래그 스핀 유지
 - [ ] Android Chrome: 스핀 화면 진입만으로 흔들기 동작, 주머니에 넣고 걸을 때 오작동 없음

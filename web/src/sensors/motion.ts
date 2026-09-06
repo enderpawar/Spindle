@@ -61,12 +61,17 @@ export async function requestMotionPermission(): Promise<MotionPermission> {
 
 /**
  * 흔들기 구독. 콜백에는 데드존을 넘은 흔들림 세기만 전달하며, 해제 함수를 반환한다.
+ * onSample은 값 없는 생존 신호일 뿐이며 devicemotion 이벤트가 올 때마다 호출한다.
  * 가속도 원값은 이 모듈 밖으로 나가지 않는다.
  */
-export function subscribeShake(onShake: (energy: number) => void): () => void {
+export function subscribeShake(
+  onShake: (energy: number) => void,
+  onSample?: () => void,
+): () => void {
   if (typeof window === "undefined") return () => {};
   const meter = new ShakeMeter();
   const handler = (event: DeviceMotionEvent): void => {
+    onSample?.();
     const a = event.accelerationIncludingGravity ?? event.acceleration;
     if (!a || a.x === null || a.y === null || a.z === null) return;
     const energy = meter.push({ x: a.x, y: a.y, z: a.z }, performance.now());
