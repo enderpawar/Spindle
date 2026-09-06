@@ -197,6 +197,24 @@ export async function fetchAreaPois(
 // 세션 범위 메모리 캐시 — 탭이 닫히면 사라진다. 영속화 금지 (절대 원칙 3).
 const sessionCache = new Map<string, Promise<AreaPoi[]>>();
 
+/**
+ * 이미 시작된 구군 목록 호출만 기다린다. 호출 시점의 Promise 스냅샷을 사용하므로
+ * 새 목록 요청을 만들지 않으며, 진행 중인 호출이 없으면 즉시 끝난다.
+ */
+export async function whenAreaListsSettled(timeoutMs: number): Promise<void> {
+  const pending = [...sessionCache.values()];
+  if (pending.length === 0) return;
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    Promise.allSettled(pending).then(() => undefined),
+    new Promise<void>((resolve) => {
+      timeoutId = setTimeout(resolve, Math.max(0, timeoutMs));
+    }),
+  ]);
+  if (timeoutId !== undefined) clearTimeout(timeoutId);
+}
+
 /** 세션 캐시를 거치는 구별 POI 조회. 실패한 Promise는 캐시에서 제거해 재시도 가능하게 한다. */
 export function fetchAreaPoisCached(
   sigunguCode: string,

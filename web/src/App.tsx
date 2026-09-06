@@ -122,7 +122,7 @@ function App() {
   // SPEC 6: 세션 시작 시 4개 구 areaBasedList2를 실시간 호출(메모리/세션 캐시만, 영속 저장 없음)
   // — 운영계정 호출 이력을 자연스럽게 축적한다. 실패해도 앱 동작에는 영향 없음(추천은 큐레이션 풀 기반).
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    const warmAreaLists = () => {
       fetchAllOldTownPois()
         .then((regions) => {
           const total = regions.reduce((sum, r) => sum + r.pois.length, 0)
@@ -135,8 +135,21 @@ function App() {
         .catch(() => {
           /* 목록 로드 실패는 추천에 영향 없음 — 결과 시점 상세 호출에서 별도 에러 UI 처리 */
         })
-    }, 1500)
-    return () => window.clearTimeout(timer)
+    }
+
+    let idleId: number | undefined
+    let timerId: number | undefined
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(warmAreaLists)
+    } else {
+      // 미지원 브라우저도 첫 페인트 직후 빠르게 워밍업을 시작한다.
+      timerId = window.setTimeout(warmAreaLists, 300)
+    }
+
+    return () => {
+      if (idleId !== undefined) window.cancelIdleCallback(idleId)
+      if (timerId !== undefined) window.clearTimeout(timerId)
+    }
   }, [])
 
   const finishOnboarding = () => {

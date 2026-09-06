@@ -14,7 +14,7 @@ import {
   stripHtml,
   visitFactsFromIntro,
 } from "./details";
-import { TourApiError, clearSessionCache, fetchAreaPois } from "./tourapi";
+import { TourApiError, clearSessionCache, fetchAreaPois, fetchAreaPoisCached } from "./tourapi";
 
 /** TourAPI 목록 응답 봉투 — item이 null이면 빈 결과("") */
 function envelope(item: unknown): unknown {
@@ -431,6 +431,93 @@ describe("썸네일 이미지 — 세션 목록 firstimage 재사용", () => {
 
     expect(url).toBe("https://tong.visitkorea.or.kr/a.jpg"); // http→https 정규화 유지
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("진행 중인 목록이 이미지를 알려주면 상세 폴백 없이 그 URL을 쓴다", async () => {
+    let resolveList!: (response: Response) => void;
+    const listFetch = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveList = resolve;
+        }),
+    );
+    const listPending = fetchAreaPoisCached("15", listFetch as unknown as typeof fetch);
+    const detailFetch = makeFetch({
+      common: { contentid: "warm-race", contenttypeid: "12", title: "T" },
+    });
+
+    const imagePending = fetchPoiImageCached("warm-race", detailFetch as typeof fetch);
+    resolveList(
+      jsonResponse(
+        envelope([
+          {
+            contentid: "warm-race",
+            contenttypeid: "12",
+            title: "T",
+            firstimage: "http://tong.visitkorea.or.kr/warmed.jpg",
+          },
+        ]),
+      ),
+    );
+
+    await expect(listPending).resolves.toHaveLength(1);
+    await expect(imagePending).resolves.toBe("https://tong.visitkorea.or.kr/warmed.jpg");
+    expect(detailFetch).not.toHaveBeenCalled();
+  });
+
+  it("진행 중인 목록이 없으면 타이머 대기 없이 즉시 상세 폴백을 시작한다", async () => {
+    vi.useFakeTimers();
+    try {
+      const detailFetch = makeFetch({
+        common: { contentid: "no-list", contenttypeid: "12", title: "T", firstimage: "https://img/fallback.jpg" },
+      });
+
+      const imagePending = fetchPoiImageCached("no-list", detailFetch as typeof fetch);
+      await expect(imagePending).resolves.toBe("https://img/fallback.jpg");
+      expect(detailFetch.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("목록이 제한 시간 안에 끝나지 않아도 reject하지 않고 상세 폴백으로 간다", async () => {
+    vi.useFakeTimers();
+    try {
+      const listFetch = vi.fn(() => new Promise<Response>(() => {}));
+      void fetchAreaPoisCached("15", listFetch as unknown as typeof fetch);
+      const detailFetch = makeFetch({
+        common: { contentid: "list-timeout", contenttypeid: "12", title: "T", firstimage: "https://img/timeout.jpg" },
+      });
+
+      const imagePending = fetchPoiImageCached("list-timeout", detailFetch as typeof fetch);
+      await vi.advanceTimersByTimeAsync(2_500);
+
+      await expect(imagePending).resolves.toBe("https://img/timeout.jpg");
+      expect(detailFetch.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("진행 중인 목록이 실패해도 reject하지 않고 상세 폴백으로 간다", async () => {
+    let rejectList!: (reason: unknown) => void;
+    const listFetch = vi.fn(
+      () =>
+        new Promise<Response>((_resolve, reject) => {
+          rejectList = reject;
+        }),
+    );
+    const listPending = fetchAreaPoisCached("15", listFetch as unknown as typeof fetch);
+    listPending.catch(() => {});
+    const detailFetch = makeFetch({
+      common: { contentid: "list-failure", contenttypeid: "12", title: "T", firstimage: "https://img/failure.jpg" },
+    });
+
+    const imagePending = fetchPoiImageCached("list-failure", detailFetch as typeof fetch);
+    rejectList(new Error("list down"));
+
+    await expect(imagePending).resolves.toBe("https://img/failure.jpg");
+    expect(detailFetch.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
   });
 
   it("목록 firstimage가 비어 있으면 상세 경로로 폴백한다", async () => {

@@ -11,6 +11,7 @@ import {
   extractItems,
   getKnownContentTypeId,
   getKnownFirstImage,
+  whenAreaListsSettled,
   type ListBody,
 } from "./tourapi";
 
@@ -211,6 +212,10 @@ const FACILITY_ONLY_IMAGE_CONTENT_IDS = new Set([
   // TourAPI images for this content are facility photos only (family restroom, parking, elevator).
   "3083767",
 ]);
+
+// detailCommon2 폴백의 실측 3.9~5.1초보다 짧게 기다려, 곧 끝날 목록 호출이
+// firstimage 인덱스를 채우면 총 대기시간과 API 호출을 함께 줄인다.
+const AREA_LIST_IMAGE_WARMUP_WAIT_MS = 2_500;
 
 const NON_REPRESENTATIVE_IMAGE_NAME_RE =
   /화장실|주차장|주차면|엘리베이터|에스칼레이터|에스컬레이터|수유실|장애인/i;
@@ -593,6 +598,10 @@ async function fetchPoiImage(contentId: string, fetchImpl: FetchLike): Promise<s
   const known = knownPoiImageUrl(contentId);
   if (known) return known;
   if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+
+  await whenAreaListsSettled(AREA_LIST_IMAGE_WARMUP_WAIT_MS);
+  const warmed = knownPoiImageUrl(contentId);
+  if (warmed) return warmed;
 
   const common = await fetchCommonCached(contentId, fetchImpl);
   return fetchRepresentativeImageCached(contentId, common, fetchImpl);
