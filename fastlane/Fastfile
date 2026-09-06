@@ -136,6 +136,11 @@ def build_ipa(options)
     "MARKETING_VERSION=#{version}",
     "CURRENT_PROJECT_VERSION=#{build}",
     "DEVELOPMENT_TEAM=#{team}",
+    # 프로젝트가 CODE_SIGN_IDENTITY를 지정하지 않아 Xcode 기본값 "Apple Development"가
+    # 적용된다. 그러면 app-store 아카이브인데도 개발용 인증서·프로파일을 요구하고,
+    # 클라우드 서명이 CI 실행마다 개발 인증서를 새로 발급해 계정 한도를 채운다
+    # (2026-09-06 빌드 34031629637 실패). 아카이브 서명을 배포용으로 고정한다.
+    "CODE_SIGN_IDENTITY=#{'Apple Distribution'.shellescape}",
   ].join(" ")
 
   build_app(
