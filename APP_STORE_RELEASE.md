@@ -2,11 +2,11 @@
 
 > iOS 배포를 진행하기 전에 이 문서를 먼저 읽는다. Google Play 쪽은 `GOOGLE_PLAY_RELEASE.md`에 있다.
 >
-> 마지막 갱신: 2026-09-02 (Asia/Seoul)
+> 마지막 갱신: 2026-09-06 (Asia/Seoul)
 
 ## 0. 지금 상황 요약
 
-**저장소 쪽 iOS 파이프라인은 완성돼 있다. 남은 것은 전부 Apple 콘솔에서 사람이 하는 일이다.**
+**저장소 쪽 iOS 파이프라인과 첫 출시가 완료됐다. 앱은 2026-09-06 App Store에 공개됐다.**
 
 개발 머신이 Windows라 iOS 아카이브·업로드를 로컬에서 할 수 없다. 그래서 빌드는
 **GitHub Actions의 macOS 러너**에서 돌리고, 서명은 **App Store Connect API 키를 이용한
@@ -30,13 +30,16 @@
 | 지원 페이지 | `web/public/support.html` → `https://spindle-6vp.pages.dev/support` |
 | 스크린샷 | `fastlane/screenshots/ios/ko/` 5장 (1320x2868, RGB, **iOS 상태바**). `npm run capture:ios && npm run export:ios`로 재생성 |
 
-### 남은 것 (사람이 해야 함)
+### 출시 완료 상태
 
 ~~1. Bundle ID 등록~~ · ~~2. 앱 레코드 생성~~ · ~~3. API 키 발급~~ · ~~4. GitHub secrets 4개~~
 — **2026-09-02 완료.** TestFlight 업로드까지 검증했다(0절 "실행 기록").
 
-5. 콘솔 수동 입력 항목(연령 등급·App Privacy·심사 연락처) → 5절 ← **남은 유일한 선행 작업**
-6. `release` 레인 실행 → 4절
+- **2026-09-02:** `release` 레인이 `submit:false`로 성공했다
+  (Actions run `33607578270`, 커밋 `0245b6c`). 바이너리·메타데이터·스크린샷을 업로드했고
+  precheck 9개 항목을 통과했다.
+- **2026-09-06:** App Store 공개 완료 — 버전 1.0.0, 무료, 4+.
+  <https://apps.apple.com/kr/app/spindle/id6807658917>
 
 ### 2026-09-02 실행 기록 — 파이프라인이 TestFlight까지 완주했다
 
@@ -436,11 +439,12 @@ curl -s -o /dev/null -w "%{http_code}\n" https://spindle-6vp.pages.dev/support
 | 러너 | ✅ `macos-26` — Xcode 26.6 / **iOS 26.5 SDK**. `macos-15`는 업로드가 409로 거부된다 |
 | 등록 기기 | ✅ 1대 — 없으면 프로비저닝 프로파일 발급이 거부된다 |
 
-**남은 것은 5절(콘솔 수동 입력)뿐이고, 그다음이 `release` 레인이다.**
+**`release` 레인은 2026-09-02 `submit:false`로 성공했다**
+(Actions run `33607578270`, 커밋 `0245b6c`). 바이너리·메타데이터·스크린샷 업로드와
+precheck 9개 항목 통과까지 완료됐다.
 
-`release`는 두 번에 나눠 돌린다: `submit_for_review=false`로 먼저 올려 스토어 페이지에
-메타데이터·스크린샷이 반영된 것을 콘솔에서 눈으로 확인하고, 그다음 `true`로 심사 제출한다.
-승인돼도 `automatic_release: false`라 자동 공개되지 않으므로 공개 시점은 사람이 정한다.
+**앱은 2026-09-06 App Store에 공개됐다.** 버전 1.0.0, 무료, 4+이며 제품 페이지는
+<https://apps.apple.com/kr/app/spindle/id6807658917>이다.
 
 ---
 
