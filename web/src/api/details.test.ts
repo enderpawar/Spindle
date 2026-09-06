@@ -291,7 +291,7 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     await fetchPoiImageCached("105", fetchMock as typeof fetch);
     await fetchPoiDetailCached("105", fetchMock as typeof fetch);
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
-    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(1);
   });
 });
 
@@ -398,13 +398,57 @@ describe("fetchPoiImageCached — 썸네일 경량 이미지", () => {
     expect(url).toBeNull();
   });
 
-  it("firstimage가 있으면 detailImage2는 호출하지 않는다 (호출 1회)", async () => {
+  it("detailCommon2가 firstimage를 주면 병렬 detailImage2 결과를 버리고 그 값을 쓴다", async () => {
     const common = { contentid: "203", contenttypeid: "12", title: "W", firstimage: "https://i.jpg" };
     const fetchMock = makeFetch({ common });
     await fetchPoiImageCached("203", fetchMock as typeof fetch);
     await fetchPoiImageCached("203", fetchMock as typeof fetch); // 캐시 히트
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
-    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(1);
+  });
+
+  it("detailCommon2와 detailImage2를 동시에 시작해 firstimage가 비면 이미지 결과를 쓴다", async () => {
+    let resolveCommon!: (response: Response) => void;
+    const calls: string[] = [];
+    const fetchMock = vi.fn((url: string | URL) => {
+      const value = String(url);
+      calls.push(value);
+      if (value.includes("detailCommon2")) {
+        return new Promise<Response>((resolve) => {
+          resolveCommon = resolve;
+        });
+      }
+      if (value.includes("detailImage2")) {
+        return Promise.resolve(
+          jsonResponse(envelope({ originimgurl: "https://img/parallel.jpg" })),
+        );
+      }
+      return Promise.reject(new Error(`unexpected url ${value}`));
+    });
+
+    const imagePending = fetchPoiImageCached("parallel", fetchMock as unknown as typeof fetch);
+    await Promise.resolve();
+    expect(calls.some((url) => url.includes("detailCommon2"))).toBe(true);
+    expect(calls.some((url) => url.includes("detailImage2"))).toBe(true);
+    resolveCommon(
+      jsonResponse(
+        envelope({ contentid: "parallel", contenttypeid: "12", title: "P", firstimage: "" }),
+      ),
+    );
+
+    await expect(imagePending).resolves.toBe("https://img/parallel.jpg");
+  });
+
+  it("병렬 detailImage2에서도 화장실·주차장류 사진을 대표 이미지에서 제외한다", async () => {
+    const common = { contentid: "filtered", contenttypeid: "12", title: "F", firstimage: "" };
+    const image = [
+      { imgname: "주차장", originimgurl: "https://img/parking.jpg" },
+      { imgname: "외관", originimgurl: "https://img/front.jpg" },
+    ];
+
+    await expect(
+      fetchPoiImageCached("filtered", makeFetch({ common, image }) as typeof fetch),
+    ).resolves.toBe("https://img/front.jpg");
   });
 
   it("poiImageProxyUrl은 contentId로 프록시 이미지 경로를 만든다", () => {

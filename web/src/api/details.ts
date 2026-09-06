@@ -304,6 +304,42 @@ function fetchRepresentativeImageCached(
   return pending;
 }
 
+async function fetchRepresentativeImageInParallel(
+  contentId: string,
+  fetchImpl: FetchLike,
+): Promise<string | null> {
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+
+  const commonPromise = fetchCommonCached(contentId, fetchImpl);
+  // 이 경량 폴백에서는 최악 지연을 두 홉에서 한 홉으로 줄이기 위해 detailImage2도 함께 보낸다.
+  // 호출량은 늘지만, 목록 워밍업 뒤에도 이미지가 없는 소수 POI만 이 경로에 들어온다.
+  const imagePromise = callTourApi<DetailImageBody>(
+    "detailImage2",
+    { contentId },
+    fetchImpl,
+  ).then((body) => representativeImageFromItems(extractItems(body)));
+  // common에 firstimage가 있거나 common이 실패해 image 결과를 버려도 미처리 rejection은 남기지 않는다.
+  imagePromise.catch(() => {});
+
+  const common = await commonPromise;
+  const fromCommon = normalizeImageUrl(common.firstimage);
+  return fromCommon ?? imagePromise;
+}
+
+function fetchRepresentativeImageInParallelCached(
+  contentId: string,
+  fetchImpl: FetchLike,
+): Promise<string | null> {
+  const cached = representativeImageCache.get(contentId);
+  if (cached) return cached;
+  const pending = fetchRepresentativeImageInParallel(contentId, fetchImpl).catch((err: unknown) => {
+    representativeImageCache.delete(contentId);
+    throw err;
+  });
+  representativeImageCache.set(contentId, pending);
+  return pending;
+}
+
 async function fetchGalleryImages(
   contentId: string,
   common: DetailCommonItem,
@@ -603,8 +639,7 @@ async function fetchPoiImage(contentId: string, fetchImpl: FetchLike): Promise<s
   const warmed = knownPoiImageUrl(contentId);
   if (warmed) return warmed;
 
-  const common = await fetchCommonCached(contentId, fetchImpl);
-  return fetchRepresentativeImageCached(contentId, common, fetchImpl);
+  return fetchRepresentativeImageInParallelCached(contentId, fetchImpl);
 }
 
 /** 썸네일용 대표 이미지 URL (없으면 null). 세션 메모리 캐시만 사용 (절대 원칙 3). */
