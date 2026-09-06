@@ -74,11 +74,25 @@ body {
 }
 
 body {
+  /*
+   * WKWebView 네이티브 앱에서 꾹 누르면 "공유·저장하기" 콜아웃이 뜨고,
+   * 버튼을 끌면 글자가 선택된다. 웹앱이 아니라 앱처럼 보여야 하므로 전역으로 끈다.
+   * 입력 요소는 아래에서 되살린다.
+   */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior-y: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 #root {
