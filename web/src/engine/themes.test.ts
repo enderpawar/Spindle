@@ -45,8 +45,39 @@ describe('themes', () => {
     const foodIds = poisByTheme('food').map((p) => p.id)
     expect(foodIds).toContain('jagalchi-market')
     expect(foodIds).toContain('bupyeong-market')
+    expect(foodIds).toContain('gukje-food-alley')
+    expect(foodIds).toContain('samjin-eomuk')
+    expect(foodIds).toContain('gongdong-fish-market')
+    expect(foodIds).not.toContain('choryang-market')
+    expect(foodIds).not.toContain('gukje-market')
+    expect(foodIds).not.toContain('busanjin-market')
+    expect(foodIds).not.toContain('namhang-market')
+    expect(foodIds).not.toContain('yongdusan-jagalchi')
     const nightIds = poisByTheme('night').map((p) => p.id)
     expect(nightIds).toContain('bupyeong-market')
+  })
+
+  it('시장 category는 기본으로 골목 테마에만 속한다', () => {
+    const ordinaryMarket = { ...POI_POOL[0], id: 'ordinary-market', category: '시장' }
+    expect(themesOf(ordinaryMarket)).toEqual(['alley'])
+  })
+
+  it('전망대 POI는 골목 테마에 속하지 않는다', () => {
+    const viewpoints = POI_POOL.filter((poi) => poi.name.includes('전망대'))
+    expect(viewpoints.length).toBeGreaterThan(0)
+    for (const viewpoint of viewpoints) {
+      expect(themesOf(viewpoint), `${viewpoint.id}가 골목 테마에 남음`).not.toContain('alley')
+    }
+  })
+
+  it('골목·시장과 먹거리 덱의 POI 집합이 서로 다르다', () => {
+    const alleyIds = new Set(poisByTheme('alley').map((poi) => poi.id))
+    const foodIds = new Set(poisByTheme('food').map((poi) => poi.id))
+    const symmetricDifference = new Set([
+      ...[...alleyIds].filter((id) => !foodIds.has(id)),
+      ...[...foodIds].filter((id) => !alleyIds.has(id)),
+    ])
+    expect(symmetricDifference.size).toBeGreaterThan(0)
   })
 
   it('바다 테마는 해안·해변·마을 POI를 포함한다', () => {

@@ -79,7 +79,7 @@ export const POI_POOL: Poi[] = [
   },
   // 북동 — 동구 산복도로 (초량 이바구길)
   {
-    id: 'ibagu-skyway', contentId: '2656194', name: '친환경 스카이웨이 전망대(이바구길)', category: '산복도로', district: '동구', direction: 'NE', tier: 3, lat: 35.1213, lon: 129.0307,
+    id: 'ibagu-skyway', contentId: '2656194', name: '친환경 스카이웨이 전망대(이바구길)', category: '전망', district: '동구', direction: 'NE', tier: 3, lat: 35.1213, lon: 129.0307,
     walkMinutes: 20, open: { known: true, text: '상시 개방' },
     story: '산복도로 이바구길 꼭대기, 부산항이 발아래 펼쳐지는 전망대.',
   },
@@ -122,7 +122,7 @@ export const POI_POOL: Poi[] = [
     story: '터널 끝에서 바다가 액자처럼 열려요. 흰여울 해안을 잇는 짧은 산책 터널.',
   },
   {
-    id: 'jungni-sunset', contentId: '3017435', name: '중리노을전망대', category: '해안', district: '영도구', direction: 'S', tier: 2, lat: 35.0692, lon: 129.0643,
+    id: 'jungni-sunset', contentId: '3017435', name: '중리노을전망대', category: '전망', district: '영도구', direction: 'S', tier: 2, lat: 35.0692, lon: 129.0643,
     walkMinutes: 35, open: { known: true, text: '상시 개방' },
     story: '영도 서남단, 바다로 지는 노을을 마주하는 전망대.',
   },
