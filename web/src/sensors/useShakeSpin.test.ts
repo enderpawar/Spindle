@@ -1,12 +1,25 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { requestMotionPermission, subscribeShake, type MotionPermission } from './motion'
-import { installShakeActivation, type ShakeStatus } from './useShakeSpin'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  clearMotionPermissionForTest,
+  knownMotionPermission,
+  requestMotionPermission,
+  subscribeShake,
+  type MotionPermission,
+} from './motion'
+import {
+  installShakeActivation,
+  noticeForMotionPermission,
+  shouldSkipMotionPermissionGesture,
+  type ShakeStatus,
+} from './useShakeSpin'
 
 interface CapacitorTestGlobal {
   Capacitor?: { isNativePlatform: () => boolean }
 }
 
 const originalCapacitor = Object.getOwnPropertyDescriptor(globalThis, 'Capacitor')
+
+beforeEach(() => clearMotionPermissionForTest())
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -18,7 +31,7 @@ afterEach(() => {
 })
 
 function fakeMotionWindow(
-  permissionRequest?: () => Promise<'granted' | 'denied'>,
+  permissionRequest?: () => Promise<'granted' | 'denied' | 'default'>,
 ): EventTarget {
   const host = new EventTarget()
   Object.assign(host, {
@@ -35,9 +48,10 @@ function nativeShell(): void {
   ;(globalThis as CapacitorTestGlobal).Capacitor = { isNativePlatform: () => true }
 }
 
-function activation(needsPermission: boolean) {
+function activation(needsPermission: boolean, initialPermission: MotionPermission | null = null) {
   const statuses: ShakeStatus[] = []
-  let permission: MotionPermission | null = null
+  const notices: Array<string | null> = []
+  let permission = initialPermission
   let active = false
   const subscribe = vi.fn(() => {
     active = true
@@ -49,6 +63,7 @@ function activation(needsPermission: boolean) {
   const enable = vi.fn(async () => {
     permission = await requestMotionPermission()
     if (permission === 'granted') subscribe()
+    return permission
   })
   const cleanup = installShakeActivation({
     supported: true,
@@ -58,9 +73,11 @@ function activation(needsPermission: boolean) {
     stop,
     enable,
     setStatus: (status) => statuses.push(status),
+    setNotice: (notice) => notices.push(notice),
   })
   return {
     statuses,
+    notices,
     subscribe,
     stop,
     enable,
@@ -70,36 +87,76 @@ function activation(needsPermission: boolean) {
   }
 }
 
-describe('useShakeSpin 네이티브 즉시 권한 요청', () => {
-  it('네이티브 진입 즉시 제스처 없이 권한을 요청하고 granted면 구독한다', async () => {
+describe('requestMotionPermission 세션 판정', () => {
+  it('제스처 밖 예외는 거부로 확정하지 않고 이후 granted 재시도를 허용한다', async () => {
+    const requestPermission = vi
+      .fn<() => Promise<'granted'>>()
+      .mockRejectedValueOnce(new Error('gesture required'))
+      .mockResolvedValueOnce('granted')
+    fakeMotionWindow(requestPermission)
+
+    await expect(requestMotionPermission()).resolves.toBe('retryable')
+    expect(knownMotionPermission()).toBeNull()
+    await expect(requestMotionPermission()).resolves.toBe('granted')
+    expect(knownMotionPermission()).toBe('granted')
+  })
+
+  it('default 응답도 거부로 확정하지 않는다', async () => {
+    fakeMotionWindow(() => Promise.resolve('default'))
+
+    await expect(requestMotionPermission()).resolves.toBe('retryable')
+    expect(knownMotionPermission()).toBeNull()
+    expect(noticeForMotionPermission('retryable')).toBeNull()
+  })
+
+  it('사용자의 명시적 denied만 확정하고 거부 안내를 제공한다', async () => {
+    fakeMotionWindow(() => Promise.resolve('denied'))
+
+    await expect(requestMotionPermission()).resolves.toBe('denied')
+    expect(knownMotionPermission()).toBe('denied')
+    expect(noticeForMotionPermission('denied')).toContain('권한이 거부돼')
+  })
+})
+
+describe('useShakeSpin 권한 진입 경로', () => {
+  it('네이티브에서 이미 granted면 제스처 없이 즉시 구독한다', () => {
     const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
     fakeMotionWindow(requestPermission)
     nativeShell()
 
-    const runtime = activation(true)
+    const runtime = activation(true, 'granted')
 
-    expect(requestPermission).toHaveBeenCalledTimes(1)
-    await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
-    expect(runtime.statuses.at(-1)).toBe('on')
+    expect(requestPermission).not.toHaveBeenCalled()
+    expect(runtime.subscribe).toHaveBeenCalledTimes(1)
     expect(runtime.active()).toBe(true)
     runtime.cleanup()
   })
 
-  it('네이티브 즉시 요청이 denied면 첫 조작 권한 경로로 폴백한다', async () => {
-    const requestPermission = vi
-      .fn<() => Promise<'granted' | 'denied'>>()
-      .mockResolvedValueOnce('denied')
-      .mockResolvedValueOnce('granted')
+  it('네이티브에서 아직 모르면 화면 첫 조작까지 기다린다', async () => {
+    const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
     const host = fakeMotionWindow(requestPermission)
     nativeShell()
     const runtime = activation(true)
 
-    await vi.waitFor(() => expect(runtime.permission()).toBe('denied'))
+    expect(requestPermission).not.toHaveBeenCalled()
     expect(runtime.subscribe).not.toHaveBeenCalled()
 
     host.dispatchEvent(new Event('pointerup'))
-    await vi.waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
+    runtime.cleanup()
+  })
+
+  it('최초 제스처에서 실제로 거부했으면 스핀 화면에 거부 안내를 표시한다', () => {
+    const requestPermission = vi.fn(() => Promise.resolve('denied' as const))
+    fakeMotionWindow(requestPermission)
+    nativeShell()
+
+    const runtime = activation(true, 'denied')
+
+    expect(runtime.statuses.at(-1)).toBe('unavailable')
+    expect(runtime.notices.at(-1)).toContain('권한이 거부돼')
+    expect(requestPermission).not.toHaveBeenCalled()
     runtime.cleanup()
   })
 
@@ -112,7 +169,6 @@ describe('useShakeSpin 네이티브 즉시 권한 요청', () => {
 
     expect(requestPermission).not.toHaveBeenCalled()
     expect(runtime.subscribe).toHaveBeenCalledTimes(1)
-    expect(runtime.active()).toBe(true)
     runtime.cleanup()
   })
 
@@ -123,12 +179,12 @@ describe('useShakeSpin 네이티브 즉시 권한 요청', () => {
         resolvePermission = resolve
       }),
     )
-    fakeMotionWindow(requestPermission)
+    const host = fakeMotionWindow(requestPermission)
     nativeShell()
     const runtime = activation(true)
 
+    host.dispatchEvent(new Event('pointerup'))
     runtime.cleanup()
-    expect(runtime.active()).toBe(false)
     resolvePermission('granted')
 
     await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
@@ -136,17 +192,24 @@ describe('useShakeSpin 네이티브 즉시 권한 요청', () => {
     expect(runtime.active()).toBe(false)
   })
 
-  it('웹에서는 기존처럼 첫 조작에만 권한을 요청한다', async () => {
+  it('웹에서는 첫 조작에 요청하지만 내비 탭은 계속 제외한다', async () => {
+    class NavElement extends EventTarget {
+      closest(selector: string): NavElement | null {
+        return selector === 'nav' ? this : null
+      }
+    }
+    vi.stubGlobal('Element', NavElement)
+    const nav = new NavElement()
+    expect(shouldSkipMotionPermissionGesture(nav, false)).toBe(true)
+    expect(shouldSkipMotionPermissionGesture(nav, true)).toBe(false)
+
     const requestPermission = vi.fn(() => Promise.resolve('granted' as const))
     const host = fakeMotionWindow(requestPermission)
     const runtime = activation(true)
-
     expect(requestPermission).not.toHaveBeenCalled()
-    expect(runtime.subscribe).not.toHaveBeenCalled()
 
     host.dispatchEvent(new Event('pointerup'))
     await vi.waitFor(() => expect(requestPermission).toHaveBeenCalledTimes(1))
-    await vi.waitFor(() => expect(runtime.subscribe).toHaveBeenCalledTimes(1))
     runtime.cleanup()
   })
 })

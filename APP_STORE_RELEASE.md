@@ -70,7 +70,8 @@ Xcode 목록을 찍게 해 뒀다 — Apple이 요구 SDK를 또 올리면 40분
 |---|---|---|
 | 하단 내비게이션이 59px 떠 있고 아래가 흰 띠 | `mobile-pwa.css`의 `#root`가 `bottom` 없이 높이에서 상단 inset을 뺌. 설치형 PWA용 보정인데 WKWebView에는 전제가 성립하지 않음 | 네이티브 셸에서만 뷰포트 양 끝에 고정 (PR #11) |
 | 카카오 베이스맵이 안 뜨고 자체 벡터 지도로 폴백 | 카카오 서버가 커스텀 스킴 Referer의 호스트를 파싱 못 함 — `capacitor://localhost/`를 `caller=capacitor:`로 읽고 401. **콘솔에 등록해도 통과 불가** | 네이티브에서만 Referer 전송 차단 (PR #12) |
-| TestFlight 1.0.1에서 탭 전에는 흔들기 이벤트가 없고, 탭하면 권한 팝업 없이 활성화 | WKWebView는 `DeviceMotionEvent.requestPermission()` 호출 전에는 이벤트를 주지 않지만 호출 시 앱 권한 선언을 바탕으로 즉시 `granted` 반환 | 네이티브 스핀 화면 진입 시 제스처를 기다리지 않고 권한 함수 호출 (C7) |
+| TestFlight 1.0.1에서 탭 전에는 흔들기 이벤트가 없고, 탭하면 권한 팝업 없이 활성화 | WKWebView는 `DeviceMotionEvent.requestPermission()` 호출 전에는 이벤트를 주지 않고, 유효한 제스처 안에서 호출하면 팝업 없이 `granted` 반환 | C6의 스핀 화면 첫 조작 폴백으로 동작 확인 |
+| TestFlight 1.0.2에서 모션 권한 거부 안내가 상시 표시 | C7이 사용자 제스처 밖에서 권한 함수를 호출해 거부됐고, 예외를 세션 `denied`로 잘못 확정 | 예외는 재시도 가능 상태로 남기고 네이티브 앱 최초 `pointerup`에서 미리 요청 (C9) |
 
 카카오 건은 앱에 담긴 키로 Referer만 바꿔 요청해 확정했다. Referer가 없으면 200이고,
 대조군 `https://example.com`은 `caller=https://example.com`으로 온전히 파싱된다.

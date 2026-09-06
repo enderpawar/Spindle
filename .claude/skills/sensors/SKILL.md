@@ -28,8 +28,8 @@ description: 나침반(DeviceOrientation)·GPS(Geolocation) 관련 코드를 작
 ## 흔들기 (DeviceMotion) — 여행 모드 보조 입력
 
 - **iOS 13+**: `DeviceMotionEvent.requestPermission()`도 방위 권한과 **별개**다. 나침반 권한을 이미 받았어도 따로 요청해야 하고, 마찬가지로 사용자 제스처 핸들러 안에서만 호출한다.
-- **네이티브 셸(Capacitor WKWebView)**: Safari의 설정 > 동작 및 방향 접근이 아니라 앱의 `Info.plist`에 선언한 `NSMotionUsageDescription`이 권한 모델을 관장한다. TestFlight 1.0.1 실기기에서는 `requestPermission()` 호출 전까지 `devicemotion`이 오지 않았고, 호출하면 팝업 없이 즉시 `granted`가 됐다. 따라서 `requestPermission`이 있는 네이티브는 스핀 화면 진입 즉시 제스처 없이 호출하고, 실패할 때만 기존 첫 조작 권한 경로로 폴백한다. 권한 API가 없는 네이티브는 바로 구독한다.
-- 전용 버튼 없이 켠다: 스핀 화면에서 일어나는 **첫 조작(`pointerup`·`keydown`)** 에 요청을 얹고, 그 조작을 가로채지 않는다(preventDefault 금지 — 첫 드래그 스핀이 그대로 완주돼야 한다). 화면을 떠나는 조작(하단 `nav` 내부 타깃)에는 얹지 않는다.
+- **네이티브 셸(Capacitor WKWebView)**: `requestPermission()` 호출 전에는 `devicemotion`이 오지 않으며, Safari와 마찬가지로 반드시 사용자 제스처 안에서 호출해야 한다. 다만 앱의 `Info.plist`에 `NSMotionUsageDescription`이 선언돼 있어 유효한 제스처 안에서는 팝업 없이 즉시 `granted`를 준다(TestFlight 1.0.1~1.0.2 확인). 앱 최초 `pointerup`에서 미리 요청하며 하단 내비 탭도 포함한다. 그때 받지 못했으면 스핀 화면 첫 조작에서 재시도한다. 제스처 밖 예외는 실제 거부가 아니므로 세션 `denied`로 저장하지 않는다.
+- **웹 Safari**는 스핀 화면에서 일어나는 첫 조작(`pointerup`·`keydown`)에 요청을 얹고, 그 조작을 가로채지 않는다(preventDefault 금지 — 첫 드래그 스핀이 그대로 완주돼야 한다). 화면을 떠나는 조작(하단 `nav` 내부 타깃)에는 얹지 않는다.
 - 응답은 **페이지 로드 단위 메모리**에 기억해 화면을 오갈 때 프롬프트가 반복되지 않게 한다. 같은 로드에서 이미 허용됐다면 제스처 없이 바로 구독해도 된다 (영속 저장은 하지 않는다).
 - 권한 개념이 없는 환경(안드로이드·데스크톱)은 스핀 화면 진입 시 바로 구독하고, 화면을 떠나면 반드시 해제한다.
 - 세기는 `accelerationIncludingGravity`의 **직전 표본 대비 변화량**으로 계산한다 — 중력은 차분에서 상쇄되므로 별도 필터가 필요 없다. 기기별 이벤트 주기 편차는 60Hz 기준으로 정규화한다 (`engine/shake.ts`의 `ShakeMeter`).
@@ -53,5 +53,6 @@ description: 나침반(DeviceOrientation)·GPS(Geolocation) 관련 코드를 작
 - [ ] iPhone Safari: 다른 탭에 갔다가 스핀으로 돌아와도 프롬프트가 다시 뜨지 않고 흔들기가 계속 동작
 - [ ] iPhone Safari: 동작 권한 거부 → 안내 한 줄 + 드래그 스핀 정상
 - [x] iPhone 네이티브 앱(TestFlight 1.0.1): `requestPermission()` 호출 전에는 모션 이벤트가 없고, 첫 탭으로 호출하면 팝업 없이 허용되는 동작 확인
-- [ ] iPhone 네이티브 앱(C7 이후): 동작 접근을 따로 설정하지 않은 상태에서 스핀 화면 진입 직후 탭 없이 흔들기 동작. 즉시 요청 실패 시 첫 조작 폴백과 드래그 스핀 유지
+- [x] iPhone 네이티브 앱(TestFlight 1.0.2): 제스처 밖 즉시 요청은 거부되고 잘못 캐시돼 상시 거부 안내가 뜨는 C7 회귀 확인
+- [ ] iPhone 네이티브 앱(C9 이후): 앱 최초 제스처로 미리 허용받은 뒤 스핀 화면 진입 직후 추가 탭 없이 흔들기 동작. 미확정 시 화면 첫 조작 폴백과 드래그 스핀 유지
 - [ ] Android Chrome: 스핀 화면 진입만으로 흔들기 동작, 주머니에 넣고 걸을 때 오작동 없음

@@ -36,6 +36,7 @@ import { decideExit } from './navigation/exitIntent'
 import { exitApp, useHardwareBack } from './navigation/useHardwareBack'
 import { runViewTransition } from './viewTransition'
 import { usePressFeedback } from './usePressFeedback'
+import { useNativeMotionPermissionWarmup } from './sensors/useNativeMotionPermissionWarmup'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
 
@@ -43,6 +44,7 @@ const ONBOARD_KEY = 'spindle.onboarded' // 온보딩 노출 여부만 저장 (AP
 
 function App() {
   usePressFeedback()
+  useNativeMotionPermissionWarmup()
 
   // 콜드 스타트 인트로 스플래시 — 앱 부팅마다 한 번 노출(세션 시작 POI 프리페치를 자연스럽게 가린다)
   const [booting, setBooting] = useState(true)
