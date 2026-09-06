@@ -19,7 +19,8 @@ export interface Env {
   ALLOWED_ORIGIN?: string;
 }
 
-const UPSTREAM_TIMEOUT_MS = 10_000;
+// 클라이언트의 10초 제한보다 확실히 먼저 502를 돌려 실제 업스트림 장애로 분류되게 한다.
+const UPSTREAM_TIMEOUT_MS = 8_000;
 
 function corsHeaders(env: Env): Record<string, string> {
   return {
