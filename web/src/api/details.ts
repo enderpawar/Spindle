@@ -24,6 +24,7 @@ interface DetailCommonItem {
   title: string;
   overview?: string;
   firstimage?: string;
+  firstimage2?: string;
   addr1?: string;
 }
 
@@ -214,9 +215,8 @@ const FACILITY_ONLY_IMAGE_CONTENT_IDS = new Set([
   "3083767",
 ]);
 
-// detailCommon2 폴백의 실측 3.9~5.1초보다 짧게 기다려, 곧 끝날 목록 호출이
-// firstimage 인덱스를 채우면 총 대기시간과 API 호출을 함께 줄인다.
-const AREA_LIST_IMAGE_WARMUP_WAIT_MS = 2_500;
+// 곧 도착할 목록만 짧게 기다린다. 느린 지역 목록 때문에 사진 조회까지 지연시키지 않는다.
+const AREA_LIST_IMAGE_WARMUP_WAIT_MS = 300;
 
 const NON_REPRESENTATIVE_IMAGE_NAME_RE =
   /화장실|주차장|주차면|엘리베이터|에스칼레이터|에스컬레이터|수유실|장애인/i;
@@ -243,11 +243,13 @@ function fetchCommonCached(contentId: string, fetchImpl: FetchLike): Promise<Det
   return pending;
 }
 
-function representativeImageFromItems(items: DetailImageItem[]): string | null {
+function representativeImageFromItems(items: DetailImageItem[], variant: "full" | "thumb" = "full"): string | null {
   for (const item of items) {
     if (NON_REPRESENTATIVE_IMAGE_NAME_RE.test(item.originimgurl ?? "")) continue;
     if (NON_REPRESENTATIVE_IMAGE_NAME_RE.test(item.imgname ?? "")) continue;
-    const url = normalizeImageUrl(item.originimgurl) ?? normalizeImageUrl(item.smallimageurl);
+    const url = variant === "thumb"
+      ? normalizeImageUrl(item.smallimageurl) ?? normalizeImageUrl(item.originimgurl)
+      : normalizeImageUrl(item.originimgurl) ?? normalizeImageUrl(item.smallimageurl);
     if (url) return url;
   }
   return null;
@@ -279,17 +281,53 @@ async function fetchRepresentativeImage(
   const fromCommon = normalizeImageUrl(common.firstimage);
   if (fromCommon) return fromCommon;
 
-  const imgBody = await callTourApi<DetailImageBody>(
-    "detailImage2",
-    { contentId },
-    fetchImpl,
-  );
-  return representativeImageFromItems(extractItems(imgBody));
+  return representativeImageFromItems(await fetchImageItemsCached(contentId, fetchImpl));
 }
 
 const representativeImageCache = new Map<string, Promise<string | null>>();
 const thumbImageCache = new Map<string, Promise<string | null>>();
-const galleryImageCache = new Map<string, Promise<string[]>>();
+// 목록·상세·갤러리·대체 사진이 동일한 요청과 결과를 공유한다.
+const imageItemsCache = new Map<string, Promise<DetailImageItem[]>>();
+
+function fetchImageItemsCached(contentId: string, fetchImpl: FetchLike): Promise<DetailImageItem[]> {
+  const cached = imageItemsCache.get(contentId);
+  if (cached) return cached;
+  const pending = callTourApi<DetailImageBody>("detailImage2", { contentId }, fetchImpl)
+    .then(extractItems)
+    .catch((error: unknown) => {
+      imageItemsCache.delete(contentId);
+      throw error;
+    });
+  imageItemsCache.set(contentId, pending);
+  return pending;
+}
+
+/** 깨진 이미지 URL은 다시 선택하지 않는다. 목록 원본은 추가 API 호출 없이 먼저 시도한다. */
+export async function fetchPoiImageFallback(
+  contentId: string,
+  failedUrls: readonly string[],
+  variant: "full" | "thumb" = "full",
+  fetchImpl: FetchLike = fetch,
+): Promise<string | null> {
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
+  const known = [knownPoiImageUrl(contentId), knownPoiThumbUrl(contentId)];
+  const available = known.find((url) => url && !failedUrls.includes(url));
+  if (available) return available;
+
+  const items = await fetchImageItemsCached(contentId, fetchImpl);
+  for (const item of items) {
+    if (NON_REPRESENTATIVE_IMAGE_NAME_RE.test(item.originimgurl ?? "")) continue;
+    if (NON_REPRESENTATIVE_IMAGE_NAME_RE.test(item.imgname ?? "")) continue;
+    const urls = variant === "thumb"
+      ? [item.smallimageurl, item.originimgurl]
+      : [item.originimgurl, item.smallimageurl];
+    for (const value of urls) {
+      const url = normalizeImageUrl(value);
+      if (url && !failedUrls.includes(url)) return url;
+    }
+  }
+  return null;
+}
 
 function fetchRepresentativeImageCached(
   contentId: string,
@@ -309,23 +347,31 @@ function fetchRepresentativeImageCached(
 async function fetchRepresentativeImageInParallel(
   contentId: string,
   fetchImpl: FetchLike,
+  variant: "full" | "thumb" = "full",
 ): Promise<string | null> {
   if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
 
-  const commonPromise = fetchCommonCached(contentId, fetchImpl);
-  // 이 경량 폴백에서는 최악 지연을 두 홉에서 한 홉으로 줄이기 위해 detailImage2도 함께 보낸다.
-  // 호출량은 늘지만, 목록 워밍업 뒤에도 이미지가 없는 소수 POI만 이 경로에 들어온다.
-  const imagePromise = callTourApi<DetailImageBody>(
-    "detailImage2",
-    { contentId },
-    fetchImpl,
-  ).then((body) => representativeImageFromItems(extractItems(body)));
-  // common에 firstimage가 있거나 common이 실패해 image 결과를 버려도 미처리 rejection은 남기지 않는다.
-  imagePromise.catch(() => {});
-
-  const common = await commonPromise;
-  const fromCommon = normalizeImageUrl(common.firstimage);
-  return fromCommon ?? imagePromise;
+  const commonPromise = fetchCommonCached(contentId, fetchImpl).then((common) =>
+    (variant === "thumb" ? normalizeImageUrl(common.firstimage2) : undefined)
+      ?? normalizeImageUrl(common.firstimage) ?? null);
+  const imagePromise = fetchImageItemsCached(contentId, fetchImpl)
+    .then((items) => representativeImageFromItems(items, variant));
+  // 먼저 도착한 유효 사진을 사용한다. 빈 결과는 다른 호출의 사진을 가리지 않는다.
+  const empty = Symbol("no image");
+  try {
+    return await Promise.any([commonPromise, imagePromise].map(async (pending) => {
+      const url = await pending;
+      if (!url) throw empty;
+      return url;
+    }));
+  } catch (error) {
+    if (error instanceof AggregateError) {
+      const failure = error.errors.find((reason: unknown) => reason !== empty);
+      if (failure !== undefined) throw failure;
+      return null;
+    }
+    throw error;
+  }
 }
 
 function fetchRepresentativeImageInParallelCached(
@@ -339,42 +385,6 @@ function fetchRepresentativeImageInParallelCached(
     throw err;
   });
   representativeImageCache.set(contentId, pending);
-  return pending;
-}
-
-async function fetchGalleryImages(
-  contentId: string,
-  common: DetailCommonItem,
-  fetchImpl: FetchLike,
-): Promise<string[]> {
-  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return [];
-
-  const seedImage = normalizeImageUrl(common.firstimage);
-  let body: DetailImageBody;
-  try {
-    body = await callTourApi<DetailImageBody>(
-      "detailImage2",
-      { contentId },
-      fetchImpl,
-    );
-  } catch {
-    return seedImage ? [seedImage] : [];
-  }
-  return galleryImagesFromItems(extractItems(body), seedImage);
-}
-
-function fetchGalleryImagesCached(
-  contentId: string,
-  common: DetailCommonItem,
-  fetchImpl: FetchLike,
-): Promise<string[]> {
-  const cached = galleryImageCache.get(contentId);
-  if (cached) return cached;
-  const pending = fetchGalleryImages(contentId, common, fetchImpl).catch((err: unknown) => {
-    galleryImageCache.delete(contentId);
-    throw err;
-  });
-  galleryImageCache.set(contentId, pending);
   return pending;
 }
 
@@ -601,8 +611,13 @@ export async function fetchPoiGalleryImagesCached(
   contentId: string,
   fetchImpl: FetchLike = fetch,
 ): Promise<string[]> {
-  const common = await fetchCommonCached(contentId, fetchImpl);
-  return fetchGalleryImagesCached(contentId, common, fetchImpl).catch(() => []);
+  if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return [];
+  const [common, images] = await Promise.allSettled([
+    fetchCommonCached(contentId, fetchImpl),
+    fetchImageItemsCached(contentId, fetchImpl),
+  ]);
+  const seed = common.status === "fulfilled" ? normalizeImageUrl(common.value.firstimage) : undefined;
+  return galleryImagesFromItems(images.status === "fulfilled" ? images.value : [], seed);
 }
 
 /** 테스트용 */
@@ -612,7 +627,7 @@ export function clearDetailCache(): void {
   commonCache.clear();
   representativeImageCache.clear();
   thumbImageCache.clear();
-  galleryImageCache.clear();
+  imageItemsCache.clear();
   operationInfoIndex.clear();
 }
 
@@ -637,8 +652,8 @@ export function knownPoiThumbUrl(contentId: string): string | null {
 }
 
 // ── 목록·덱 썸네일용 경량 이미지 조회 ──
-// 결과 카드는 상세 3종(fetchPoiDetailCached)이 필요하지만, 리스트 썸네일은 대표 이미지만
-// 있으면 되므로 detailCommon2 한 번만 호출한다. 상세 캐시와 분리된 세션 메모리 캐시.
+// 목록에 사진이 있으면 API를 추가 호출하지 않는다. 모르면 공통정보·사진을 병렬 조회하며
+// 상세·갤러리와 원시 응답 캐시를 공유한다. 원본/썸네일 URL 선택 결과만 따로 보관한다.
 
 async function fetchPoiImage(contentId: string, fetchImpl: FetchLike): Promise<string | null> {
   // 세션 목록이 이미 대표 이미지 URL을 실어 왔다면 detailCommon2를 건너뛴다.
@@ -649,7 +664,8 @@ async function fetchPoiImage(contentId: string, fetchImpl: FetchLike): Promise<s
   if (known) return known;
   if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
 
-  await whenAreaListsSettled(AREA_LIST_IMAGE_WARMUP_WAIT_MS);
+  await whenAreaListsSettled(AREA_LIST_IMAGE_WARMUP_WAIT_MS,
+    () => Boolean(knownPoiImageUrl(contentId) || getKnownContentTypeId(contentId)));
   const warmed = knownPoiImageUrl(contentId);
   if (warmed) return warmed;
 
@@ -669,30 +685,59 @@ async function fetchPoiThumb(contentId: string, fetchImpl: FetchLike): Promise<s
   if (known) return known;
   if (FACILITY_ONLY_IMAGE_CONTENT_IDS.has(contentId)) return null;
 
-  await whenAreaListsSettled(AREA_LIST_IMAGE_WARMUP_WAIT_MS);
+  await whenAreaListsSettled(AREA_LIST_IMAGE_WARMUP_WAIT_MS,
+    () => Boolean(knownPoiThumbUrl(contentId) || getKnownContentTypeId(contentId)));
   const warmed = knownPoiThumbUrl(contentId);
   if (warmed) return warmed;
 
-  return fetchRepresentativeImageInParallelCached(contentId, fetchImpl);
+  return fetchRepresentativeImageInParallel(contentId, fetchImpl, "thumb");
 }
 
 /** 목록용 경량 이미지 URL (없으면 null). 세션 메모리 캐시만 사용 (절대 원칙 3). */
-export function fetchPoiThumbCached(
+function fetchPoiThumbRequest(
   contentId: string,
   fetchImpl: FetchLike = fetch,
 ): Promise<string | null> {
+  const known = knownPoiThumbUrl(contentId);
+  if (known) return Promise.resolve(known);
   const cached = thumbImageCache.get(contentId);
   if (cached) return cached;
-  const pending = fetchPoiThumb(contentId, fetchImpl).catch(() => null);
+  const pending = fetchPoiThumb(contentId, fetchImpl).catch((error: unknown) => {
+    thumbImageCache.delete(contentId);
+    throw error;
+  });
   thumbImageCache.set(contentId, pending);
   return pending;
+}
+
+export function fetchPoiThumbCached(contentId: string, fetchImpl: FetchLike = fetch): Promise<string | null> {
+  return fetchPoiThumbRequest(contentId, fetchImpl).catch(() => null);
+}
+
+export type PoiImageResult =
+  | { status: "ready"; url: string }
+  | { status: "empty" }
+  | { status: "error"; error: unknown };
+
+/** UI는 사진이 없는 경우와 재시도 가능한 조회 실패를 구분한다. */
+export async function fetchPoiImageResultCached(
+  contentId: string,
+  variant: "full" | "thumb" = "full",
+  fetchImpl: FetchLike = fetch,
+): Promise<PoiImageResult> {
+  try {
+    const url = await (variant === "thumb" ? fetchPoiThumbRequest(contentId, fetchImpl) : fetchPoiImage(contentId, fetchImpl));
+    return url ? { status: "ready", url } : { status: "empty" };
+  } catch (error) {
+    return { status: "error", error };
+  }
 }
 
 /** 테스트용 */
 export function clearImageCache(): void {
   representativeImageCache.clear();
   thumbImageCache.clear();
-  galleryImageCache.clear();
+  imageItemsCache.clear();
   commonCache.clear();
 }
 

@@ -154,6 +154,7 @@ const contentTypeIndex = new Map<string, string>();
 const firstImageIndex = new Map<string, string>();
 // 세션 메모리 전용 인덱스. 영속 저장하지 않는다 (절대 원칙 3).
 const thumbImageIndex = new Map<string, string>();
+const imageIndexListeners = new Set<() => void>();
 
 function rememberContentTypeId(poi: AreaPoi): void {
   if (!poi.contentid) return;
@@ -197,6 +198,7 @@ export async function fetchAreaPois(
     );
     const items = extractItems(body);
     for (const item of items) rememberContentTypeId(item);
+    for (const listener of imageIndexListeners) listener();
     all.push(...items);
     const totalCount = toNumber(String(body.totalCount)) ?? 0;
     if (all.length >= totalCount || items.length === 0) return all;
@@ -210,19 +212,30 @@ const sessionCache = new Map<string, Promise<AreaPoi[]>>();
 /**
  * 이미 시작된 구군 목록 호출만 기다린다. 호출 시점의 Promise 스냅샷을 사용하므로
  * 새 목록 요청을 만들지 않으며, 진행 중인 호출이 없으면 즉시 끝난다.
+ * 필요한 장소가 한 페이지에 도착하면 isReady로 나머지 목록 대기를 종료한다.
  */
-export async function whenAreaListsSettled(timeoutMs: number): Promise<void> {
+export async function whenAreaListsSettled(
+  timeoutMs: number,
+  isReady: () => boolean = () => false,
+): Promise<void> {
+  if (isReady()) return;
   const pending = [...sessionCache.values()];
   if (pending.length === 0) return;
 
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let onIndexChange: (() => void) | undefined;
   await Promise.race([
     Promise.allSettled(pending).then(() => undefined),
+    new Promise<void>((resolve) => {
+      onIndexChange = () => { if (isReady()) resolve(); };
+      imageIndexListeners.add(onIndexChange);
+    }),
     new Promise<void>((resolve) => {
       timeoutId = setTimeout(resolve, Math.max(0, timeoutMs));
     }),
   ]);
   if (timeoutId !== undefined) clearTimeout(timeoutId);
+  if (onIndexChange) imageIndexListeners.delete(onIndexChange);
 }
 
 /** 세션 캐시를 거치는 구별 POI 조회. 실패한 Promise는 캐시에서 제거해 재시도 가능하게 한다. */
