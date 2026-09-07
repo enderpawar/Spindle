@@ -55,7 +55,17 @@ type KakaoMapEventListener = () => void
 
 export interface KakaoMapsNs {
   load(callback: () => void): void
-  Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
+  Map: new (
+    container: HTMLElement,
+    options: {
+      center: KakaoLatLng
+      level: number
+      /** 드래그 팬 허용 여부. 결과 카드 안의 작은 지도는 꺼서 카드 스크롤을 뺏지 않는다. */
+      draggable?: boolean
+      /** 휠 줌 허용 여부. 위와 같은 이유로 작은 지도에서만 끈다 (핀치 줌은 남는다). */
+      scrollwheel?: boolean
+    },
+  ) => KakaoMap
   LatLng: new (lat: number, lng: number) => KakaoLatLng
   LatLngBounds: new () => KakaoLatLngBounds
   Point: new (x: number, y: number) => KakaoPoint

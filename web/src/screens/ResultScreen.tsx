@@ -1,4 +1,5 @@
 import { PhotoViewer } from '../components/PhotoViewer'
+import { ResultLocationMap } from '../components/ResultLocationMap'
 import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, knownPoiImageUrl, selectPrimaryVisitFacts, type PoiDetail, type PoiVisitFact } from '../api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
@@ -15,10 +16,12 @@ import { markVisited } from '../lib/visited'
 import { overviewExcerpt } from '../lib/overviewExcerpt'
 import { failureCauseLine } from '../api/failureCopy'
 import { useBackGuard } from '../navigation/useBackGuard'
-import type { Poi, Recommendation } from '../mock/pois'
+import type { Departure, Poi, Recommendation } from '../mock/pois'
 
 interface Props {
   rec: Recommendation
+  /** 추천에 사용한 출발점 — 현장 모드면 확보한 현재 위치, 여행 모드면 고른 프리셋. */
+  departure: Departure
   candidateIndex: number
   onNextCandidate: () => void
   onBack: () => void
@@ -43,7 +46,7 @@ interface Props {
 const FALLBACK_NOTE_HEIGHT = 44
 const ACTION_BAR_CLEARANCE = 132 + FALLBACK_NOTE_HEIGHT
 
-export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse, initialCourseNotice = null }: Props) {
+export function ResultScreen({ rec, departure, candidateIndex, onNextCandidate, onBack, onRespin, onShare, onContinueTheme, onFinishTheme, onBuildCourse, initialCourseNotice = null }: Props) {
   const { direction } = rec
   const poi = rec.candidates[candidateIndex]
   const [loading, setLoading] = useState(true)
@@ -367,6 +370,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 </svg>
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
               </div>
+
+              <ResultLocationMap poi={poi} departure={departure} />
 
               <section className="result-attraction-section" aria-labelledby="result-attraction-title">
                 <h3 id="result-attraction-title">이곳의 매력</h3>

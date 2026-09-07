@@ -683,14 +683,14 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 .home-mission-card {
   position: relative;
   display: block;
-  width: calc(100% - 32px);
+  width: calc(100% - 40px);
   min-height: 148px;
-  margin: 24px 16px 0;
+  margin: 24px 20px 0;
   padding: 18px 116px 18px 18px;
   overflow: hidden;
   border: 1px solid #d7e5ff;
-  border-radius: 20px;
-  background: #eef4ff;
+  border-radius: 24px;
+  background: linear-gradient(125deg, #f3f7ff, #e5efff);
   color: var(--l-ink);
   text-align: left;
   cursor: pointer;
@@ -720,7 +720,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   line-height: 1.35;
   letter-spacing: -0.3px;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .home-mission-description {
@@ -732,7 +732,7 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   font-weight: 550;
   line-height: 1.45;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
 
 .home-mission-cta {
@@ -1986,6 +1986,103 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   letter-spacing: -0.08px;
   overflow-wrap: break-word;
   word-break: keep-all;
+}
+
+/* ─── 결과 카드 위치 지도 — 추천 기준점과 목적지를 함께 보여준다 ─── */
+.result-location {
+  margin-top: 22px;
+  padding: 14px;
+  border: 1px solid #dce7f8;
+  border-radius: 22px;
+  background: #f5f8ff;
+}
+
+.result-location-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.result-location-heading h3 {
+  margin: 0;
+  color: var(--l-ink);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.25px;
+}
+
+.result-location-heading > span {
+  color: var(--l-primary);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.result-location-origin {
+  margin: 5px 0 12px;
+  color: var(--l-ink-2);
+  font-size: 12.5px;
+  font-weight: 550;
+  overflow-wrap: anywhere;
+}
+
+.result-location-map {
+  position: relative;
+  height: 268px;
+  overflow: hidden;
+  border-radius: 16px;
+  isolation: isolate;
+  background: #c3dcf9;
+}
+
+.result-location-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  background: #edf3ff;
+  color: var(--l-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.result-location-caption {
+  margin: 10px 0 0;
+  color: var(--l-ink-3);
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.result-location-fallback {
+  margin: 8px 0 0;
+  color: var(--l-ink-2);
+  font-size: 12.5px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  word-break: keep-all;
+}
+
+.result-location-fallback button {
+  display: block;
+  min-height: 44px;
+  padding: 0 8px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--l-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 359px) {
+  .result-location-map {
+    height: 232px;
+  }
 }
 
 .result-attraction-section {
@@ -3799,11 +3896,6 @@ button.is-pressing:not(:disabled) {
 @media (hover: hover) { .spots-region-options button:hover { background: #f0f5ff; color: var(--l-primary); } }
 
 /* 2026-09 디자인 폴리시 — 핵심 행동과 읽기 흐름 */
-.home-mission-inline { display: flex; align-items: center; gap: 10px; width: calc(100% - 40px); margin: 12px 20px 0; padding: 12px; border: 1px solid #dce7fb; border-radius: 16px; background: #edf3ff; text-align: left; color: var(--l-ink); font: inherit; cursor: pointer; }
-.home-mission-inline-label { flex: none; font-size: 10px; font-weight: 700; color: var(--l-primary); }
-.home-mission-inline-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.home-mission-inline-body strong { font-size: 12px; line-height: 1.4; }
-.home-mission-inline-body > span { font-size: 10.5px; line-height: 1.5; color: var(--l-ink-2); word-break: keep-all; }
 .home-theme-card { color: #fff; }
 .home-theme-symbol { opacity: .5; }
 .home-theme-tagline { opacity: 1; }
@@ -3829,8 +3921,6 @@ button.is-pressing:not(:disabled) {
 .spots-region-options { animation: regionFadeIn 120ms ease-out; }
 @keyframes regionFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 340px) {
-  .home-mission-inline { margin-inline: 12px; width: calc(100% - 24px); gap: 8px; padding: 10px; }
-  .home-mission-inline-label { max-width: 3em; line-height: 1.5; }
   .stamp-header-mascot { width: 54px !important; right: 8px !important; top: 8px !important; opacity: .65; }
 }
 @media (prefers-reduced-motion: reduce) { .spots-region-options { animation: none; } }

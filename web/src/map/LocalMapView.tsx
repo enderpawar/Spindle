@@ -27,6 +27,12 @@ export interface MapViewProps {
   pois: Poi[]
   departure: Departure
   selectedId: string | null
+  /**
+   * 스크롤되는 카드 안에 박히는 작은 개관 지도. 선택 핀으로 팬하지 않고 출발점과 목적지를
+   * 항상 함께 맞추며, 한 손가락 드래그·휠을 받지 않아 세로 스크롤을 카드에 넘긴다
+   * (확대·축소·전체 보기 버튼과 두 손가락 핀치는 그대로).
+   */
+  compactOverview?: boolean
   /** 혼잡·쾌적 화면 상태. 추천 계산에는 사용하지 않는다. */
   statusByPoiId?: ReadonlyMap<string, CongestionVisualStatus>
   /** 운영 중단·운영시간 외로 확인된 POI id — 핀을 흐리게 그린다 (선택·열기는 그대로 가능). */
@@ -125,6 +131,7 @@ export function LocalMapView({
   pois,
   departure,
   selectedId,
+  compactOverview = false,
   statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
@@ -283,9 +290,9 @@ export function LocalMapView({
     }
     const fit = fitCam(fitPoints)
     setZMin(Math.min(fit.z, coverZ))
-    if (!cam || (navigationMode && !followCurrentPosition)) setCam(fit)
+    if (!cam || compactOverview || (navigationMode && !followCurrentPosition)) setCam(fit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, fitPoints, pickMode])
+  }, [size, fitPoints, pickMode, compactOverview])
 
   // 화면 중앙 = 후보 좌표. 상위 화면이 그 위에 십자선을 겹쳐 그린다.
   useEffect(() => {
@@ -320,7 +327,7 @@ export function LocalMapView({
     const minY = Math.min(...ys), maxY = Math.max(...ys)
     const padT = navigationMode ? 108 : 64
     const padS = navigationMode ? 38 : 44
-    const padB = navigationMode ? Math.min(size.h * 0.5, 430) : 196
+    const padB = navigationMode ? Math.min(size.h * 0.5, 430) : compactOverview ? 64 : 196
     const z = Math.min(Z_MAX, (size.w - padS * 2) / Math.max(maxX - minX, 1), (size.h - padT - padB) / Math.max(maxY - minY, 1))
     return {
       z,
@@ -378,7 +385,7 @@ export function LocalMapView({
 
   // 선택된 핀으로 부드럽게 이동 (카드 스와이프·핀 탭 공통)
   useEffect(() => {
-    if (!selectedId || !cam) return
+    if (compactOverview || !selectedId || !cam) return
     const pin = pins.find((p) => p.poi.id === selectedId)
       ?? extraPins.find((p) => p.spot.id === selectedId)
     if (!pin) return
@@ -392,12 +399,12 @@ export function LocalMapView({
     const cy = pin.y - (size.h * 0.38 - size.h / 2) / z
     animateTo({ cx: pin.x, cy, z }, 360)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
+  }, [selectedId, compactOverview])
 
-  // 휠 줌 (passive:false 필요)
+  // 휠 줌 (passive:false 필요). 결과 카드의 작은 지도는 휠을 넘겨 페이지가 스크롤되게 둔다.
   useEffect(() => {
     const el = wrapRef.current
-    if (!el) return
+    if (!el || compactOverview) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       stopPan()
@@ -416,9 +423,11 @@ export function LocalMapView({
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zMin, size])
+  }, [zMin, size, compactOverview])
 
   // ── 포인터 제스처: 드래그 팬 + 두 손가락 핀치 ──
+  // 결과 카드의 작은 지도(compactOverview)는 제스처를 받지 않는다 — 지도 위에서 세로로
+  // 쓸었을 때 카드가 그대로 스크롤돼야 하고, 보여줄 범위는 이미 맞춰져 있다.
   const onPointerDown = (e: ReactPointerEvent) => {
     cancelAnimationFrame(anim.current)
     stopPan() // 진행 중 팬을 현재 보이는 위치에서 확정 → 드래그가 이어서 시작
@@ -582,11 +591,11 @@ export function LocalMapView({
     // 출처 표기(.spots-source-overlay z-10) 위에 그려진다.
     <div
       ref={wrapRef}
-      style={{ position: 'absolute', inset: 0, isolation: 'isolate', overflow: 'hidden', background: 'linear-gradient(180deg, #cde3fb, #b7d4f6)', touchAction: 'none', cursor: 'grab', userSelect: 'none' }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      style={{ position: 'absolute', inset: 0, isolation: 'isolate', overflow: 'hidden', background: 'linear-gradient(180deg, #cde3fb, #b7d4f6)', touchAction: compactOverview ? 'pan-y' : 'none', cursor: compactOverview ? 'default' : 'grab', userSelect: 'none' }}
+      onPointerDown={compactOverview ? undefined : onPointerDown}
+      onPointerMove={compactOverview ? undefined : onPointerMove}
+      onPointerUp={compactOverview ? undefined : onPointerUp}
+      onPointerCancel={compactOverview ? undefined : onPointerUp}
     >
       {/* ── 지형 레이어 (canvas 래스터) ── */}
       <canvas

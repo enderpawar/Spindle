@@ -1,4 +1,5 @@
 import pointingImg from '../assets/poses/별이_pointing.webp'
+import winkImg from '../assets/poses/별이_wink.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
@@ -181,12 +182,6 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           />
         </div>
 
-        <button type="button" className="home-mission-inline" onClick={() => onNavigate('spin')}>
-          <span className="home-mission-inline-label">오늘의 미션</span>
-          <span className="home-mission-inline-body"><strong>{mission.title}</strong><span>{mission.description}</span></span>
-          <span aria-hidden="true">›</span>
-        </button>
-
         {/* 퀵 메뉴 */}
         <div className="home-quick-grid motion-card-list">
           {quickMenu.map((item) => (
@@ -270,8 +265,15 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             )
           })}
         </div>
-
-
+        <button type="button" className="home-mission-card" onClick={() => onNavigate('spin')}>
+          <span className="home-mission-copy">
+            <span className="home-mission-label">오늘의 미션</span>
+            <strong className="home-mission-title">{mission.title}</strong>
+            <span className="home-mission-description">{mission.description}</span>
+            <span className="home-mission-cta">스핀하러 가기 <span aria-hidden>›</span></span>
+          </span>
+          <img src={winkImg} alt="" className="home-mission-mascot" />
+        </button>
       </div>
 
       <BottomNav active="home" onNavigate={onNavigate} />

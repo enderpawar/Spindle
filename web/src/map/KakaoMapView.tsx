@@ -159,6 +159,7 @@ export function KakaoMapView({
   pois,
   departure,
   selectedId,
+  compactOverview = false,
   statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
@@ -278,9 +279,14 @@ export function KakaoMapView({
     if (!maps || !container) return
 
     const initialDeparture = initialDepartureRef.current
+    // 결과 카드 안의 작은 지도는 한 손가락 드래그·휠을 지도가 먹지 않게 둔다 — 그래야
+    // 지도 위에서 위아래로 쓸어도 카드가 그대로 스크롤된다. 확대·축소·전체 보기 버튼과
+    // 두 손가락 핀치는 그대로 동작한다.
     const map = new maps.Map(container, {
       center: new maps.LatLng(initialDeparture.lat, initialDeparture.lon),
       level: navigationMode ? 5 : pickMode ? 4 : 7,
+      draggable: !compactOverview,
+      scrollwheel: !compactOverview,
     })
     mapRef.current = map
     setLevel(map.getLevel())
@@ -317,7 +323,7 @@ export function KakaoMapView({
       if (mapRef.current === map) mapRef.current = null
       container.replaceChildren()
     }
-  }, [navigationMode, pickMode])
+  }, [compactOverview, navigationMode, pickMode])
 
   useEffect(() => {
     if (!ready) return
@@ -349,8 +355,8 @@ export function KakaoMapView({
     for (const poi of pois) bounds.extend(new maps.LatLng(poi.lat, poi.lon))
     for (const spot of extraSpots) bounds.extend(new maps.LatLng(spot.lat, spot.lon))
     bounds.extend(new maps.LatLng(departure.lat, departure.lon))
-    map.setBounds(bounds, 64, 44, 196, 44)
-  }, [departure.lat, departure.lon, extraSpots, navigationMode, pickMode, pois])
+    map.setBounds(bounds, 64, 44, compactOverview ? 64 : 196, 44)
+  }, [compactOverview, departure.lat, departure.lon, extraSpots, navigationMode, pickMode, pois])
 
   useEffect(() => {
     if (ready) fitAll()
@@ -623,7 +629,7 @@ export function KakaoMapView({
   }, [])
 
   useEffect(() => {
-    if (!ready || !selectedId) return
+    if (compactOverview || !ready || !selectedId) return
     const maps = mapsRef.current
     const map = mapRef.current
     const point = poiById.get(selectedId) ?? extraById.get(selectedId)
@@ -657,7 +663,7 @@ export function KakaoMapView({
       window.clearTimeout(timeoutId)
       if (selectionPanTimerRef.current === timeoutId) selectionPanTimerRef.current = null
     }
-  }, [extraById, poiById, ready, selectedId, selectionOffsetRatio])
+  }, [compactOverview, extraById, poiById, ready, selectedId, selectionOffsetRatio])
 
   const zoomIn = () => {
     const map = mapRef.current

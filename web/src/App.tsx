@@ -384,6 +384,7 @@ function App() {
       return rec ? (
         <ResultScreen
           rec={rec}
+          departure={origin}
           candidateIndex={candidateIndex}
           onNextCandidate={() => setCandidateIndex((i) => (i + 1) % rec.candidates.length)}
           onBack={() => goTo(poiReturn)}
