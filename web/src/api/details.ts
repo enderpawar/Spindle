@@ -527,19 +527,31 @@ export function getOperationInfo(contentId: string): OperationInfo | undefined {
   return operationInfoIndex.get(contentId);
 }
 
+// 예열 중인 contentId. 응답이 와야 operationInfoIndex에 들어가므로 인덱스만으로는 중복을
+// 막지 못한다 — StrictMode의 이펙트 2회 실행이나 화면 전환이 겹치면 같은 POI를 두 번 부른다.
+const operationPrimeInflight = new Set<string>();
+
 /**
- * 큐레이션 POI의 운영 원문을 배경에서 미리 채운다 (detailIntro2 1회/POI).
+ * **곧 화면에 보일** POI의 운영 원문을 미리 채운다 (detailIntro2 1회/POI).
  *
- * 세션 시작 목록 호출이 이미 알려준 contentTypeId가 있을 때만 호출한다 — 배경 예열 때문에
+ * 큐레이션 49곳을 세션 시작에 전부 부르던 예열을 걷어냈다. 방향이 정해지기 전에는 어느
+ * POI가 필요한지 알 수 없어 46곳쯤이 그대로 버려졌고, 인덱스가 메모리 전용(절대 원칙 3)이라
+ * 새로고침마다 반복돼 `detailIntro2`만 오퍼레이션 트래픽을 12배 빠르게 소진했다.
+ * 지금은 호출자가 대상(스핀 후보·화면에 뜬 목록)을 정해 넘긴다.
+ *
+ * 세션 목록 호출이 이미 알려준 contentTypeId가 있을 때만 호출한다 — 예열 때문에
  * detailCommon2까지 추가로 태우지는 않는다. 모르는 POI는 결과 카드가 상세를 부를 때 채워진다.
- * 실패는 조용히 넘긴다 (예열은 추천 동작의 전제가 아니다).
+ * 실패는 조용히 넘긴다 (예열은 추천 동작의 전제가 아니다 — 모르는 POI는 1.0 보수 통과).
  */
 export async function primeOperationInfo(
   contentIds: readonly string[],
   fetchImpl: FetchLike = fetch,
-  concurrency = 3,
+  concurrency = 2,
 ): Promise<void> {
-  const queue = contentIds.filter((id) => !operationInfoIndex.has(id));
+  const queue = contentIds.filter(
+    (id) => !operationInfoIndex.has(id) && !operationPrimeInflight.has(id),
+  );
+  for (const id of queue) operationPrimeInflight.add(id);
   let cursor = 0;
 
   const worker = async (): Promise<void> => {
@@ -547,9 +559,9 @@ export async function primeOperationInfo(
       const index = cursor++;
       if (index >= queue.length) return;
       const contentId = queue[index];
-      const contentTypeId = getKnownContentTypeId(contentId);
-      if (!contentTypeId) continue;
       try {
+        const contentTypeId = getKnownContentTypeId(contentId);
+        if (!contentTypeId) continue;
         const body = await callTourApi<ListBody<DetailIntroItem>>(
           "detailIntro2",
           { contentId, contentTypeId },
@@ -562,6 +574,8 @@ export async function primeOperationInfo(
         });
       } catch {
         /* 예열 실패는 무시 — 결과 시점 상세 호출이 다시 채운다 */
+      } finally {
+        operationPrimeInflight.delete(contentId);
       }
     }
   };

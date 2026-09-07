@@ -10,6 +10,7 @@ import {
   firstSentence,
   getOperationInfo,
   getOperationInfoVersion,
+  primeOperationInfo,
   subscribeOperationInfo,
 } from '../api/details'
 import { fetchExtraSpots, toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
@@ -34,6 +35,8 @@ const CATEGORY_FILTERS = ['전체', '음식점', '카페'] as const
 type CategoryFilter = (typeof CATEGORY_FILTERS)[number]
 const CURATED_CONTENT_IDS = new Set(POI_POOL.map((poi) => poi.contentId))
 const EMPTY_STATUS_MAP = new Map<string, CongestionVisualStatus>()
+/** 목록 예열 상한 — 운영 원문을 모르는 POI는 평상시 핀으로 보수 통과하므로 전량일 필요가 없다. */
+const OPERATION_PRIME_LIMIT = 12
 
 function RegionPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -367,6 +370,17 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     () => categoryFilter === '전체' ? list : extraDisplayPois,
     [categoryFilter, extraDisplayPois, list],
   )
+  // 세션 시작 전량 예열을 걷어낸 뒤의 대체 경로 — 명소 탭을 연 시점에, 지금 필터로
+  // 화면에 뜬 목록의 앞쪽만 운영 원문을 데운다. 이미 알거나 예열 중인 POI는
+  // primeOperationInfo가 거르므로 필터를 오가도 같은 POI를 다시 부르지 않는다.
+  useEffect(() => {
+    const ids = listDisplayPois
+      .map((poi) => poi.contentId)
+      .filter((id): id is string => !!id)
+      .slice(0, OPERATION_PRIME_LIMIT)
+    if (ids.length > 0) void primeOperationInfo(ids).catch(() => {})
+  }, [listDisplayPois])
+
   const congestionCandidates = useMemo(
     () => [...POI_POOL, ...allExtraDisplayPois],
     [allExtraDisplayPois],

@@ -5,7 +5,7 @@ import { fetchAllOldTownPois } from './api/tourapi'
 import { transformExtraSpots, type ExtraSpot } from './api/extraSpots'
 import { failureCauseLine } from './api/failureCopy'
 import { recommendDiningSpin, type SpinCategory } from './engine/diningSpin'
-import { CURATED_CONTENT_IDS, recommendFromSpin } from './engine/spinRecommend'
+import { recommendFromSpin } from './engine/spinRecommend'
 import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
@@ -135,10 +135,10 @@ function App() {
         .then((regions) => {
           const total = regions.reduce((sum, r) => sum + r.pois.length, 0)
           console.info(`[Spindle] 세션 시작 POI 실시간 로드: ${total}곳 (${regions.length}개 구)`)
-          // 목록 호출이 contentTypeId를 알려준 뒤에야 detailIntro2를 1회/POI로 부를 수 있다.
-          // 운영 상태 축(SPEC 4장)이 첫 스핀부터 실제 이용시간·휴무를 반영하도록 배경에서 예열한다.
-          // 실패해도 추천은 보수적 통과로 그대로 동작한다.
-          void primeOperationInfo(CURATED_CONTENT_IDS).catch(() => {})
+          // 여기서 큐레이션 49곳의 detailIntro2를 전부 예열하던 코드를 걷어냈다. 방향이 정해지기
+          // 전에는 어느 POI가 필요한지 알 수 없어 대부분이 버려졌고, 인덱스가 메모리 전용이라
+          // (절대 원칙 3) 새로고침마다 반복돼 오퍼레이션 트래픽만 소진했다.
+          // 예열은 대상이 정해지는 시점으로 옮겼다 — 스핀 직후 후보(onSpun)와 명소 목록.
         })
         .catch(() => {
           /* 목록 로드 실패는 추천에 영향 없음 — 결과 시점 상세 호출에서 별도 에러 UI 처리 */
@@ -209,6 +209,10 @@ function App() {
     // 마운트 900ms 뒤 조회할 때 캐시에 이미 있어, 축제 카드가 네트워크 지연만큼 늦게
     // 튀어나오지 않고 연출 타이밍대로 뜬다. 호출 수는 그대로(세션 캐시 디듀프).
     void fetchOldTownFestivalsCached(todayYyyymmdd()).catch(() => {})
+    // 방향이 정해진 지금이 운영 원문을 부를 자리다 — 이 후보 3개가 사용자가 실제로 볼
+    // 전부이고, `다른 후보`를 누르면 어차피 나갈 호출이라 순증이 없다. 리빌 연출(3초,
+    // RevealScreen) 안에 도착하므로 체감 지연도 없다.
+    void primeOperationInfo(nextRec.candidates.map((c) => c.contentId)).catch(() => {})
     const firstContentId = nextRec.candidates[0]?.contentId
     if (firstContentId) {
       // 리빌 연출(~700ms) 동안 결과 카드가 마운트 시 다시 호출할 상세 3종을 미리 데운다.

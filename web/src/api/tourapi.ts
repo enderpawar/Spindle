@@ -20,6 +20,7 @@ export type TourApiFailureKind =
   | "offline" // 단말이 오프라인
   | "timeout" // 요청 타임아웃
   | "network" // 그 밖의 네트워크 실패 (DNS·차단 등)
+  | "rateLimited" // TourAPI 호출 한도 초과 (HTTP 429)
   | "http" // 프록시/업스트림이 비정상 상태 코드로 응답
   | "api"; // 응답은 왔지만 TourAPI가 오류를 알림
 
@@ -61,7 +62,50 @@ const FETCH_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
   offline: "네트워크 연결 없음",
   timeout: "요청 시간 초과",
   network: "네트워크 요청 실패",
+  rateLimited: "TourAPI 호출 한도 초과",
 };
+
+// ── 429 처리 ──
+// TourAPI 트래픽은 오퍼레이션별로 집계된다 — 한 엔드포인트가 429를 내도 나머지는 멀쩡하다.
+// 그래서 재시도도 쿨다운도 엔드포인트 단위로 건다.
+//
+// 429에는 성질이 다른 두 가지가 섞여 있다:
+//   - 초당 호출 제한 → 잠깐 쉬면 풀린다. 짧은 지수 백오프로 넘긴다.
+//   - 일일 트래픽 소진 → 재시도해도 안 풀린다. 계속 두드리면 나머지 호출까지 낭비하므로
+//     쿨다운을 걸어 빠르게 실패시키고, 남은 예산을 사용자가 실제로 연 화면에 쓴다.
+const RETRY_DELAYS_MS: readonly number[] = [600, 1_800];
+const RATE_LIMIT_COOLDOWN_MS = 60_000;
+const RETRY_AFTER_CAP_MS = 30_000;
+const rateLimitedUntil = new Map<string, number>();
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 429의 `Retry-After`(초 또는 HTTP-date)를 ms로 읽는다. 없거나 해석 불가면 null. */
+function retryAfterMs(res: Response): number | null {
+  const raw = res.headers.get("retry-after");
+  if (!raw) return null;
+  const seconds = Number(raw.trim());
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(seconds * 1_000, RETRY_AFTER_CAP_MS);
+  }
+  const at = Date.parse(raw);
+  if (Number.isNaN(at)) return null;
+  return Math.min(Math.max(at - Date.now(), 0), RETRY_AFTER_CAP_MS);
+}
+
+function rateLimitError(): TourApiError {
+  return new TourApiError(FETCH_FAILURE_MESSAGES.rateLimited, {
+    kind: "rateLimited",
+    status: 429,
+  });
+}
+
+/** 테스트·진단용 — 엔드포인트별 429 쿨다운을 지운다. */
+export function resetRateLimitState(): void {
+  rateLimitedUntil.clear();
+}
 
 /** TourAPI 응답 필드는 숫자·좌표 포함 전부 문자열로 온다 — 변환은 이 유틸로만 */
 export function toNumber(value: string | undefined): number | undefined {
@@ -105,37 +149,55 @@ export async function callTourApi<B>(
   params: Record<string, string>,
   fetchImpl: FetchLike,
 ): Promise<B> {
-  const qs = new URLSearchParams(params);
-  let res: Response;
-  try {
-    res = await fetchImpl(`${API_BASE}/${endpoint}?${qs.toString()}`, {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (err) {
-    // 오프라인·타임아웃·차단을 구분해 실어 보낸다 — 에러 UI가 사유를 알려주고
-    // 재시도 버튼을 띄운다 (빈 화면 금지).
-    const kind = classifyFetchFailure(err);
-    throw new TourApiError(FETCH_FAILURE_MESSAGES[kind], { kind });
-  }
-  if (!res.ok) {
-    throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`, {
-      kind: "http",
-      status: res.status,
-    });
-  }
+  // 이미 한도에 걸린 엔드포인트는 두드리지 않고 즉시 실패시킨다.
+  if (Date.now() < (rateLimitedUntil.get(endpoint) ?? 0)) throw rateLimitError();
 
-  const data = (await res.json()) as TourApiEnvelope<B>;
-  const header = data.response?.header;
-  const body = data.response?.body;
-  if (header?.resultCode !== "0000" || body === undefined) {
-    // 규약: resultCode !== "0000"이면 콘솔에 resultMsg 로깅 + 사용자 재시도 UI
-    console.error("TourAPI 오류:", header?.resultCode, header?.resultMsg);
-    throw new TourApiError(header?.resultMsg ?? "TourAPI 응답 형식 오류", {
-      kind: "api",
-      resultCode: header?.resultCode,
-    });
+  const qs = new URLSearchParams(params);
+  const url = `${API_BASE}/${endpoint}?${qs.toString()}`;
+
+  for (let attempt = 0; ; attempt += 1) {
+    let res: Response;
+    try {
+      res = await fetchImpl(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    } catch (err) {
+      // 오프라인·타임아웃·차단을 구분해 실어 보낸다 — 에러 UI가 사유를 알려주고
+      // 재시도 버튼을 띄운다 (빈 화면 금지).
+      const kind = classifyFetchFailure(err);
+      throw new TourApiError(FETCH_FAILURE_MESSAGES[kind], { kind });
+    }
+
+    if (res.status === 429) {
+      if (attempt >= RETRY_DELAYS_MS.length) {
+        // 재시도로도 안 풀렸다 = 초당 제한이 아니라 트래픽 소진에 가깝다.
+        rateLimitedUntil.set(endpoint, Date.now() + RATE_LIMIT_COOLDOWN_MS);
+        console.error(`TourAPI 호출 한도: ${endpoint} — ${RATE_LIMIT_COOLDOWN_MS}ms 쉬어갑니다`);
+        throw rateLimitError();
+      }
+      // 지터를 섞어 동시에 튕긴 요청들이 같은 순간에 다시 몰리지 않게 한다.
+      await sleep(retryAfterMs(res) ?? RETRY_DELAYS_MS[attempt] + Math.random() * 300);
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`, {
+        kind: "http",
+        status: res.status,
+      });
+    }
+
+    const data = (await res.json()) as TourApiEnvelope<B>;
+    const header = data.response?.header;
+    const body = data.response?.body;
+    if (header?.resultCode !== "0000" || body === undefined) {
+      // 규약: resultCode !== "0000"이면 콘솔에 resultMsg 로깅 + 사용자 재시도 UI
+      console.error("TourAPI 오류:", header?.resultCode, header?.resultMsg);
+      throw new TourApiError(header?.resultMsg ?? "TourAPI 응답 형식 오류", {
+        kind: "api",
+        resultCode: header?.resultCode,
+      });
+    }
+    return body;
   }
-  return body;
 }
 
 export function extractItems<T>(body: ListBody<T>): T[] {

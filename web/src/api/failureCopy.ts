@@ -13,6 +13,7 @@ const CAUSE_LINES: Readonly<Record<TourApiFailureKind, string>> = {
   offline: "네트워크 연결이 끊겨 있어요",
   timeout: "응답이 늦어지고 있어요",
   network: "잠시 연결이 어려워요",
+  rateLimited: "관광정보 요청이 잠시 몰렸어요",
   http: "관광정보 서버가 잠시 불안정해요",
   api: "관광정보를 받아오지 못했어요",
 };

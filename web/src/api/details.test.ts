@@ -14,6 +14,7 @@ import {
   knownPoiThumbUrl,
   normalizeIntroValue,
   poiImageProxyUrl,
+  primeOperationInfo,
   selectPrimaryVisitFacts,
   stripHtml,
   visitFactsFromIntro,
@@ -892,5 +893,48 @@ describe("detailIntro2 병렬 발사 (세션 목록 contentTypeId 인덱스)", (
     releaseCommon();
     const detail = await pending;
     expect(detail.visitFactsStatus).toBe("ready");
+  });
+});
+
+describe("primeOperationInfo — 예열 중복 방지", () => {
+  /** 목록 응답으로 contentTypeId 인덱스를 채운다 (없으면 예열이 호출 자체를 건너뛴다) */
+  async function warmIndexFor(contentId: string): Promise<void> {
+    const listFetch = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(
+          envelope([{ contentid: contentId, contenttypeid: "12", title: "예열", addr1: "부산" }]),
+        ),
+      ),
+    );
+    await fetchAreaPois("15", listFetch as unknown as typeof fetch);
+  }
+
+  it("응답 전에 겹쳐 들어와도 detailIntro2는 한 번만 나간다", async () => {
+    // StrictMode는 이펙트를 두 번 실행한다. 색인은 응답이 와야 채워지므로 색인만으로는
+    // 이 중복을 막지 못한다 — 진행 중 목록을 따로 두는 이유.
+    await warmIndexFor("911");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(jsonResponse(envelope({ usetime: "09:00~18:00" }))),
+    );
+
+    await Promise.all([
+      primeOperationInfo(["911"], fetchMock as unknown as typeof fetch),
+      primeOperationInfo(["911"], fetchMock as unknown as typeof fetch),
+    ]);
+
+    // 예열이 내는 호출은 detailIntro2뿐이다 — 한 번만 나갔으면 중복이 막힌 것.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("이미 예열된 POI는 다시 부르지 않는다", async () => {
+    await warmIndexFor("912");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(jsonResponse(envelope({ usetime: "10:00~19:00" }))),
+    );
+
+    await primeOperationInfo(["912"], fetchMock as unknown as typeof fetch);
+    await primeOperationInfo(["912"], fetchMock as unknown as typeof fetch);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
