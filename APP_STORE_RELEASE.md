@@ -41,6 +41,9 @@
   precheck 9개 항목을 통과했다.
 - **2026-09-06:** App Store 공개 완료 — 버전 1.0.0, 무료, 4+.
   <https://apps.apple.com/kr/app/spindle/id6807658917>
+- **2026-09-08:** **1.0.9 심사 제출 완료** (run `34138405530`, 빌드 17, `971e9d0`).
+  `submit` 레인으로 빌드 없이 제출했다 — precheck 무경고 통과, 스크린샷 5장 교체(기존 중복
+  일괄 삭제 후 업로드), **승인 시 자동 공개**로 설정. 더 사람이 누를 것은 없다.
 
 ### 버전 이력
 
@@ -117,6 +120,11 @@ error: No profiles for 'kr.spindle.app' were found: Xcode couldn't find any
 **`Apple Development` 타입만** 폐기(Revoke)한다. 오래된 것부터, 사실상 전부 지워도 된다 —
 다음 빌드가 새로 발급한다. **`Apple Distribution`은 건드리지 않는다.**
 (2026-09-07: 빌드 17에서 발생, 폐기 후 같은 커밋으로 재실행해 통과)
+
+**이번 릴리스에서 쓴 우회** (2026-09-08): 심사 제출에는 새 빌드가 필요 없다. `beta` 레인이
+올린 빌드가 이미 App Store Connect에 있으므로, **`submit` 레인**(`skip_binary_upload: true` +
+`build_number`)으로 그 빌드를 지정해 제출하면 아카이브를 만들지 않아 인증서를 쓰지 않는다.
+바이너리가 바뀌지 않는 재제출·메타데이터 수정에는 `release` 대신 이쪽을 쓴다.
 
 **근본 해결 후보** (마감 뒤에 판단):
 1. Development 인증서와 개인키를 `.p12`로 내보내 GitHub secret에 넣고 빌드 전 러너 키체인에
@@ -531,7 +539,7 @@ git fetch origin && git log --oneline origin/main..origin/fix/tourapi-image-warm
 | 최신 TestFlight 버전 | **1.0.9** (빌드 17, run `34133375267`, 커밋 `ee2031a`) — 다음은 `1.1.0`. 1.0.7·1.0.8은 스핀 버튼 브래킷이 남아 폐기 |
 | 빌드 브랜치 | ✅ `main`. 1.0.8부터는 `main`에서 dispatch한다 |
 | 웹 프로덕션(`spindle-6vp.pages.dev`) | ✅ **해소.** `cf49159` 머지로 배포 완료 (run `34130879541`, 3잡 성공). 번들 `main-DqgMwMWI.js`, `/`·`/support`·`/privacy` 200, 프록시 `resultCode=0000` |
-| 스크린샷 | ⚠ `fastlane/screenshots/ios/ko/` 5장은 1.0.6 이전 UI. 결과 카드 지도(`여기에 있어요`)가 없다 |
+| 스크린샷 | ✅ **해소.** 2026-09-08 `capture:web`으로 라이브 앱에서 재생성 — 관광지·음식점·카페 탭, 새 스핀 마크, 이동시간 한도 반영. 1320x2868·알파 없음·중복 없음. 목업 프레임 하단에서 탭 라벨이 약간 잘리지만 리젝 사유가 아니고 공모전 심사는 웹 URL만 본다 — 여유 있을 때 재생성한다 |
 | TourAPI `detailIntro2` 일일 트래픽 | ⚠ **2026-09-07 시점 소진(429).** 예열 수정은 앞으로의 소비를 줄이지만 오늘 쓴 분량은 되돌리지 못한다 — **자정 리셋 후에 방문 정보를 검증한다** |
 | `gh` CLI | ✅ `C:\Program Files\GitHub CLI\gh.exe` (PATH에는 없음). `enderpawar` 인증됨, 스코프에 `workflow` 포함 |
 
