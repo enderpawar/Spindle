@@ -187,11 +187,20 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 Play 앱 서명이 등록돼 있어 업로드 키는 교체 가능하다. 앱 서명 키는 Google이 갖고 있으므로
 기존 사용자의 업데이트 경로는 끊기지 않는다.
 
-**1) JDK 설치** — 이 머신에는 `keytool`이 없다. AAB 빌드에도 JDK 21이 필요하니 어차피 깔아야 한다.
+**0) 빌드 환경도 함께 없다는 점을 먼저 안다.** 2026-09-07 확인 기준 이 머신에는
+`keytool`(JDK)·`ANDROID_HOME`·`local.properties`가 **전부 없다.** 키를 받아도 Android SDK가
+없으면 `gradlew bundleRelease`가 돌지 않는다. 키 재발급과 별개로 **Android Studio 또는
+JDK 21 + Android SDK 설치가 필요**하다. Android Studio를 깔면 JBR(keytool 포함)과 SDK가
+같이 들어와 한 번에 해결된다.
+
+**1) JDK 설치** — `keytool`이 있어야 키를 만든다.
 
 ```powershell
-winget install EclipseAdoptium.Temurin.21.JDK   # 또는 Android Studio (JBR 번들)
+winget install EclipseAdoptium.Temurin.21.JDK   # keytool만 필요할 때
+winget install Google.AndroidStudio             # SDK까지 필요하면 이쪽 (권장)
 ```
+
+설치 후 PATH가 잡히도록 **새 터미널을 연다.**
 
 **2) 새 업로드 키 생성** — 유효기간은 **2033-10-22 이후**여야 한다는 Play 요건이 있다(`-validity 10000`이면 충족).
 
@@ -203,13 +212,15 @@ keytool -genkeypair -v -keystore spindle-upload.jks -alias spindle-upload \
 비밀번호와 별칭은 기록해 둔다. 파일은 `web/android/`에 두고 `keystore.properties`를 만든다:
 
 ```properties
-storeFile=app/spindle-upload.jks
+storeFile=spindle-upload.jks
 storePassword=<위에서 정한 값>
 keyAlias=spindle-upload
 keyPassword=<위에서 정한 값>
 ```
 
-`storeFile`은 `rootProject.file()` 기준 상대경로다(`app/build.gradle:38`).
+`storeFile`은 `rootProject.file()` 기준이고 여기서 rootProject는 **`web/android`** 다
+(`app/build.gradle:8`이 `rootProject.file("keystore.properties")`를 읽는다). 즉 `.jks`를
+`web/android/`에 두면 파일명만 적으면 된다.
 
 **3) 인증서를 PEM으로 내보낸다** — 요청 양식에 첨부할 파일이다.
 
