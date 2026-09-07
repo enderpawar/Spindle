@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from 'react'
-import { DIAL_STEPS, dialDesc, dialMoodLabel, dialTimeLabel } from '../mock/pois'
+import { DIAL_STEPS, dialTimeLabel } from '../mock/pois'
 
 interface Props {
   /** 현재 이동시간 예산(분). Infinity = 하루 */
@@ -51,13 +51,13 @@ export function minutesToRaw(minutes: number): number {
 const ANCHOR_LABELS = [
   dialTimeLabel(DIAL_STEPS[0]),
   dialTimeLabel(DIAL_STEPS[(DIAL_STEPS.length - 1) / 2]),
-  dialTimeLabel(DIAL_STEPS[DIAL_STEPS.length - 1]),
+  '제한 없음',
 ]
 
 /** 이동시간 다이얼 — 20분~하루를 1분 단위로 부드럽게 조정하는 슬라이더 (스핀·설정 공용) */
 export function DialSlider({ minutes, onChange }: Props) {
   const raw = Math.round(minutesToRaw(minutes))
-  const anchor = Math.round((raw / RAW_MAX) * (ANCHOR_LABELS.length - 1))
+  const selectionLabel = Number.isFinite(minutes) ? `최대 ${dialTimeLabel(minutes)}` : '제한 없음'
 
   /** 키보드 미세 조정 — 화살표 ±1분, PageUp/Down ±30분 (raw 좌표는 1분 미만이라 직접 처리) */
   const nudge = (deltaMin: number) => {
@@ -92,8 +92,8 @@ export function DialSlider({ minutes, onChange }: Props) {
   return (
     <div className="dial-slider">
       <div className="dial-slider-summary" aria-hidden>
-        <span>{dialMoodLabel(minutes)}</span>
-        <span>{dialDesc(minutes)}</span>
+        <span>이동시간 한도</span>
+        <span>{selectionLabel}</span>
       </div>
       <div className="dial-slider-control">
         <div className="dial-slider-track" aria-hidden>
@@ -106,15 +106,15 @@ export function DialSlider({ minutes, onChange }: Props) {
           max={RAW_MAX}
           step={1}
           value={raw}
-          aria-label="이동시간 범위"
-          aria-valuetext={`${dialTimeLabel(minutes)}, ${dialDesc(minutes)}`}
+          aria-label="이동시간 한도"
+          aria-valuetext={selectionLabel}
           onChange={(event) => onChange(rawToMinutes(Number(event.currentTarget.value)))}
           onKeyDown={handleKeyDown}
         />
       </div>
       <div className="dial-slider-labels" aria-hidden>
-        {ANCHOR_LABELS.map((label, i) => (
-          <span key={label} className={i === anchor ? 'is-active' : ''}>{label}</span>
+        {ANCHOR_LABELS.map((label) => (
+          <span key={label}>{label}</span>
         ))}
       </div>
     </div>

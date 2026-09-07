@@ -26,6 +26,13 @@ function areaPoi(overrides: Partial<AreaPoi> = {}): AreaPoi {
 }
 
 describe('transformExtraSpots', () => {
+  it('추천은 지도 핀 제한을 해제하고 전체 음식점·카페 목록을 사용한다', () => {
+    const pois = Array.from({ length: 45 }, (_, i) => areaPoi({ contentid: String(i), contenttypeid: '39', cat3: i < 30 ? 'A05020900' : 'A05020100' }))
+    expect(transformExtraSpots(pois, new Set())).toHaveLength(FOOD_SPOTS_PER_DISTRICT_LIMIT)
+    const pool = transformExtraSpots(pois, new Set(), Infinity)
+    expect(pool).toHaveLength(45)
+    expect(pool.filter(poi => poi.category === '음식점')).toHaveLength(15)
+  })
   it('허용 유형만 남기고 큐레이션·빈 제목·중복 ID·좌표 없는 항목을 제외한다', () => {
     const pois = [
       areaPoi(),

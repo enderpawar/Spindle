@@ -5,10 +5,10 @@ import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
 import { DIRECTIONS, directionFromHeading, type Departure } from '../mock/pois'
 import type { ThemeInfo } from '../engine/themes'
+import type { SpinCategory } from '../engine/diningSpin'
 import { useFieldMode } from '../sensors/useFieldMode'
 import { useShakeSpin } from '../sensors/useShakeSpin'
 
-export type SpinPurpose = 'single' | 'course'
 
 interface Props {
   departure: Departure
@@ -16,16 +16,19 @@ interface Props {
   dial: number
   onDialChange: (minutes: number) => void
   onOpenDeparture: () => void
-  onSpun: (headingDeg: number) => void
+  onSpun: (headingDeg: number) => boolean | void
+  category: SpinCategory
+  onCategoryChange: (category: SpinCategory) => void
+  categoryLoading: boolean
+  categoryError: string | null
+  categoryNotice: string | null
+  onRetryCategory: () => void
   onNavigate: (tab: NavTab) => void
   theme?: ThemeInfo
   themeStep?: number
   themeTarget?: number
   onOpenTheme: () => void
   onClearTheme: () => void
-  purpose: SpinPurpose
-  onPurposeChange: (purpose: SpinPurpose) => void
-  purposeNotice?: string | null
   /** 현장 모드 출발점(현재 위치)이 바뀔 때 알린다. 여행 모드로 돌아오면 null */
   onFieldOriginChange: (origin: Departure | null) => void
 }
@@ -34,19 +37,23 @@ interface Props {
  * 스핀 탭 — 밤바다 몰입 화면.
  * 여행 모드는 원판을 직접 드래그해, 현장 모드는 실제 기기 방위로 방향을 정한다.
  */
-export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate, theme, themeStep, themeTarget, onOpenTheme, onClearTheme, purpose, onPurposeChange, purposeNotice, onFieldOriginChange }: Props) {
+export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onSpun, onNavigate, theme, themeStep, themeTarget, onOpenTheme, onClearTheme, onFieldOriginChange, category, onCategoryChange, categoryLoading, categoryError, categoryNotice, onRetryCategory }: Props) {
   const [spinning, setSpinning] = useState(false)
   const [settled, setSettled] = useState(false)
   const [dirIndex, setDirIndex] = useState(0)
   const liveDir = DIRECTIONS[dirIndex]
   const field = useFieldMode()
   const fieldOn = field.status === 'on'
+  const dataBlocked = categoryLoading || !!categoryError
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const failedHeading = useRef<number | null>(null)
+  useEffect(() => () => clearTimeout(settleTimer.current), [])
 
   // 흔들기 스핀 — 흔드는 동안 원판에 회전 에너지를 넣고, 멈추면 원판이 알아서 감속·정착한다.
   const roseRef = useRef<CompassRoseHandle>(null)
   const handleShake = useCallback((energy: number) => {
-    roseRef.current?.shake(energy)
-  }, [])
+    if (!dataBlocked) roseRef.current?.shake(energy)
+  }, [dataBlocked])
   const shake = useShakeSpin(handleShake)
   const shakeOn = shake.status === 'on' && !fieldOn
 
@@ -67,30 +74,41 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
 
   const handleSettle = useCallback(
     (heading: number) => {
+      if (dataBlocked) return
       setSettled(true)
-      setTimeout(() => onSpun(heading), 700) // 정지 방위를 잠깐 보여주고 연출 화면으로
+      clearTimeout(settleTimer.current)
+      settleTimer.current = setTimeout(() => {
+        if (onSpun(heading) === false) {
+          failedHeading.current = heading
+          setSettled(false)
+          setSpinning(false)
+        }
+      }, 700)
     },
-    [onSpun],
+    [dataBlocked, onSpun],
   )
 
   const busy = spinning || settled
 
   /** 기기를 겨눈 채 방위가 안정되면 자동 잠금 — 수동 `이 방향으로 결정`과 같은 각도를 쓴다. */
   useEffect(() => {
-    if (!fieldOn || !field.aimed || busy || field.heading === null) return
+    if (!fieldOn || !field.aimed || busy || dataBlocked || field.heading === null) return
+    // 후보가 없는 동일 방위로 자동 스핀을 반복하지 않고, 다른 방위를 겨누면 다시 시도한다.
+    if (categoryNotice && failedHeading.current !== null
+      && directionFromHeading(field.heading).id === directionFromHeading(failedHeading.current).id) return
     handleSettle(field.heading)
-  }, [busy, field.aimed, field.heading, fieldOn, handleSettle])
+  }, [busy, categoryNotice, dataBlocked, field.aimed, field.heading, fieldOn, handleSettle])
 
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0', zIndex: 2 }}>
-        <span style={{ fontSize: 19, fontWeight: 900, letterSpacing: -0.4, color: 'var(--l-ink)' }}>스핀</span>
+        <span style={{ fontSize: 19, fontWeight: 800, letterSpacing: -0.4, color: 'var(--l-ink)' }}>스핀</span>
         {fieldOn ? (
           <button
             type="button"
             onClick={field.disable}
             aria-label="나침반 현장 모드 종료"
-            style={{ minHeight: 44, border: 0, background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}
+            style={{ minHeight: 44, border: 0, background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
           >
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--ok)', flex: 'none' }} />
             내 위치 기준 · 나침반
@@ -123,24 +141,34 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
         )}
       </header>
 
-      <div className="spin-purpose" aria-label="스핀 목적">
-        <button type="button" className={purpose === 'single' ? 'is-active' : ''} onClick={() => onPurposeChange('single')}>한 곳</button>
-        <button type="button" className={purpose === 'course' ? 'is-active' : ''} onClick={() => onPurposeChange('course')}>코스</button>
-      </div>
-      {purposeNotice && <p className="spin-purpose-notice" role="status">{purposeNotice}</p>}
+      {!theme && <div className="spin-category-switch" role="group" aria-label="스핀 장소 종류">
+        {(['전체', '음식점', '카페'] as const).map(value => <button key={value} type="button" disabled={busy}
+          aria-pressed={category === value} className={category === value ? 'is-active' : ''}
+          onClick={() => onCategoryChange(value)}>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {value === '전체' ? <><path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" /><circle cx="12" cy="10" r="2.5" /></> : value === '음식점' ? <><path d="M5 3v6a3 3 0 0 0 6 0V3M8 3v18M19 21V3c-4 3-4 8 0 9" /></> : <><path d="M4 8h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5ZM17 9h2a3 3 0 0 1 0 6h-2M7 3v2M12 3v2" /></>}
+          </svg>
+          <span>{value === '전체' ? '관광지' : value}</span>
+        </button>)}
+      </div>}
+      {theme && <div className="spin-category-context">{theme.label} 테마 적용 중 <button type="button" disabled={busy} onClick={onClearTheme}>해제</button></div>}
+      {(categoryLoading || categoryError || categoryNotice) && <div className="spin-category-status" role={categoryError ? 'alert' : 'status'}>
+        {categoryLoading ? `${category}를 불러오는 중이에요` : categoryError ?? categoryNotice}
+        {categoryError && <button type="button" onClick={onRetryCategory}>다시 시도</button>}
+      </div>}
 
       <div className="spin-heading">
         {busy ? (
           <>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>{settled ? '오늘의 방향은' : '방향을 찾는 중…'}</div>
-            <div style={{ marginTop: 4, fontSize: 34, fontWeight: 900, letterSpacing: -0.5, color: settled ? liveDir.color : 'var(--l-ink)', transition: 'color .3s ease' }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>{settled ? '오늘의 방향은' : '방향을 찾는 중…'}</div>
+            <div style={{ marginTop: 4, fontSize: 34, fontWeight: 800, letterSpacing: -0.5, color: settled ? liveDir.color : 'var(--l-ink)', transition: 'color .3s ease' }}>
               {liveDir.label}
             </div>
           </>
         ) : (
           <>
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{fieldOn ? '휴대폰을 돌려 방향을 겨눠보세요' : purpose === 'course' ? '한 번 돌려 오늘의 코스를 만들어요' : theme ? `${theme.label} 테마, 어느 쪽으로 갈까요?` : '오늘, 어느 쪽으로 갈까요?'}</h1>
-            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{fieldOn ? '겨눈 방향에서 잠시 멈추면 그 방위로 정해져요' : purpose === 'course' ? '같은 방향의 장소 2~4곳을 이어드려요' : theme ? '선택한 테마 안에서 방향이 장소를 골라줘요' : '원판을 휙 돌리고, 방향에 맡겨보세요'}</p>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{fieldOn ? '휴대폰을 돌려 방향을 겨눠보세요' : theme ? `${theme.label} 테마, 어느 쪽으로 갈까요?` : category === '음식점' ? '오늘, 어디서 먹을까요?' : category === '카페' ? '잠깐, 커피 한 잔 할까요?' : '오늘, 어느 쪽으로 갈까요?'}</h1>
+            <p style={{ margin: '7px 0 0', fontSize: 13.5, fontWeight: 500, color: 'var(--l-ink-3)' }}>{fieldOn ? '겨눈 방향에서 잠시 멈추면 그 방위로 정해져요' : theme ? '선택한 테마 안에서 방향이 장소를 골라줘요' : category !== '전체' ? `방향에 맞춰 ${category} 한 곳을 추천해요` : '방향에 맞춰 여행지를 추천해요'}</p>
           </>
         )}
       </div>
@@ -161,14 +189,14 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           />
           <CompassRose
             ref={roseRef}
-            disabled={settled}
+            disabled={settled || dataBlocked}
             describedById={!fieldOn && !busy ? 'spin-gesture-instruction' : undefined}
             onSpinningChange={setSpinning}
             onHeading={handleHeading}
             onSettle={handleSettle}
             followHeading={fieldOn && !settled ? field.heading : null}
           />
-          {theme && purpose === 'single' && !busy && (
+          {theme && !busy && (
             <div className="spin-theme-disc-mark" style={{ '--theme-color': theme.color } as React.CSSProperties}>
               {theme.label} 디스크
             </div>
@@ -180,14 +208,14 @@ export function SpinScreen({ departure, dial, onDialChange, onOpenDeparture, onS
           aria-hidden={fieldOn || busy}
         >
           <span className="spin-gesture-cue-mark" aria-hidden />
-          {shakeOn ? '휴대폰을 흔들거나, 원판을 휙 돌려보세요' : '원판을 잡고 휙 돌려보세요'}
+          {shakeOn ? '밀어서 돌리기 · 휴대폰 흔들기' : '원판을 밀어서 돌려보세요'}
         </p>
       </div>
 
       {/* 하단에는 이동시간 카드만 남기고, 스핀 실행은 원판 직접 조작으로 일원화한다. */}
       <div className="spin-controls">
         <div style={{ pointerEvents: busy ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {theme && purpose === 'single' && (
+          {theme && (
             <div className="spin-theme-control">
               <div>
                 <strong style={{ color: theme.color }}>{theme.label}</strong>

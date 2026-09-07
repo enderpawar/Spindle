@@ -1,3 +1,4 @@
+import { PhotoViewer } from '../components/PhotoViewer'
 import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, fetchPoiGalleryImagesCached, knownPoiImageUrl, selectPrimaryVisitFacts, type PoiDetail, type PoiVisitFact } from '../api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from '../api/festivals'
@@ -328,7 +329,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                   type="button"
                   onClick={openGallery}
                   aria-label={`${poi.name} 사진 더 보기`}
-                  style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, minWidth: 44, minHeight: 44, border: 'none', borderRadius: 15, background: 'rgba(15,37,64,.78)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0 12px', cursor: 'pointer', fontSize: 12, fontWeight: 900, backdropFilter: 'blur(6px)' }}
+                  style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 2, minWidth: 44, minHeight: 44, border: 'none', borderRadius: 15, background: 'rgba(15,37,64,.78)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0 12px', cursor: 'pointer', fontSize: 12, fontWeight: 800, backdropFilter: 'blur(6px)' }}
                 >
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
                     <rect x="3" y="5" width="18" height="14" rx="2.5" />
@@ -339,15 +340,15 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 </button>
               )}
               {(!detailImageUrl || imageFailed) && (
-                <span style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.75)' }}>
+                <span style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10.5, fontWeight: 600, color: 'rgba(255,255,255,.75)' }}>
                   {detailImageLoading ? '이미지 불러오는 중' : '대표 이미지 없음'}
                 </span>
               )}
             </div>
 
             <div style={{ padding: '18px 2px 0' }}>
-              <h2 style={{ margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -0.6, lineHeight: 1.2, color: 'var(--l-ink)' }}>{poi.name}</h2>
-              <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700, color: 'var(--l-ink-3)' }}>
+              <h2 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: -0.6, lineHeight: 1.2, color: 'var(--l-ink)' }}>{poi.name}</h2>
+              <div style={{ marginTop: 6, fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>
                 {poi.category} · {poi.district} · 도보 약 {poi.walkMinutes}분 · 근사치
               </div>
               {operation?.notice && (
@@ -364,7 +365,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                   <path d="M12 21 C8.5 17.5 5 13.6 5 9.5 a7 7 0 0 1 14 0 c0 4.1-3.5 8-7 11.5 z" />
                   <circle cx="12" cy="9.5" r="2.4" />
                 </svg>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
               </div>
 
               <section className="result-attraction-section" aria-labelledby="result-attraction-title">
@@ -406,7 +407,7 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                 </p>
               )}
 
-              {!rec.theme && (
+              {!rec.theme && !rec.diningCategory && (
                 <>
                   {/* 일반 스핀은 방향 코스로 확장할 수 있다. 테마 여정에서는 다른 테마가 섞이지 않도록 숨긴다. */}
                   <button
@@ -415,8 +416,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                     className="btn result-course-action"
                   >
                     <span style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 900, letterSpacing: -0.2 }}>이 방향으로 코스 짜기</span>
-                      <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
+                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 800, letterSpacing: -0.2 }}>이 방향으로 코스 짜기</span>
+                      <span style={{ display: 'block', marginTop: 2.5, fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>가까운 장소 2~4곳을 이어 코스로 만들어요</span>
                     </span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
                       <path d="M9 6 l6 6 -6 6" />
@@ -434,8 +435,8 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
                   className="btn"
                   style={{ width: '100%', height: 52, marginTop: 12, background: '#fff', border: '2px solid #d7e3f8', color: 'var(--l-primary)', fontSize: 15 }}
                 >
-                  다른 후보 보기
-                  <span style={{ color: 'var(--l-ink-3)', fontWeight: 700 }}>
+                  {rec.diningCategory ? `다른 ${rec.diningCategory} 보기` : '다른 후보 보기'}
+                  <span style={{ color: 'var(--l-ink-3)', fontWeight: 600 }}>
                     {candidateIndex + 1}/{rec.candidates.length}
                   </span>
                 </button>
@@ -496,57 +497,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
       )}
 
       {/* 도장 획득 토스트 */}
-      {galleryOpen && (
-        <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 14, background: 'rgba(8,20,38,.72)' }}>
-          <button aria-label="닫기" onClick={() => setGalleryOpen(false)} style={{ position: 'absolute', inset: 0, border: 'none', background: 'transparent', cursor: 'pointer' }} />
-          <div className="motion-dialog" style={{ position: 'absolute', left: 18, right: 18, top: '8%', bottom: '8%', display: 'flex', flexDirection: 'column', gap: 12, zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.66)' }}>{poi.district}</div>
-                <div style={{ marginTop: 2, fontSize: 18, fontWeight: 900, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</div>
-              </div>
-              <button onClick={() => setGalleryOpen(false)} aria-label="닫기" className="btn" style={{ width: 44, height: 44, borderRadius: 16, background: 'rgba(255,255,255,.14)', color: '#fff', padding: 0, flex: 'none' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
-                  <path d="M6 6 l12 12 M18 6 L6 18" />
-                </svg>
-              </button>
-            </div>
-
-            <div style={{ position: 'relative', flex: 1, minHeight: 0, borderRadius: 24, overflow: 'hidden', background: `linear-gradient(135deg, ${direction.color}, #1e4fd8 130%)`, display: 'grid', placeItems: 'center', boxShadow: '0 24px 48px -18px rgba(0,0,0,.55)' }}>
-              {activeGalleryImage ? (
-                <img src={activeGalleryImage} alt={poi.name} style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#071326' }} />
-              ) : (
-                <div style={{ display: 'grid', placeItems: 'center', gap: 10, color: 'rgba(255,255,255,.78)', fontSize: 13, fontWeight: 800 }}>
-                  <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-                    <rect x="3" y="5" width="18" height="14" rx="2" />
-                    <path d="M3 17 l5-4 4 3 3-3 6 5" />
-                  </svg>
-                  사진 없음
-                </div>
-              )}
-
-              {galleryImages.length > 1 && (
-                <>
-                  <button onClick={() => moveGallery(-1)} aria-label="이전 사진" className="btn gallery-nav" style={{ position: 'absolute', left: 10, top: '50%', width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,37,64,.72)', color: '#fff', padding: 0 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
-                      <path d="M15 5 L8 12 L15 19" />
-                    </svg>
-                  </button>
-                  <button onClick={() => moveGallery(1)} aria-label="다음 사진" className="btn gallery-nav" style={{ position: 'absolute', right: 10, top: '50%', width: 46, height: 46, borderRadius: '50%', background: 'rgba(15,37,64,.72)', color: '#fff', padding: 0 }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden>
-                      <path d="M9 5 L16 12 L9 19" />
-                    </svg>
-                  </button>
-                </>
-              )}
-            </div>
-
-            <div style={{ minHeight: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'rgba(255,255,255,.75)', fontSize: 12, fontWeight: 800 }}>
-              {galleryLoading ? '사진 불러오는 중' : galleryImages.length > 0 ? `${galleryIndex + 1} / ${galleryImages.length}` : '대표 사진만 표시'}
-            </div>
-          </div>
-        </div>
-      )}
+      {galleryOpen && <PhotoViewer name={poi.name} district={poi.district} src={activeGalleryImage}
+        images={galleryImages} count={galleryImages.length} index={galleryIndex} loading={galleryLoading}
+        onMove={moveGallery} onClose={() => setGalleryOpen(false)} />}
 
       {infoOpen && (
         <div className="motion-overlay" style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
@@ -554,9 +507,9 @@ export function ResultScreen({ rec, candidateIndex, onNextCandidate, onBack, onR
           <div className="motion-sheet no-scrollbar" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '78%', overflowY: 'auto', background: '#fff', borderRadius: '24px 24px 0 0', padding: '22px 20px calc(28px + env(safe-area-inset-bottom))', boxShadow: '0 -12px 40px rgba(20,40,90,.22)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14 }}>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--l-primary)' }}>이 동네 이야기</div>
-                <div style={{ marginTop: 5, fontSize: 21, lineHeight: 1.25, fontWeight: 900, color: 'var(--l-ink)' }}>{poi.name}</div>
-                <div style={{ marginTop: 5, fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>{poi.category} · {poi.district}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--l-primary)' }}>이 동네 이야기</div>
+                <div style={{ marginTop: 5, fontSize: 21, lineHeight: 1.25, fontWeight: 800, color: 'var(--l-ink)' }}>{poi.name}</div>
+                <div style={{ marginTop: 5, fontSize: 12.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{poi.category} · {poi.district}</div>
               </div>
               <button onClick={() => setInfoOpen(false)} aria-label="닫기" className="l-icon-btn" style={{ flex: 'none' }}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>

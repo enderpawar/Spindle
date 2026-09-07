@@ -55,7 +55,7 @@ export function OriginPickScreen({ origin, onConfirm, onBack }: Props) {
             <path d="M15 5 L8 12 L15 19" />
           </svg>
         </button>
-        <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--l-ink)' }}>지도에서 출발점 고르기</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--l-ink)' }}>지도에서 출발점 고르기</span>
       </header>
 
       <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden' }}>
@@ -89,16 +89,16 @@ export function OriginPickScreen({ origin, onConfirm, onBack }: Props) {
       </div>
 
       <section className="origin-pick__sheet">
-        <div aria-live="polite" aria-atomic="true" style={{ fontSize: 16, fontWeight: 800, color: 'var(--l-ink)' }}>
+        <div aria-live="polite" aria-atomic="true" style={{ fontSize: 16, fontWeight: 700, color: 'var(--l-ink)' }}>
           {zone ? `${zone.name} 근처` : '권역 밖이에요'}
         </div>
-        <p style={{ margin: '4px 0 0', fontSize: 12.5, lineHeight: 1.6, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+        <p style={{ margin: '4px 0 0', fontSize: 12.5, lineHeight: 1.6, fontWeight: 500, color: 'var(--l-ink-3)' }}>
           {zone
             ? '지도를 움직여 핀 끝을 출발하고 싶은 자리에 두세요. 이 좌표는 단말 안에서만 쓰여요.'
             : 'Spindle은 부산 원도심과 영도를 안내해요. 권역 안 지점으로 옮겨 주세요.'}
         </p>
         {notice && (
-          <p role="status" style={{ margin: '8px 0 0', fontSize: 12.5, lineHeight: 1.55, fontWeight: 600, color: 'var(--l-ink-2)' }}>
+          <p role="status" style={{ margin: '8px 0 0', fontSize: 12.5, lineHeight: 1.55, fontWeight: 500, color: 'var(--l-ink-2)' }}>
             {notice}
           </p>
         )}

@@ -4,7 +4,9 @@ import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
-import { THEMES, poisByTheme, representativePoiForTheme, themeInfo, type ThemeId } from '../engine/themes'
+import { ThemeNavigation } from '../components/ThemeNavigation'
+import { ThemeHero } from '../components/ThemeHero'
+import { poisByTheme, representativePoiForTheme, themeInfo, type ThemeId } from '../engine/themes'
 import { directionOf, type Departure, type Poi } from '../mock/pois'
 import { useVisited } from '../lib/visited'
 import { fetchThemeCafes } from './themeCafes'
@@ -47,8 +49,8 @@ export function ThemeCafeSection({ themeId, spots, onSelect }: {
                     markVisited 흐름은 유지하되 카페 카드에는 도장 배지를 표시하지 않는다. */}
               </div>
               <div style={{ padding: '9px 2px 0' }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--l-ink)' }}>{poi.name}</div>
-                <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink)' }}>{poi.name}</div>
+                <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 500, color: 'var(--l-ink-3)' }}>
                   {poi.category} · {poi.district}
                 </div>
               </div>
@@ -95,84 +97,15 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, departure, onStar
             <path d="M15 5 L8 12 L15 19" />
           </svg>
         </button>
-        <div style={{ fontSize: 19, fontWeight: 900, color: 'var(--l-ink)', letterSpacing: -0.4 }}>테마로 떠나기</div>
+        <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--l-ink)', letterSpacing: -0.4 }}>테마로 떠나기</div>
       </header>
 
-      {/* 테마 칩 */}
-      <div className="no-scrollbar" style={{ display: 'flex', gap: 9, padding: '12px 16px 4px', overflowX: 'auto', zIndex: 2 }}>
-        {THEMES.map((t) => {
-          const on = t.id === themeId
-          return (
-            <button
-              key={t.id}
-              onClick={() => setThemeId(t.id)}
-              className="motion-card"
-              style={{
-                flex: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                minHeight: 44,
-                padding: '9px 15px',
-                borderRadius: 999,
-                border: on ? 'none' : '1.5px solid var(--l-line)',
-                background: on ? 'var(--l-primary)' : '#fff',
-                color: on ? '#fff' : 'var(--l-ink-2)',
-                fontSize: 13,
-                fontWeight: 800,
-                cursor: 'pointer',
-                boxShadow: on ? '0 8px 18px -8px rgba(47,92,255,.55)' : 'none',
-              }}
-            >
-              <span aria-hidden>{t.emoji}</span>
-              {t.label}
-            </button>
-          )
-        })}
-      </div>
+      <ThemeNavigation value={themeId} onChange={setThemeId} />
 
       {/* 선택 테마 소개·사진 히어로·장소 목록은 한 흐름으로 함께 스크롤한다. */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
-        <div style={{ padding: '10px 18px 0', zIndex: 2 }}>
-          <div className="theme-deck-summary">
-            <span><b style={{ color: theme.color }}>{theme.label}</b> {theme.tagline}</span>
-            <strong>{pois.length}곳</strong>
-          </div>
-        </div>
-
-        <section
-          key={themeId}
-          className="theme-story-card"
-          style={{ '--theme-color': theme.color } as React.CSSProperties}
-          aria-labelledby="theme-story-title"
-        >
-          <div className="theme-story-glow" aria-hidden="true" />
-          <div className="theme-story-copy">
-            <span className="theme-story-symbol" aria-hidden>{theme.emoji}</span>
-            <h1 id="theme-story-title">{theme.label} 테마로<br />방향을 맡겨보세요</h1>
-            <p>{journeyTarget}개의 장면, 매번 다른 여행 미션을 만나요.</p>
-            <button
-              type="button"
-              className="theme-story-cta motion-card"
-              onClick={() => onStart(themeId)}
-              disabled={pois.length === 0}
-            >
-              이 테마로 돌리기
-            </button>
-          </div>
-          <div className="theme-story-media">
-            <div className="theme-story-photo-fallback" aria-hidden>
-              <span>{theme.emoji}</span>
-            </div>
-            {representative && (
-              <PoiPhoto
-                contentId={representative.contentId}
-                alt={`${theme.label} 테마 대표 장소 ${representative.name}`}
-                scrim
-              />
-            )}
-          </div>
-        </section>
+        <ThemeHero key={themeId} theme={theme} representative={representative}
+          count={pois.length} journeyTarget={journeyTarget} onStart={onStart} />
 
         {/* POI 덱 그리드 */}
         <div style={{ padding: '14px 16px 0' }}>
@@ -202,8 +135,8 @@ export function ThemeDeckScreen({ initialTheme, journeyTarget, departure, onStar
                   )}
                 </div>
                 <div style={{ padding: '9px 2px 0' }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--l-ink)' }}>{poi.name}</div>
-                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink)' }}>{poi.name}</div>
+                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 500, color: 'var(--l-ink-3)' }}>
                     {poi.category} · {poi.district}
                   </div>
                 </div>

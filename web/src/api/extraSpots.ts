@@ -52,6 +52,7 @@ function compareFoodCandidates(a: FoodSpotCandidate, b: FoodSpotCandidate): numb
 export function transformExtraSpots(
   pois: readonly AreaPoi[],
   excludeContentIds: ReadonlySet<string>,
+  foodLimitPerDistrict = FOOD_SPOTS_PER_DISTRICT_LIMIT,
 ): ExtraSpot[] {
   const seenContentIds = new Set<string>()
   const spots: ExtraSpot[] = []
@@ -100,7 +101,7 @@ export function transformExtraSpots(
     const { districtCode, spot } = candidate
     if (seenContentIds.has(spot.contentId)) continue
     const count = foodCountByDistrict.get(districtCode) ?? 0
-    if (count >= FOOD_SPOTS_PER_DISTRICT_LIMIT) continue
+    if (count >= foodLimitPerDistrict) continue
 
     seenContentIds.add(spot.contentId)
     foodCountByDistrict.set(districtCode, count + 1)

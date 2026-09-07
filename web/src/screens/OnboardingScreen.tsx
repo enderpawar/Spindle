@@ -28,7 +28,7 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '18px 20px 0', zIndex: 2 }}>
-        <button onClick={onDone} className="btn" style={{ background: 'none', border: 'none', color: 'var(--l-ink-3)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: '6px 10px' }}>
+        <button onClick={onDone} className="btn" style={{ background: 'none', border: 'none', color: 'var(--l-ink-3)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '6px 10px' }}>
           건너뛰기
         </button>
       </div>
@@ -39,11 +39,11 @@ export function OnboardingScreen({ onDone }: { onDone: () => void }) {
           <img src={slide.img} alt="" style={{ width: 168, filter: 'drop-shadow(0 16px 26px rgba(20,40,90,.22))', animation: 'bob 3.4s ease-in-out infinite' }} />
         </div>
         <div>
-          <h1 style={{ margin: 0, fontSize: 25, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{slide.title}</h1>
+          <h1 style={{ margin: 0, fontSize: 25, fontWeight: 800, letterSpacing: -0.5, color: 'var(--l-ink)' }}>{slide.title}</h1>
           <p style={{ margin: '12px 0 0', fontSize: 15, lineHeight: 1.6, fontWeight: 500, color: 'var(--l-ink-2)', whiteSpace: 'pre-line' }}>{slide.body}</p>
         </div>
         {last && (
-          <div style={{ padding: '13px 18px', borderRadius: 16, background: '#fff', border: '1px solid var(--l-line)', boxShadow: '0 8px 20px -16px rgba(20,40,90,.3)', fontSize: 12.5, fontWeight: 600, lineHeight: 1.55, color: 'var(--l-ink-2)' }}>
+          <div style={{ padding: '13px 18px', borderRadius: 16, background: '#fff', border: '1px solid var(--l-line)', boxShadow: '0 8px 20px -16px rgba(20,40,90,.3)', fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, color: 'var(--l-ink-2)' }}>
             부산에 계시다면 <b style={{ color: 'var(--l-ink)' }}>현장 모드</b>(나침반)로,
             <br />
             아니라면 <b style={{ color: 'var(--l-ink)' }}>여행 모드</b>로 어디서든 돌릴 수 있어요

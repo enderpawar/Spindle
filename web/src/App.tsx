@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, primeOperationInfo } from './api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
+import { transformExtraSpots, type ExtraSpot } from './api/extraSpots'
+import { failureCauseLine } from './api/failureCopy'
+import { recommendDiningSpin, type SpinCategory } from './engine/diningSpin'
 import { CURATED_CONTENT_IDS, recommendFromSpin } from './engine/spinRecommend'
-import { buildCourseFromAnchor, buildCourseFromSpin, type ReadyCourse } from './engine/spinCourse'
+import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { SpotsScreen } from './screens/SpotsScreen'
-import { SpinScreen, type SpinPurpose } from './screens/SpinScreen'
+import { SpinScreen } from './screens/SpinScreen'
 import { StampScreen } from './screens/StampScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { DepartureScreen } from './screens/DepartureScreen'
@@ -63,8 +66,11 @@ function App() {
   const [poiReturn, setPoiReturn] = useState<Screen>('home')
   const [course, setCourse] = useState<ReadyCourse | null>(null)
   const [courseReturn, setCourseReturn] = useState<Screen>('result')
-  const [spinPurpose, setSpinPurpose] = useState<SpinPurpose>('single')
-  const [spinPurposeNotice, setSpinPurposeNotice] = useState<string | null>(null)
+  const [spinCategory, setSpinCategory] = useState<SpinCategory>('전체')
+  const [diningSpots, setDiningSpots] = useState<ExtraSpot[] | null>(null)
+  const [diningError, setDiningError] = useState<string | null>(null)
+  const [diningRetry, setDiningRetry] = useState(0)
+  const [diningNotice, setDiningNotice] = useState<string | null>(null)
   const [courseFailureNotice, setCourseFailureNotice] = useState<string | null>(null)
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
@@ -162,14 +168,40 @@ function App() {
   // 현장 모드면 실제 현재 위치가, 여행 모드면 선택한 프리셋이 추천·코스의 출발점이다.
   const origin = fieldOrigin ?? departure
 
+  useEffect(() => {
+    if (spinCategory === '전체') return
+    let active = true
+    setDiningError(null)
+    fetchAllOldTownPois().then(regions => {
+      if (active) setDiningSpots(transformExtraSpots(regions.flatMap(region => region.pois), new Set(), Infinity))
+    }).catch((error: unknown) => {
+      if (active) setDiningError(`장소를 불러오지 못했어요 · ${failureCauseLine(error)}`)
+    })
+    return () => { active = false }
+  }, [spinCategory, diningRetry])
+
+  const changeSpinCategory = (category: SpinCategory) => {
+    setSpinCategory(category)
+    setDiningNotice(null)
+    if (category !== '전체') setThemeJourney(null)
+  }
+
   const handleSpun = (headingDeg: number) => {
-    const nextRec = recommendFromSpin({
+    const input = {
       heading: headingDeg,
       departure: origin,
       budgetMinutes: dial,
-      prevContentId: rec?.candidates[0]?.contentId,
-      themeJourney: spinPurpose === 'single' ? themeJourney ?? undefined : undefined,
-    })
+      prevContentId: rec?.candidates[candidateIndex]?.contentId,
+      themeJourney: themeJourney ?? undefined,
+    }
+    const nextRec = spinCategory !== '전체'
+      ? recommendDiningSpin({ ...input, category: spinCategory, spots: diningSpots ?? [] })
+      : recommendFromSpin(input)
+    if (nextRec.candidates.length === 0) {
+      setDiningNotice(`이 방향과 이동시간에 맞는 ${spinCategory === '카페' ? '카페가' : '음식점이'} 없어요. 방향을 바꾸거나 이동시간을 늘려보세요.`)
+      return false
+    }
+    setDiningNotice(null)
     setRec(nextRec)
     setCandidateIndex(0)
     setPoiReturn('home')
@@ -191,27 +223,6 @@ function App() {
             }
           }, 500)
         })
-    }
-    if (spinPurpose === 'course') {
-      const anchor = nextRec.candidates[0]
-      const result = anchor ? buildCourseFromSpin({
-        departure: origin,
-        budgetMinutes: dial,
-        anchor,
-        headingDeg,
-        noteReason: nextRec.expandReason,
-      }) : null
-      if (result?.status === 'ready') {
-        setCourse(result)
-        setCourseReturn('spin')
-        setCourseFailureNotice(null)
-        goTo('course')
-      } else {
-        setPoiReturn('spin')
-        setCourseFailureNotice(`이 방향은 코스로 잇기 어려워요. ${result?.reason ?? '코스 다시 돌리기를 눌러 주세요.'}`)
-        goTo('result')
-      }
-      return
     }
     setCourseFailureNotice(null)
     goTo('reveal')
@@ -238,15 +249,16 @@ function App() {
   }
 
   const startThemeJourney = (themeId: ThemeId) => {
+    setSpinCategory('전체')
+    setDiningNotice(null)
     setThemeSeed(themeId)
     setThemeJourney({ themeId, step: 1, target: themeJourneyTarget(dial) })
     setCandidateIndex(0)
-    setSpinPurpose('single')
-    setSpinPurposeNotice(null)
     goTo('spin')
   }
 
   const changeDial = (nextDial: number) => {
+    setDiningNotice(null)
     setDial(nextDial)
     setThemeJourney((journey) => {
       if (!journey) return journey
@@ -287,17 +299,6 @@ function App() {
     return result.reason
   }
 
-  const changeSpinPurpose = (purpose: SpinPurpose) => {
-    setSpinPurpose(purpose)
-    setCourseFailureNotice(null)
-    if (purpose === 'course' && themeJourney) {
-      setThemeJourney(null)
-      setSpinPurposeNotice('코스 모드에서는 테마 여정을 잠시 마쳐요.')
-    } else {
-      setSpinPurposeNotice(null)
-    }
-  }
-
   const openDeparture = (from: Screen) => {
     setDepartureReturn(from)
     goTo('departure')
@@ -323,15 +324,18 @@ function App() {
           onDialChange={changeDial}
           onOpenDeparture={() => openDeparture('spin')}
           onSpun={handleSpun}
+          category={spinCategory}
+          onCategoryChange={changeSpinCategory}
+          categoryLoading={spinCategory !== '전체' && diningSpots === null && diningError === null}
+          categoryError={spinCategory !== '전체' ? diningError : null}
+          categoryNotice={diningNotice}
+          onRetryCategory={() => { setDiningError(null); setDiningRetry(value => value + 1) }}
           onNavigate={navigate}
           theme={themeJourney ? themeInfo(themeJourney.themeId) : undefined}
           themeStep={themeJourney?.step}
           themeTarget={themeJourney?.target}
           onOpenTheme={() => openTheme(themeJourney?.themeId ?? themeSeed, 'spin')}
           onClearTheme={() => setThemeJourney(null)}
-          purpose={spinPurpose}
-          onPurposeChange={changeSpinPurpose}
-          purposeNotice={spinPurposeNotice}
           onFieldOriginChange={setFieldOrigin}
         />
       )
@@ -398,7 +402,6 @@ function App() {
           departure={origin}
           onBack={() => goTo(courseReturn)}
           onRespin={() => {
-            setSpinPurpose(courseReturn === 'spin' ? 'course' : 'single')
             goTo('spin')
           }}
         />

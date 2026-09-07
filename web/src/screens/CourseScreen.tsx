@@ -120,7 +120,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
             <path d="M15 5 L8 12 L15 19" />
           </svg>
         </button>
-        <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--l-ink)' }}>{direction.label}쪽 코스</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--l-ink)' }}>{direction.label}쪽 코스</div>
         <div style={{ width: 40 }} />
       </header>
 
@@ -128,9 +128,9 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
       <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <MapView pois={stopPois} departure={departure} selectedId={selectedId} onPick={setSelectedId} courseOrder={courseOrder} />
         <div style={{ position: 'absolute', left: 16, top: 14, display: 'inline-flex', alignItems: 'center', gap: 9, padding: '9px 14px', borderRadius: 14, background: 'rgba(255,255,255,.94)', boxShadow: '0 6px 16px -8px rgba(20,40,90,.35)' }}>
-          <span style={{ fontSize: 13, fontWeight: 900, color: 'var(--l-ink)' }}>{stops.length}곳 코스</span>
+          <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--l-ink)' }}>{stops.length}곳 코스</span>
           <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'var(--l-ink-3)' }} />
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>총 약 {totalMinutes}분 · 근사치</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>총 약 {totalMinutes}분 · 근사치</span>
         </div>
       </div>
 
@@ -138,7 +138,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
       {reasons.length > 0 && (
         <div style={{ flex: 'none', padding: '10px 20px 0', display: 'flex', flexDirection: 'column', gap: 3 }}>
           {reasons.map((reason) => (
-            <div key={reason} style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--l-ink-3)' }}>· {reason}</div>
+            <div key={reason} style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>· {reason}</div>
           ))}
         </div>
       )}
@@ -177,7 +177,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
               {/* 장소 사진 — 번호만 보여주지 않고 대표 사진을 먼저 (없으면 방위색 폴백) */}
               <div style={{ position: 'relative', height: 100, overflow: 'hidden', background: `linear-gradient(150deg, ${direction.color}, #1e4fd8 140%)` }}>
                 <PoiPhoto contentId={stop.poi.contentId} alt={stop.poi.name} scrim />
-                <span style={{ position: 'absolute', top: 10, left: 10, minWidth: 24, height: 24, padding: '0 8px', borderRadius: 12, background: 'rgba(15,37,64,.82)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 900 }}>
+                <span style={{ position: 'absolute', top: 10, left: 10, minWidth: 24, height: 24, padding: '0 8px', borderRadius: 12, background: 'rgba(15,37,64,.82)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 800 }}>
                   {stop.order}
                 </span>
                 {done && (
@@ -190,11 +190,11 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
               </div>
 
               <div style={{ padding: '11px 14px 13px' }}>
-                <div style={{ fontSize: 15.5, fontWeight: 900, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.poi.name}</div>
-                <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                <div style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.poi.name}</div>
+                <div style={{ marginTop: 4, fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>
                   {stop.poi.category} · {stop.poi.district}
                 </div>
-                <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>{legLabel(stop)}</div>
+                <div style={{ marginTop: 3, fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>{legLabel(stop)}</div>
                 <a
                   href={kakaoMapDirectionsUrl(stop.poi.name, stop.poi.lat, stop.poi.lon)}
                   target="_blank"
@@ -227,15 +227,15 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
           style={{ flex: 'none', margin: '0 20px 8px', padding: '13px 15px 15px', borderRadius: 18, background: '#fff', border: '1.5px solid var(--l-line)', boxShadow: '0 10px 24px -18px rgba(20,40,90,.4)' }}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 11.5, fontWeight: 900, color: 'var(--l-primary)' }}>{stage === 'first' ? '1단계' : '2단계'}</span>
-            <strong style={{ fontSize: 14.5, fontWeight: 900, color: 'var(--l-ink)' }}>
+            <span style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--l-primary)' }}>{stage === 'first' ? '1단계' : '2단계'}</span>
+            <strong style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)' }}>
               {stage === 'first' ? `${firstStop?.poi.name ?? '1번 장소'}로 이동` : '코스 순서대로 이동'}
             </strong>
           </div>
 
           {stage === 'first' ? (
             <>
-              <p style={{ margin: '6px 0 11px', fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-3)' }}>
+              <p style={{ margin: '6px 0 11px', fontSize: 12, fontWeight: 500, lineHeight: 1.5, color: 'var(--l-ink-3)' }}>
                 {firstStopDirectionsHref
                   ? '카카오맵에서 1번 장소까지 안내받으세요. 출발지는 카카오맵이 직접 잡습니다.'
                   : '1번 장소의 좌표가 없어 길찾기 링크를 만들지 못했어요. 아래 카드의 장소명으로 검색해 주세요.'}
@@ -269,7 +269,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
             </>
           ) : (
             <>
-              <p style={{ margin: '6px 0 11px', fontSize: 12, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-3)' }}>
+              <p style={{ margin: '6px 0 11px', fontSize: 12, fontWeight: 500, lineHeight: 1.5, color: 'var(--l-ink-3)' }}>
                 {courseWalkHref
                   ? `이제 ${stops.length}곳을 순서대로 둘러보세요. 카카오맵이 1번부터의 방문 순서를 이어서 안내합니다.`
                   : '좌표가 있는 장소가 부족해 전체 코스 링크를 만들지 못했어요. 아래 카드에서 장소별로 길찾기를 이용해 주세요.'}
@@ -304,7 +304,7 @@ export function CourseScreen({ course, departure, onBack, onRespin }: Props) {
       )}
 
       {stage === 'idle' && (
-        <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 600 }}>
+        <p style={{ flex: 'none', margin: '0 20px 6px', color: 'var(--l-ink-3)', fontSize: 11.5, fontWeight: 500 }}>
           안내를 시작하면 1번 장소까지 먼저 이동한 뒤, 도착을 확인하고 전체 코스로 넘어가요.
         </p>
       )}

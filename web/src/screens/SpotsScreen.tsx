@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { failureCauseLine } from '../api/failureCopy'
 import {
   fetchOldTownCongestionCached,
@@ -15,6 +15,7 @@ import {
 import { fetchExtraSpots, toDisplayPoi, type ExtraSpot } from '../api/extraSpots'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { PoiPhoto } from '../components/PoiPhoto'
+import { SpotsCategoryNavigation } from '../components/SpotsCategoryNavigation'
 import { ScreenFrame } from '../components/ScreenFrame'
 import { SourceLine } from '../components/SourceLine'
 import { MapView } from '../map/MapView'
@@ -33,6 +34,50 @@ const CATEGORY_FILTERS = ['전체', '음식점', '카페'] as const
 type CategoryFilter = (typeof CATEGORY_FILTERS)[number]
 const CURATED_CONTENT_IDS = new Set(POI_POOL.map((poi) => poi.contentId))
 const EMPTY_STATUS_MAP = new Map<string, CongestionVisualStatus>()
+
+function RegionPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const close = () => { setOpen(false); trigger.current?.focus() }
+  useBackGuard(open, close)
+
+  useEffect(() => {
+    if (!open) return
+    const outside = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', outside)
+    return () => document.removeEventListener('pointerdown', outside)
+  }, [open])
+
+  return (
+    <div ref={root} className="spots-region-select" onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+    }} onKeyDown={(event) => {
+      if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); close() }
+    }}>
+      <button ref={trigger} type="button" className={`spots-region-trigger ${open ? 'is-open' : ''}`}
+        aria-label={`지역 선택: ${value === '전체' ? '모든 지역' : value}`}
+        aria-expanded={open} aria-controls="spots-region-options" onClick={() => setOpen(!open)}>
+        {value === '전체' ? '모든 지역' : value}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && <div id="spots-region-options" className="spots-region-options" role="group" aria-label="지역 선택">
+        <div className="spots-region-options__title">어디를 둘러볼까요?</div>
+        {FILTERS.map((district) => (
+          <button key={district} type="button" aria-pressed={district === value}
+            onClick={() => { onChange(district); close() }}>
+            <span>{district === '전체' ? '모든 지역' : district}</span>
+            {district === value && <span className="spots-region-check" aria-hidden="true">✓</span>}
+          </button>
+        ))}
+      </div>}
+    </div>
+  )
+}
 
 interface Props {
   departure: Departure
@@ -96,9 +141,9 @@ function PoiCardBody({ poi, status, summary, notice }: {
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ width: 10, height: 10, borderRadius: '50%', background: dir.color, flex: 'none' }} />
-        <span style={{ fontSize: 15.5, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</span>
+        <span style={{ fontSize: 15.5, fontWeight: 700, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</span>
       </div>
-      <div style={{ marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+      <div style={{ marginTop: 4, fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>
         {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
       </div>
       {notice && (
@@ -108,7 +153,7 @@ function PoiCardBody({ poi, status, summary, notice }: {
         </div>
       )}
       {!notice && status && <CongestionBadge status={status} />}
-      <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 600, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <div style={{ marginTop: 6, fontSize: 12.5, lineHeight: 1.5, fontWeight: 500, color: 'var(--l-ink-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {summary ?? poi.story}
       </div>
     </>
@@ -137,9 +182,9 @@ function PoiListCard({ poi, status, notice, onSelect }: {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--l-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{poi.name}</span>
         </div>
-        <div style={{ marginTop: 3, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+        <div style={{ marginTop: 3, fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>
           {poi.category} · {poi.district} · {dir.label}쪽 도보 {poi.walkMinutes}분
         </div>
         {notice && (
@@ -218,8 +263,8 @@ export function ExtraSpotsStatus({
     return (
       <div className="extra-spots-status" role="status">
         {categoryFilter === '전체'
-          ? `큐레이션 ${curatedCount}곳 + 관광공사 등록 명소 ${filteredCount}곳`
-          : `관광공사 등록 ${filteredCount}곳`}
+          ? `둘러볼 곳 ${curatedCount + filteredCount}곳`
+          : `${categoryFilter} ${filteredCount}곳`}
       </div>
     )
   }
@@ -333,8 +378,10 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     [congestion, congestionCandidates, congestionDate],
   )
   const statusByPoiId = useMemo(
-    () => filterCongestionStatusMap(allStatusByPoiId, [...list, ...extraDisplayPois]),
-    [allStatusByPoiId, extraDisplayPois, list],
+    () => categoryFilter === '전체'
+      ? filterCongestionStatusMap(allStatusByPoiId, [...list, ...extraDisplayPois])
+      : EMPTY_STATUS_MAP,
+    [allStatusByPoiId, categoryFilter, extraDisplayPois, list],
   )
   const congestionCounts = useMemo(() => {
     let busy = 0
@@ -415,8 +462,8 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header className="spots-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '12px 16px 0', zIndex: 5 }}>
         <div>
-          <div className="spots-title" style={{ fontSize: 22, fontWeight: 900, color: 'var(--l-ink)' }}>명소 둘러보기</div>
-          <div className="spots-subtitle" style={{ marginTop: 2, fontSize: 13, fontWeight: 600, color: 'var(--l-ink-3)' }}>원도심과 영도, {POI_POOL.length}곳의 이야기</div>
+          <div className="spots-title" style={{ fontSize: 22, fontWeight: 800, color: 'var(--l-ink)' }}>명소 둘러보기</div>
+          <div className="spots-subtitle" style={{ marginTop: 2, fontSize: 13, fontWeight: 500, color: 'var(--l-ink-3)' }}>부산 원도심과 영도, 취향 따라 발견</div>
         </div>
         <div className="spots-view-toggle" style={{ display: 'flex', flex: 'none', padding: 3, gap: 2, borderRadius: 14, background: '#fff', boxShadow: '0 6px 14px -8px rgba(20,40,90,.25)' }}>
           {(
@@ -428,6 +475,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             <button
               key={m}
               onClick={() => setMode(m)}
+              aria-pressed={mode === m}
               className="motion-card"
               style={{
                 border: 'none',
@@ -435,7 +483,7 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
                 padding: '7px 14px',
                 borderRadius: 11,
                 fontSize: 12.5,
-                fontWeight: 800,
+                fontWeight: 700,
                 whiteSpace: 'nowrap',
                 background: mode === m ? 'var(--l-primary)' : 'transparent',
                 color: mode === m ? '#fff' : '#7089b8',
@@ -447,23 +495,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         </div>
       </header>
 
-      <div className="no-scrollbar" aria-label="지역 필터" style={{ display: 'flex', gap: 8, padding: '9px 16px 8px', overflowX: 'auto', zIndex: 5 }}>
-        {FILTERS.map((f) => (
-          <button key={f} className={`l-zone-chip ${f === filter ? 'on' : ''}`} onClick={() => setFilter(f)}>
-            {f}
-          </button>
-        ))}
-      </div>
-      <div className="no-scrollbar" aria-label="종류 필터" style={{ display: 'flex', gap: 8, padding: '0 16px 8px', overflowX: 'auto', zIndex: 5 }}>
-        {CATEGORY_FILTERS.map((category) => (
-          <button
-            key={category}
-            className={`l-zone-chip ${category === categoryFilter ? 'on' : ''}`}
-            onClick={() => setCategoryFilter(category)}
-          >
-            {category}
-          </button>
-        ))}
+      <div className="spots-filter-bar spots-filter-bar--icons">
+        <SpotsCategoryNavigation value={categoryFilter} onChange={setCategoryFilter} />
+        <RegionPicker value={filter} onChange={setFilter} />
       </div>
 
       {mode === 'map' ? (
@@ -485,12 +519,12 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
             <SourceLine style={{ margin: 0, color: '#61789d', fontSize: 9.5, lineHeight: 1.25 }} />
           </div>
           <div className="map-status-stack">
-            <CongestionStatus
+            {categoryFilter === '전체' && <CongestionStatus
               state={congestion}
               busyCount={congestionCounts.busy}
               goodCount={congestionCounts.good}
               onRetry={() => setCongestionRetry((value) => value + 1)}
-            />
+            />}
             <ExtraSpotsStatus
               categoryFilter={categoryFilter}
               extraSpots={extraSpots}
@@ -550,12 +584,12 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
         </>
       ) : (
         <div className="no-scrollbar motion-card-list" style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(var(--nav-h, calc(88px + env(safe-area-inset-bottom))) + 16px)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <CongestionStatus
+          {categoryFilter === '전체' && <CongestionStatus
             state={congestion}
             busyCount={congestionCounts.busy}
             goodCount={congestionCounts.good}
             onRetry={() => setCongestionRetry((value) => value + 1)}
-          />
+          />}
           {categoryFilter !== '전체' && (
             <ExtraSpotsStatus
               categoryFilter={categoryFilter}
