@@ -3118,6 +3118,25 @@ button:disabled,
 }
 
 /* ─── 접근성 · 상호작용 (상용 품질 플로어) ─── */
+/*
+ * iOS 16+ WKWebView는 롱프레스한 이미지의 피사체를 인식해 모서리 브래킷을 그린다
+ * (Live Text·피사체 들어올리기). 스핀 버튼을 꾹 누르면 별 로고가 피사체로 잡혔다.
+ * body의 -webkit-touch-callout은 "공유·저장하기" 콜아웃만 막고 이 오버레이는 막지 못한다.
+ *
+ * 장식용 이미지를 히트 테스트에서 빼면 롱프레스가 이미지에 닿지 않아 브래킷이 뜨지 않는다.
+ * alt=""·aria-hidden은 정의상 장식용이라 클릭 대상이 아니고(핸들러는 부모 버튼이 갖는다),
+ * .poi-photo는 alt가 비어 있지 않지만 감싼 카드가 클릭을 받는 표시 전용 이미지다 —
+ * 실사진이라 Live Text가 가장 잘 걸리는 쪽이다.
+ * -webkit-user-drag는 Android WebView·Chrome의 이미지 드래그 고스트도 함께 막는다.
+ *
+ * 탭 대상인 이미지(결과 카드 대표 사진의 onClick)는 여기 걸리면 동작이 죽으므로 제외한다.
+ */
+img[alt=""],
+img[aria-hidden="true"],
+.poi-photo {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
 /* 키보드 포커스만 링을 그리고(마우스 클릭엔 안 그림), 링은 브랜드 블루로 통일 */
 :focus:not(:focus-visible) {
   outline: none;
