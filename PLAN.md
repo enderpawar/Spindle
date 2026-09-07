@@ -275,10 +275,29 @@ Phase N을 실행할 때 순서대로:
 - [ ] 실기기(TestFlight 1.0.7)에서 앱을 여러 번 재시작해도 방문 정보가 계속 뜨는지,
       명소 탭 운영중단 흐린 핀이 유지되는지 확인 — `APP_STORE_RELEASE.md` 4절 체크리스트
 
-### 미커밋 위험 — 웹 프로덕션이 뒤처져 있다 (2026-09-07)
+### 롱프레스 이미지 브래킷 제거 (2026-09-07)
 
-`deploy.yml`은 `main` push만 트리거하는데 `origin/main`은 `0245b6c`(2026-09-02)에서 멈춰 있다.
-iOS는 `fix/tourapi-image-warmup`에서 dispatch해 1.0.7까지 최신이지만, **심사 제출용 URL인
-`https://spindle-6vp.pages.dev`는 9/02 버전**이다.
+TestFlight 1.0.7 실기기에서 하단 내비게이션 스핀 버튼을 꾹 누르면 모서리 브래킷이 나타났다.
+iOS 16+ WKWebView의 Live Text·피사체 들어올리기가 별 로고를 피사체로 인식한 것이다.
+`body`의 `-webkit-touch-callout: none`(커밋 `e630e60`)은 콜아웃 메뉴만 막고 이 오버레이는 막지 못한다.
 
-- [ ] `fix/tourapi-image-warmup` → `main` 머지로 웹·프록시 프로덕션 배포 — **마감 전 필수**
+- [x] 장식용 이미지(`alt=""`·`aria-hidden`)와 `.poi-photo`를 히트 테스트에서 제외 —
+      롱프레스가 이미지에 닿지 않아 브래킷이 뜨지 않는다. 클릭은 부모 버튼이 받으므로 동작 무영향.
+      `-webkit-user-drag: none`으로 Android WebView·Chrome 드래그 고스트도 함께 막았다.
+- [x] 장식용 이미지 중 `onClick`을 가진 것이 없음을 확인. 탭 대상인 결과 카드 대표 사진
+      (`ResultScreen.tsx:287`)은 규칙에서 제외 — 걸리면 갤러리가 열리지 않는다.
+- [x] 배포본 CSS에 규칙 반영 확인 (`main-C_Q3mk0Q.css`).
+- [ ] iOS 1.0.8 실기기에서 브래킷이 사라졌는지, 스핀 버튼 탭이 정상인지 확인
+- [ ] 결과 카드 대표 사진의 롱프레스는 이번 범위 밖 — 핸들러를 감싼 `<div>`로 옮기면
+      이미지 폴백 상태까지 클릭 가능해지는 동작 변경이 생긴다. 필요해지면 별도로 판단한다.
+
+### 웹 프로덕션 배포 (2026-09-07) — 해소
+
+`deploy.yml`이 `main` push만 트리거하는데 `origin/main`이 `0245b6c`(2026-09-02)에서 멈춰 있어
+**심사 제출용 URL이 3주 전 코드**였다. iOS만 작업 브랜치에서 직접 dispatch해 최신이었다.
+
+- [x] `fix/tourapi-image-warmup` → `main` 머지(`cf49159`, `--no-ff`) 후 배포 —
+      Actions `34130879541` 3잡(check·web·proxy) 전부 성공
+- [x] 배포본 검증: 번들 `main-DqgMwMWI.js`, `/`·`/support`·`/privacy` 200,
+      프록시 `areaBasedList2` `resultCode=0000`
+- [x] Squash 대신 머지 커밋을 썼다 — `APP_STORE_RELEASE.md` 버전 이력 표가 개별 커밋 SHA를 참조한다

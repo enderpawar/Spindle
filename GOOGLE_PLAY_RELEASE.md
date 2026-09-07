@@ -140,9 +140,28 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 (2026-08-25 vc4)에서 멈춰 있다 — 1.0.1~1.0.7의 7개 빌드 분량이 아직 Android에 없다.
 버전 대응은 `APP_STORE_RELEASE.md` 0절 "버전 이력" 표를 본다.
 
-- [ ] `web/android/app/build.gradle`의 `versionCode`를 `5`로 올린다 (`versionName`은 정책에 맞게)
-- [ ] iOS 1.0.7 실기기 검증 통과 후 AAB 빌드 → 프로덕션 트랙 게시
+- [x] **웹 프로덕션 배포 완료** (2026-09-07, `cf49159`, Actions `34130879541` 3잡 성공) — 앱과 같은 번들이다
+- [x] **`versionCode 5` / `versionName "1.0.8"` 상향 완료** (2026-09-07) — iOS와 버전 표기를 통일했다
+- [ ] **AAB 빌드** — 아래 두 파일이 필요하고 현재 이 머신에 **없다**:
+      `web/android/keystore.properties`, `web/android/spindle-release.jks`.
+      없으면 `hasReleaseSigning`이 false가 되어 **서명 없는 번들**이 나오고 Play가 거부한다
+      (`app/build.gradle:35-52`). `web/.env.local`(카카오 JS 키)은 있다.
+      ```bash
+      cd web && npm run build:app && npx cap sync android
+      cd android && ./gradlew bundleRelease
+      # 산출물: web/android/app/build/outputs/bundle/release/app-release.aab
+      ```
+      **⚠ `cap sync android` 직후 경로 구분자를 확인한다** — iOS `Package.swift`와 같은 함정이다.
+      `capacitor.settings.gradle`·`app/capacitor.build.gradle`은 **커밋된 파일**이고 현재 슬래시
+      경로다. Windows에서 백슬래시가 박히면 되돌린다:
+      `git diff web/android/capacitor.settings.gradle web/android/app/capacitor.build.gradle`
+- [ ] 서명 지문이 vc2~vc4와 같은지 확인 — `jarsigner -verify` +
+      `SHA256:8B:45:7A:99:...:50:1C` (2절). 바뀌면 업로드가 거부된다
+- [ ] **iOS 1.0.8 실기기 검증 통과 후** 프로덕션 트랙 100% 게시 —
+      웹·앱이 같은 번들이고 Play 프로덕션 100%는 롤백 수단이 없다. TestFlight 검증이 유일한 안전망이다
 - [ ] Android 실기기에서 결과 카드 지도 탭 잠금 해제를 확인한다 (iOS와 웹뷰가 다르다)
+- [ ] Android 실기기에서 스핀 버튼·사진 롱프레스에 드래그 고스트가 없는지 확인
+      (`-webkit-user-drag: none` — iOS Live Text 수정과 같은 규칙이 Android도 덮는다)
 
 ### 과거 기록 — 비공개 테스트 기간에 해야 했던 일 (2026-08-25 기준)
 
