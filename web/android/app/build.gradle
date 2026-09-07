@@ -26,7 +26,7 @@ android {
         // versionName은 iOS와 통일한다 — 버전 이력은 APP_STORE_RELEASE.md 0절 하나로 본다.
         // 서명키·패키지명은 vc2~vc4와 동일하게 유지한다 (바뀌면 업로드가 거부된다).
         versionCode 5
-        versionName "1.0.8"
+        versionName "1.0.9"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

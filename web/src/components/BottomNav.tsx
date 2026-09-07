@@ -88,10 +88,15 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
           <NavSpotsIcon />
         }
       />
+      {/*
+        브랜드 마크를 <img>가 아니라 CSS 배경으로 그린다 (index.css의 .nav-spin-disc::before).
+        iOS WKWebView가 <img>를 만나면 렌더 시점에 피사체를 분석해 버튼을 누를 때 모서리
+        브래킷을 그렸다 — 별 로고가 피사체로 잡힌다. pointer-events로 히트 테스트에서 빼도
+        남았고(1.0.8에서 확인), 요소가 없으면 분석할 대상 자체가 없어진다. 장식용이라
+        alt=""였으므로 접근성 정보 손실은 없다.
+      */}
       <Item label="스핀" spin active={active === 'spin'} onClick={() => onNavigate('spin')}
-        icon={<span className="nav-spin-disc">
-          <img src="/brand-mark-192.png" alt="" width="32" height="32" />
-        </span>} />
+        icon={<span className="nav-spin-disc" aria-hidden />} />
       <Item
         label="도장"
         active={active === 'stamp'}
