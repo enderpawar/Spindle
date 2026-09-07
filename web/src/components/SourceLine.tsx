@@ -6,7 +6,7 @@ export function SourceLine({ style }: { style?: CSSProperties }) {
       style={{
         margin: '20px 0 0',
         fontSize: 11.5,
-        fontWeight: 600,
+        fontWeight: 500,
         lineHeight: 1.45,
         color: 'var(--l-ink-3)',
         textAlign: 'center',

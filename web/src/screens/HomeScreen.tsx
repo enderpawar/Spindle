@@ -137,13 +137,13 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
       <header className="home-header">
         <div className="home-brand">
           <img src="/brand-mark-192.png" alt="" className="home-brand-icon" />
-          <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5, color: 'var(--l-ink)' }}>Spindle</span>
+          <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.5, color: 'var(--l-ink)' }}>Spindle</span>
         </div>
         <button
           onClick={onOpenDeparture}
           className="home-origin"
           data-guide="departure"
-          style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 800 }}
+          style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700 }}
         >
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1fa971', flex: 'none' }} />
           <span className="home-origin-label">{departure.name} 기준</span>
@@ -157,7 +157,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         {/* 히어로 배너 */}
         <div className="home-hero" data-guide="spin">
           <div className="home-hero-copy">
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#cfe0ff' }}>붐비는 해변 말고,</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#cfe0ff' }}>붐비는 해변 말고,</div>
             <div className="home-hero-title">
               숨은 부산을
               <br />
@@ -188,7 +188,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             <button
               key={item.label}
               onClick={item.onClick}
-              className="home-quick-button motion-card motion-card-enter"
+              className="home-quick-button motion-card"
             >
               <div className={`home-quick-icon home-quick-icon--${item.kind}`}>
                 <HomeQuickIcon kind={item.kind} />
@@ -199,13 +199,13 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         </div>
 
         {/* 테마로 떠나기 */}
-        <div style={{ padding: '16px 20px 10px', fontSize: 15, fontWeight: 900, color: 'var(--l-ink)' }}>테마로 떠나기</div>
+        <div style={{ padding: '20px 20px 12px', fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>테마로 떠나기</div>
         <div className="home-theme-grid motion-card-list" data-guide="themes">
           {THEMES.map((theme) => (
             <button
               key={theme.id}
               onClick={() => onOpenTheme(theme.id)}
-              className="home-theme-card motion-card motion-card-enter"
+              className="home-theme-card motion-card"
               data-theme={theme.id}
               style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
             >
@@ -221,27 +221,18 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         {/* 도장깨기 진행 카드 */}
         <button
           onClick={() => onNavigate('stamp')}
-          className="home-stamp-card motion-card motion-card-enter"
+          className="home-stamp-card motion-card"
           data-guide="stamps"
         >
           <div className="home-stamp-body">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--l-ink)' }}>원도심 도장깨기</div>
-              <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--l-primary)' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink)' }}>원도심 도장깨기</div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--l-primary)' }}>
                 {progress.collected}
                 <span style={{ color: '#c3d3ee' }}>/{progress.total}</span>
               </span>
             </div>
-            <div className="home-stamp-dots">
-              {Array.from({ length: Math.min(progress.collected, 5) }, (_, i) => (
-                <div key={i} className="home-stamp-dot home-stamp-dot--filled">
-                  <img src="/stamp-mark-512.png" alt="" aria-hidden />
-                </div>
-              ))}
-              {Array.from({ length: Math.max(0, Math.min(5 - progress.collected, 2)) + 2 }, (_, i) => (
-                <div key={`empty-${i}`} className="home-stamp-dot home-stamp-dot--empty" />
-              ))}
-            </div>
+            <div className="home-stamp-progress" aria-hidden="true"><span style={{ width: `${progress.collected / Math.max(progress.total, 1) * 100}%` }} /></div>
           </div>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
             <path d="M9 6 l6 6 l-6 6" />
@@ -250,7 +241,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
 
         {/* 오늘의 스핀 추천 */}
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '18px 20px 12px' }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--l-ink)' }}>오늘의 스핀 추천</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--l-ink)' }}>오늘의 스핀 추천</div>
           <button onClick={() => onNavigate('spots')} className="home-section-link">
             더보기 ›
           </button>
@@ -259,7 +250,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           {todayPicks.map((poi, i) => {
             const dir = directionOf(poi.direction)
             return (
-              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card motion-card motion-card-enter">
+              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card motion-card">
                 <div className="home-pick-image" style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>
                   <SketchArt variant={i} />
                   <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
@@ -274,20 +265,12 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
             )
           })}
         </div>
-
-        {/* 오늘의 한 칸 미션 */}
-        <button
-          type="button"
-          onClick={() => onNavigate('spin')}
-          className="home-mission-card motion-card motion-card-enter"
-        >
+        <button type="button" className="home-mission-card" onClick={() => onNavigate('spin')}>
           <span className="home-mission-copy">
-            <span className="home-mission-label">오늘의 한 칸 미션</span>
+            <span className="home-mission-label">오늘의 미션</span>
             <strong className="home-mission-title">{mission.title}</strong>
             <span className="home-mission-description">{mission.description}</span>
-            <span className="home-mission-cta">
-              스핀하러 가기 <span aria-hidden>›</span>
-            </span>
+            <span className="home-mission-cta">스핀하러 가기 <span aria-hidden>›</span></span>
           </span>
           <img src={winkImg} alt="" className="home-mission-mascot" />
         </button>

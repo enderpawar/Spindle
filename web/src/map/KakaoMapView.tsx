@@ -159,6 +159,8 @@ export function KakaoMapView({
   pois,
   departure,
   selectedId,
+  compactOverview = false,
+  interactionLocked = false,
   statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
@@ -190,6 +192,8 @@ export function KakaoMapView({
   const routeStyleRef = useRef<string | null>(null)
   const initialDepartureRef = useRef(departure)
   const onPickRef = useRef(onPick)
+  // 지도 생성 시점의 잠금 상태 — 이후 변경은 setDraggable/setZoomable effect가 따라간다.
+  const interactionLockedRef = useRef(interactionLocked)
   const [ready, setReady] = useState(false)
   const [level, setLevel] = useState(7)
   const [layoutRevision, setLayoutRevision] = useState(0)
@@ -278,9 +282,13 @@ export function KakaoMapView({
     if (!maps || !container) return
 
     const initialDeparture = initialDepartureRef.current
+    // 잠긴 채로 열리는 지도(결과 카드)는 처음부터 드래그·휠을 먹지 않게 만든다 —
+    // 잠금 해제는 아래 별도 effect가 setDraggable/setZoomable로 처리한다.
     const map = new maps.Map(container, {
       center: new maps.LatLng(initialDeparture.lat, initialDeparture.lon),
       level: navigationMode ? 5 : pickMode ? 4 : 7,
+      draggable: !interactionLockedRef.current,
+      scrollwheel: !interactionLockedRef.current,
     })
     mapRef.current = map
     setLevel(map.getLevel())
@@ -319,6 +327,14 @@ export function KakaoMapView({
     }
   }, [navigationMode, pickMode])
 
+  // 탭으로 잠금이 풀리면 그 자리에서 드래그·줌을 열어준다 (지도를 새로 만들지 않는다).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map) return
+    map.setDraggable(!interactionLocked)
+    map.setZoomable(!interactionLocked)
+  }, [interactionLocked, ready])
+
   useEffect(() => {
     if (!ready) return
     const map = mapRef.current
@@ -349,8 +365,8 @@ export function KakaoMapView({
     for (const poi of pois) bounds.extend(new maps.LatLng(poi.lat, poi.lon))
     for (const spot of extraSpots) bounds.extend(new maps.LatLng(spot.lat, spot.lon))
     bounds.extend(new maps.LatLng(departure.lat, departure.lon))
-    map.setBounds(bounds, 64, 44, 196, 44)
-  }, [departure.lat, departure.lon, extraSpots, navigationMode, pickMode, pois])
+    map.setBounds(bounds, 64, 44, compactOverview ? 64 : 196, 44)
+  }, [compactOverview, departure.lat, departure.lon, extraSpots, navigationMode, pickMode, pois])
 
   useEffect(() => {
     if (ready) fitAll()
@@ -623,7 +639,7 @@ export function KakaoMapView({
   }, [])
 
   useEffect(() => {
-    if (!ready || !selectedId) return
+    if (compactOverview || !ready || !selectedId) return
     const maps = mapsRef.current
     const map = mapRef.current
     const point = poiById.get(selectedId) ?? extraById.get(selectedId)
@@ -657,7 +673,7 @@ export function KakaoMapView({
       window.clearTimeout(timeoutId)
       if (selectionPanTimerRef.current === timeoutId) selectionPanTimerRef.current = null
     }
-  }, [extraById, poiById, ready, selectedId, selectionOffsetRatio])
+  }, [compactOverview, extraById, poiById, ready, selectedId, selectionOffsetRatio])
 
   const zoomIn = () => {
     const map = mapRef.current

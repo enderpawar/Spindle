@@ -63,11 +63,6 @@ export interface Poi {
 export const POI_POOL: Poi[] = [
   // 북 — 중구 원도심 (용두산·대청동)
   {
-    id: 'modern-history', contentId: '3083767', name: '부산근현대역사관 본관', category: '근현대', district: '중구', direction: 'N', tier: 1, lat: 35.1028, lon: 129.0322,
-    walkMinutes: 10, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
-    story: '원도심 한복판, 근대 건축물에 들어선 부산의 근현대사 전시관이에요.',
-  },
-  {
     id: 'busan-tower', contentId: '1277679', name: '부산타워', category: '전망', district: '중구', direction: 'N', tier: 1, lat: 35.1012, lon: 129.0324,
     walkMinutes: 10, open: { known: false, text: '운영시간은 지도에서 확인' },
     story: '용두산공원 위에서 원도심과 부산항을 한눈에 내려다보는 전망 타워.',
@@ -79,7 +74,7 @@ export const POI_POOL: Poi[] = [
   },
   // 북동 — 동구 산복도로 (초량 이바구길)
   {
-    id: 'ibagu-skyway', contentId: '2656194', name: '친환경 스카이웨이 전망대(이바구길)', category: '산복도로', district: '동구', direction: 'NE', tier: 3, lat: 35.1213, lon: 129.0307,
+    id: 'ibagu-skyway', contentId: '2656194', name: '친환경 스카이웨이 전망대(이바구길)', category: '전망', district: '동구', direction: 'NE', tier: 3, lat: 35.1213, lon: 129.0307,
     walkMinutes: 20, open: { known: true, text: '상시 개방' },
     story: '산복도로 이바구길 꼭대기, 부산항이 발아래 펼쳐지는 전망대.',
   },
@@ -122,7 +117,7 @@ export const POI_POOL: Poi[] = [
     story: '터널 끝에서 바다가 액자처럼 열려요. 흰여울 해안을 잇는 짧은 산책 터널.',
   },
   {
-    id: 'jungni-sunset', contentId: '3017435', name: '중리노을전망대', category: '해안', district: '영도구', direction: 'S', tier: 2, lat: 35.0692, lon: 129.0643,
+    id: 'jungni-sunset', contentId: '3017435', name: '중리노을전망대', category: '전망', district: '영도구', direction: 'S', tier: 2, lat: 35.0692, lon: 129.0643,
     walkMinutes: 35, open: { known: true, text: '상시 개방' },
     story: '영도 서남단, 바다로 지는 노을을 마주하는 전망대.',
   },
@@ -189,11 +184,6 @@ export const POI_POOL: Poi[] = [
     id: 'yongdusan-park', contentId: '126121', name: '용두산공원', category: '공원', district: '중구', direction: 'N', tier: 1, lat: 35.1004, lon: 129.0327,
     walkMinutes: 12, open: { known: true, text: '상시 개방' },
     story: '원도심 한복판에 솟은 언덕. 계단을 오르면 부산항이 펼쳐져요.',
-  },
-  {
-    id: 'modern-history-annex', contentId: '2784363', name: '부산근현대역사관 별관', category: '근현대', district: '중구', direction: 'N', tier: 2, lat: 35.1027, lon: 129.0312,
-    walkMinutes: 12, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
-    story: '오래된 건물 안에서 도시의 시간을 천천히 읽는 곳.',
   },
   {
     id: 'democracy-park', contentId: '127149', name: '민주공원', category: '공원', district: '중구', direction: 'N', tier: 3, lat: 35.1094, lon: 129.0281,
@@ -270,11 +260,6 @@ export const POI_POOL: Poi[] = [
   },
   // 남 — 영도 남쪽·동쪽 해안 (흰여울·동삼·태종대)
   {
-    id: 'jeoryeong-coast', contentId: '252561', name: '절영해안산책로', category: '해안', district: '영도구', direction: 'S', tier: 2, lat: 35.0812, lon: 129.0412,
-    walkMinutes: 45, open: { known: true, text: '상시 개방' },
-    story: '절벽 아래 파도와 나란히 오래 걸을 수 있는 해안길.',
-  },
-  {
     id: 'taejongdae', contentId: '126658', name: '태종대', category: '자연', district: '영도구', direction: 'S', tier: 1, lat: 35.0597, lon: 129.0798,
     walkMinutes: 126, open: { known: true, text: '상시 개방' },
     story: '기암절벽과 바다가 맞닿은 영도 남단. 등대까지 숲길이 이어져요.',
@@ -316,37 +301,17 @@ export const POI_POOL: Poi[] = [
     story: '겹겹의 바위가 부산 바다의 오랜 시간을 들려주는 곳.',
   },
   {
-    id: 'songdo-skywalk-bridge', contentId: '2684738', name: '송도용궁구름다리', category: '해안', district: '서구', direction: 'SW', tier: 2, lat: 35.0619, lon: 129.0220,
-    walkMinutes: 79, open: { known: false, text: '운영시간은 지도에서 확인' },
-    story: '암남공원 절벽과 작은 섬을 잇는 구름다리. 발밑으로 파도가 부서져요.',
-  },
-  {
     id: 'gongdong-fish-market', contentId: '1607655', name: '부산공동어시장', category: '시장', district: '서구', direction: 'SW', tier: 3, lat: 35.0887, lon: 129.0251,
     walkMinutes: 21, open: { known: false, text: '점포별 상이' },
     story: '새벽 경매 소리로 하루를 여는 국내 최대 산지 위판장.',
   },
-  {
-    id: 'nuribaragi-view', contentId: '2788424', name: '누리바라기전망대', category: '전망', district: '서구', direction: 'SW', tier: 3, lat: 35.0908, lon: 129.0203,
-    walkMinutes: 20, open: { known: true, text: '상시 개방' },
-    story: '서구 언덕 끝에서 남항과 영도를 한 화면에 담는 전망대.',
-  },
   // 서 — 서구 내륙 (대신·구덕·부민)
-  {
-    id: 'cheonmasan-view', contentId: '2721158', name: '천마산하늘전망대', category: '전망', district: '서구', direction: 'W', tier: 3, lat: 35.0936, lon: 129.0173,
-    walkMinutes: 19, open: { known: true, text: '상시 개방' },
-    story: '천마산 위에서 항구와 산복도로를 함께 내려다보는 자리.',
-  },
   {
     id: 'provisional-capital', contentId: '1608530', name: '임시수도기념관', category: '근현대', district: '서구', direction: 'W', tier: 2, lat: 35.1038, lon: 129.0176,
     walkMinutes: 20, open: { known: false, text: '운영시간·휴관일은 지도에서 확인' },
     story: '한국전쟁 시절 대통령 관저로 쓰인 집. 피란수도 부산의 1000일이 남아 있어요.',
   },
   // 북서 — 중구 서쪽 시장 (부평·자갈치·국제시장)
-  {
-    id: 'gukje-market', contentId: '132191', name: '국제시장', category: '시장', district: '중구', direction: 'NW', tier: 1, lat: 35.1016, lon: 129.0286,
-    walkMinutes: 8, open: { known: false, text: '점포별 상이' },
-    story: '서로 다른 골목이 한 장면처럼 이어지는 오래된 시장.',
-  },
   {
     id: 'gukje-food-alley', contentId: '1018702', name: '국제시장 먹자골목', category: '시장', district: '중구', direction: 'NW', tier: 2, lat: 35.1011, lon: 129.0281,
     walkMinutes: 6, open: { known: false, text: '점포별 상이' },
@@ -365,6 +330,8 @@ export const POI_POOL: Poi[] = [
 ]
 
 export interface Recommendation {
+  /** 음식점·카페 전용 단일 스핀. 테마/코스와 함께 적용하지 않는다. */
+  diningCategory?: '음식점' | '카페'
   direction: DirectionInfo
   candidates: Poi[]
   /** 후보 부족으로 인접 방위까지 넓힌 경우 (ui.md S3 — 사유 1줄 노출) */

@@ -55,12 +55,12 @@ export function DepartureScreen({ selected, onSelect, onOpenMap, onBack }: Props
             <path d="M15 5 L8 12 L15 19" />
           </svg>
         </button>
-        <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--l-ink)' }}>어디서 출발하세요?</span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--l-ink)' }}>어디서 출발하세요?</span>
       </header>
 
       <div className="fade-up" style={{ flex: 1, padding: '26px 24px 0', zIndex: 2 }}>
         <div style={{ position: 'relative', marginBottom: 22 }}>
-          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, fontWeight: 600, color: 'var(--l-ink-2)', maxWidth: 250 }}>
+          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, fontWeight: 500, color: 'var(--l-ink-2)', maxWidth: 250 }}>
             여행 모드에서는 출발점을 기준으로
             <br />
             방향을 계산해요. 탭 한 번이면 끝.
@@ -68,7 +68,7 @@ export function DepartureScreen({ selected, onSelect, onOpenMap, onBack }: Props
           <img src={locateImg} alt="" style={{ position: 'absolute', right: -6, top: -18, width: 86, filter: 'drop-shadow(0 10px 18px rgba(20,40,90,.22))', animation: 'bobsm 3.2s ease-in-out infinite' }} />
         </div>
 
-        <p style={{ margin: '-6px 0 18px', fontSize: 12.5, lineHeight: 1.6, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+        <p style={{ margin: '-6px 0 18px', fontSize: 12.5, lineHeight: 1.6, fontWeight: 500, color: 'var(--l-ink-3)' }}>
           Spindle은 지금 원도심과 영도에 집중해요. 붐비는 곳 너머의 골목으로 안내하기 위한 선택이에요.
         </p>
 
@@ -100,8 +100,8 @@ export function DepartureScreen({ selected, onSelect, onOpenMap, onBack }: Props
                   </svg>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--l-ink)' }}>{d.name}</div>
-                  <div style={{ marginTop: 2, fontSize: 12.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{d.desc}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--l-ink)' }}>{d.name}</div>
+                  <div style={{ marginTop: 2, fontSize: 12.5, fontWeight: 500, color: 'var(--l-ink-3)' }}>{d.desc}</div>
                 </div>
                 {on && (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--l-primary)" strokeWidth={2.6} strokeLinecap="round" aria-hidden>
@@ -124,7 +124,7 @@ export function DepartureScreen({ selected, onSelect, onOpenMap, onBack }: Props
             <circle cx="12" cy="12" r="7.6" />
             <path d="M12 1.6 v3 M12 19.4 v3 M1.6 12 h3 M19.4 12 h3" />
           </svg>
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
             {locating ? '현 위치 확인 중…' : '현 위치를 출발점으로 잡기'}
           </span>
           {!locating && (
@@ -143,19 +143,19 @@ export function DepartureScreen({ selected, onSelect, onOpenMap, onBack }: Props
             <path d="M9 3 L3 5.4 v15.2 L9 18.2 l6 2.4 6-2.4 V3 L15 5.4 Z" />
             <path d="M9 3 v15.2 M15 5.4 v15.2" />
           </svg>
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>지도에서 좌표 직접 찍기</span>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>지도에서 좌표 직접 찍기</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--l-ink-3)" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
             <path d="M9 5 l7 7 -7 7" />
           </svg>
         </button>
 
         {notice && (
-          <p role="status" style={{ margin: '10px 2px 0', fontSize: 12.5, lineHeight: 1.55, fontWeight: 600, color: 'var(--l-ink-2)' }}>
+          <p role="status" style={{ margin: '10px 2px 0', fontSize: 12.5, lineHeight: 1.55, fontWeight: 500, color: 'var(--l-ink-2)' }}>
             {notice}
           </p>
         )}
 
-        <p style={{ margin: '10px 2px 0', fontSize: 11.5, lineHeight: 1.55, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+        <p style={{ margin: '10px 2px 0', fontSize: 11.5, lineHeight: 1.55, fontWeight: 500, color: 'var(--l-ink-3)' }}>
           현 위치는 방향과 거리 계산에만 쓰이고 휴대폰 밖으로 나가지 않아요.
         </p>
       </div>

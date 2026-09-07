@@ -7,18 +7,23 @@
  *
  * 켜는 방식은 기기에 따라 다르다.
  * - 권한 개념이 없는 환경(안드로이드·데스크톱): 스핀 화면에 들어오면 바로 켠다.
- * - iOS 13+: 권한을 사용자 제스처 안에서만 물을 수 있어, 별도 버튼을 두는 대신 스핀 화면에서
+ * - 네이티브 셸(WKWebView): requestPermission()은 Safari처럼 사용자 제스처 안에서만 성공한다.
+ *   다만 팝업 없이 granted를 주며, 호출 전에는 devicemotion이 오지 않는다(TestFlight 1.0.1~1.0.2).
+ *   앱 최초 제스처에서 미리 허용받고, 아직이면 스핀 화면 첫 조작에서 다시 요청한다.
+ * - iOS 13+ 브라우저: 권한을 사용자 제스처 안에서만 물을 수 있어, 별도 버튼을 두는 대신 스핀 화면에서
  *   일어나는 **첫 조작(탭·드래그·키 입력)** 에 요청을 얹는다. 화면에 들어와 아무거나 한 번
  *   건드리면 그때 프롬프트가 뜨고, 허용 이후로는 그냥 흔들기만 하면 된다.
  *   (명시적 버튼을 다시 두고 싶으면 `enable()`을 onClick에 걸면 된다 — 옵션은 열어 둔다)
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isNativeShell } from '../native/shell'
 import {
   isMotionSupported,
   knownMotionPermission,
   motionNeedsPermission,
   requestMotionPermission,
   subscribeShake,
+  type MotionPermission,
 } from './motion'
 
 export type ShakeStatus = 'off' | 'requesting' | 'on' | 'unavailable'
@@ -33,9 +38,117 @@ export interface ShakeSpin {
   enable: () => Promise<void>
 }
 
-/** 하단 내비게이션 탭처럼 화면을 떠나는 조작에는 권한 프롬프트를 얹지 않는다 */
-function leavesScreen(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest('nav') !== null
+/** 웹에서는 내비 이탈 조작을 제외하지만, 팝업이 없는 네이티브에서는 내비 탭도 허용한다. */
+export function shouldSkipMotionPermissionGesture(
+  target: EventTarget | null,
+  nativeShell: boolean,
+): boolean {
+  return (
+    !nativeShell &&
+    typeof Element !== 'undefined' &&
+    target instanceof Element &&
+    target.closest('nav') !== null
+  )
+}
+
+export function noticeForMotionPermission(permission: MotionPermission): string | null {
+  if (permission === 'denied') {
+    return '동작 센서 권한이 거부돼 흔들기로는 돌릴 수 없어요. 원판을 손가락으로 돌리면 똑같이 동작해요.'
+  }
+  if (permission === 'unsupported') {
+    return '이 기기에서는 흔들기를 읽을 수 없어요. 원판을 손가락으로 돌려 주세요.'
+  }
+  return null
+}
+
+interface ShakeActivationOptions {
+  supported: boolean
+  needsPermission: boolean
+  knownPermission: () => ReturnType<typeof knownMotionPermission>
+  subscribe: (onSample?: () => void) => void
+  stop: () => void
+  enable: () => Promise<MotionPermission>
+  setStatus: (status: ShakeStatus) => void
+  setNotice: (notice: string | null) => void
+}
+
+/** 훅의 화면 진입/이탈 수명주기. DOM 렌더러 없이 권한 전환을 회귀 테스트할 수 있게 분리한다. */
+export function installShakeActivation({
+  supported,
+  needsPermission,
+  knownPermission,
+  subscribe,
+  stop,
+  enable,
+  setStatus,
+  setNotice,
+}: ShakeActivationOptions): () => void {
+  if (!supported) return () => {}
+
+  const nativeShell = isNativeShell()
+  let cancelled = false
+  let detached = false
+
+  const arm = (event: Event) => {
+    if (shouldSkipMotionPermissionGesture(event.target, nativeShell)) return
+    detach()
+    runEnable()
+  }
+  const detach = () => {
+    if (detached) return
+    detached = true
+    window.removeEventListener('pointerup', arm, true)
+    window.removeEventListener('keydown', arm, true)
+  }
+  const armPermission = () => {
+    detached = false
+    window.addEventListener('pointerup', arm, true)
+    window.addEventListener('keydown', arm, true)
+  }
+  const enterPermissionPath = () => {
+    const known = knownPermission()
+    if (known === 'granted') {
+      subscribe()
+      return
+    }
+    if (known !== null) {
+      setStatus('unavailable')
+      setNotice(noticeForMotionPermission(known))
+      return
+    }
+    armPermission()
+  }
+
+  const runEnable = () => {
+    void enable().then(
+      (permission) => {
+        if (cancelled) {
+          stop()
+          return
+        }
+        if (permission === 'retryable') armPermission()
+      },
+      () => {
+        if (cancelled) {
+          stop()
+        } else {
+          armPermission()
+        }
+      },
+    )
+  }
+
+  if (!needsPermission) {
+    subscribe()
+  } else {
+    enterPermissionPath()
+  }
+
+  return () => {
+    cancelled = true
+    detach()
+    stop()
+  }
 }
 
 export function useShakeSpin(onShake: (energy: number) => void): ShakeSpin {
@@ -51,74 +164,51 @@ export function useShakeSpin(onShake: (energy: number) => void): ShakeSpin {
     onShakeRef.current = onShake
   }, [onShake])
 
-  const subscribe = useCallback(() => {
+  const subscribe = useCallback((onSample?: () => void) => {
     unsubscribeRef.current?.()
-    unsubscribeRef.current = subscribeShake((energy) => onShakeRef.current(energy))
+    unsubscribeRef.current = subscribeShake((energy) => onShakeRef.current(energy), onSample)
     setStatus('on')
   }, [])
 
-  const enable = useCallback(async () => {
+  const requestAndEnable = useCallback(async (): Promise<MotionPermission> => {
     setNotice(null)
     setStatus('requesting')
 
     const permission = await requestMotionPermission()
+    if (permission === 'retryable') {
+      setStatus('off')
+      return permission
+    }
     if (permission !== 'granted') {
       setStatus('unavailable')
-      setNotice(
-        permission === 'denied'
-          ? '동작 센서 권한이 거부돼 흔들기로는 돌릴 수 없어요. 원판을 손가락으로 돌리면 똑같이 동작해요.'
-          : '이 기기에서는 흔들기를 읽을 수 없어요. 원판을 손가락으로 돌려 주세요.',
-      )
-      return
+      setNotice(noticeForMotionPermission(permission))
+      return permission
     }
 
     subscribe()
+    return permission
   }, [subscribe])
 
-  useEffect(() => {
-    if (!supported) return
+  const enable = useCallback(async () => {
+    await requestAndEnable()
+  }, [requestAndEnable])
 
+  useEffect(() => {
     const stop = () => {
       unsubscribeRef.current?.()
       unsubscribeRef.current = null
     }
-
-    // 권한 개념이 없는 환경 — 화면에 들어오는 즉시 켠다.
-    if (!needsPermission) {
-      subscribe()
-      return stop
-    }
-
-    // 같은 페이지 로드에서 이미 답을 받았다면 다시 묻지 않는다 (탭을 오갈 때 프롬프트 반복 방지).
-    const known = knownMotionPermission()
-    if (known === 'granted') {
-      subscribe()
-      return stop
-    }
-    if (known !== null) {
-      setStatus('unavailable')
-      return stop
-    }
-
-    // iOS — 화면에서 일어나는 첫 조작에 권한 요청을 얹는다. 조작 자체는 막지 않으므로
-    // 드래그 스핀이 그대로 진행되고, 손을 뗀 뒤(pointerup) 프롬프트가 뜬다.
-    const arm = (event: Event) => {
-      if (leavesScreen(event.target)) return
-      detach()
-      void enable()
-    }
-    const detach = () => {
-      window.removeEventListener('pointerup', arm, true)
-      window.removeEventListener('keydown', arm, true)
-    }
-    window.addEventListener('pointerup', arm, true)
-    window.addEventListener('keydown', arm, true)
-
-    return () => {
-      detach()
-      stop()
-    }
-  }, [enable, needsPermission, subscribe, supported])
+    return installShakeActivation({
+      supported,
+      needsPermission,
+      knownPermission: knownMotionPermission,
+      subscribe,
+      stop,
+      enable: requestAndEnable,
+      setStatus,
+      setNotice,
+    })
+  }, [needsPermission, requestAndEnable, subscribe, supported])
 
   return { status, needsPermission, notice, enable }
 }

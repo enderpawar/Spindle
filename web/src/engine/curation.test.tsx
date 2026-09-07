@@ -4,8 +4,8 @@ import { CuratedCopy } from '../components/CuratedCopy'
 import { COPY_BY_CONTENT_ID, copyOf } from './curation'
 
 describe('추천 한 줄 큐레이션', () => {
-  it('49곳 모두 40자 이내 자체 카피를 가진다', () => {
-    expect(COPY_BY_CONTENT_ID.size).toBe(49)
+  it('42곳 모두 40자 이내 자체 카피를 가진다', () => {
+    expect(COPY_BY_CONTENT_ID.size).toBe(42)
     for (const copy of COPY_BY_CONTENT_ID.values()) {
       expect(copy.trim()).not.toBe('')
       expect([...copy].length).toBeLessThanOrEqual(40)
@@ -13,8 +13,8 @@ describe('추천 한 줄 큐레이션', () => {
   })
 
   it('큐레이션 POI는 결과 카드용 한 줄을 렌더링한다', () => {
-    const markup = renderToStaticMarkup(<CuratedCopy contentId="132191" className="result-curation-copy" />)
-    expect(markup).toContain(copyOf('132191'))
+    const markup = renderToStaticMarkup(<CuratedCopy contentId="132190" className="result-curation-copy" />)
+    expect(markup).toContain(copyOf('132190'))
     expect(markup).toContain('result-curation-copy')
   })
 

@@ -36,6 +36,10 @@ export interface KakaoMap {
   setCenter(position: KakaoLatLng): void
   getLevel(): number
   setLevel(level: number, options?: { animate?: boolean }): void
+  /** 드래그 팬 허용 여부를 런타임에 바꾼다 (결과 카드 지도의 탭 잠금 해제). */
+  setDraggable(draggable: boolean): void
+  /** 휠·핀치 줌 허용 여부를 런타임에 바꾼다 (위와 같은 용도). */
+  setZoomable(zoomable: boolean): void
   relayout(): void
 }
 
@@ -55,7 +59,17 @@ type KakaoMapEventListener = () => void
 
 export interface KakaoMapsNs {
   load(callback: () => void): void
-  Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
+  Map: new (
+    container: HTMLElement,
+    options: {
+      center: KakaoLatLng
+      level: number
+      /** 드래그 팬 허용 여부. 결과 카드 지도는 잠긴 채로 열려 카드 스크롤을 뺏지 않는다. */
+      draggable?: boolean
+      /** 휠 줌 허용 여부. 위와 같은 이유로 잠긴 동안 끈다. */
+      scrollwheel?: boolean
+    },
+  ) => KakaoMap
   LatLng: new (lat: number, lng: number) => KakaoLatLng
   LatLngBounds: new () => KakaoLatLngBounds
   Point: new (x: number, y: number) => KakaoPoint

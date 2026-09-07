@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Departure } from '../mock/pois'
-import { toDisplayPoi, transformExtraSpots, type ExtraSpot } from './extraSpots'
+import {
+  FOOD_SPOTS_PER_DISTRICT_LIMIT,
+  toDisplayPoi,
+  transformExtraSpots,
+  type ExtraSpot,
+} from './extraSpots'
 import type { AreaPoi } from './tourapi'
 
 const horizontalCoordinateField = ['ma', 'px'].join('')
@@ -21,6 +26,13 @@ function areaPoi(overrides: Partial<AreaPoi> = {}): AreaPoi {
 }
 
 describe('transformExtraSpots', () => {
+  it('추천은 지도 핀 제한을 해제하고 전체 음식점·카페 목록을 사용한다', () => {
+    const pois = Array.from({ length: 45 }, (_, i) => areaPoi({ contentid: String(i), contenttypeid: '39', cat3: i < 30 ? 'A05020900' : 'A05020100' }))
+    expect(transformExtraSpots(pois, new Set())).toHaveLength(FOOD_SPOTS_PER_DISTRICT_LIMIT)
+    const pool = transformExtraSpots(pois, new Set(), Infinity)
+    expect(pool).toHaveLength(45)
+    expect(pool.filter(poi => poi.category === '음식점')).toHaveLength(15)
+  })
   it('허용 유형만 남기고 큐레이션·빈 제목·중복 ID·좌표 없는 항목을 제외한다', () => {
     const pois = [
       areaPoi(),
@@ -55,7 +67,106 @@ describe('transformExtraSpots', () => {
         lon: 129.03,
         address: '부산광역시 중구 테스트로 1',
       },
+      {
+        id: 'tour-102',
+        contentId: '102',
+        name: '테스트 관광지',
+        category: '음식점',
+        district: '중구',
+        lat: 35.1,
+        lon: 129.03,
+        address: '부산광역시 중구 테스트로 1',
+      },
     ])
+  })
+
+  it('음식점 cat3가 카페면 카페로, 그 외와 누락은 음식점으로 표시한다', () => {
+    const result = transformExtraSpots([
+      areaPoi({ contentid: '201', contenttypeid: '39', cat3: 'A05020900', title: '카페 A' }),
+      areaPoi({ contentid: '202', contenttypeid: '39', cat3: 'A05020100', title: '식당 B' }),
+      areaPoi({ contentid: '203', contenttypeid: '39', cat3: undefined, title: '식당 C' }),
+    ], new Set())
+    const categoryById = new Map(result.map((spot) => [spot.contentId, spot.category]))
+
+    expect(categoryById.get('201')).toBe('카페')
+    expect(categoryById.get('202')).toBe('음식점')
+    expect(categoryById.get('203')).toBe('음식점')
+  })
+
+  it('구당 상한을 지키면서 카페를 먼저 채우고 남는 자리에 식당을 넣는다', () => {
+    const jungguCafes = Array.from(
+      { length: FOOD_SPOTS_PER_DISTRICT_LIMIT - 1 },
+      (_, index) => areaPoi({
+        contentid: String(1000 + index),
+        contenttypeid: '39',
+        cat3: 'A05020900',
+        title: `중구 카페 ${String(index).padStart(2, '0')}`,
+        sigungucode: '15',
+      }),
+    )
+    const jungguRestaurants = ['C 식당', 'A 식당', 'B 식당'].map((title, index) =>
+      areaPoi({
+        contentid: String(2000 + index),
+        contenttypeid: '39',
+        cat3: 'A05020100',
+        title,
+        sigungucode: '15',
+      }),
+    )
+    const dongguCafes = Array.from(
+      { length: FOOD_SPOTS_PER_DISTRICT_LIMIT + 1 },
+      (_, index) => areaPoi({
+        contentid: String(3000 + index),
+        contenttypeid: '39',
+        cat3: 'A05020900',
+        title: `동구 카페 ${String(index).padStart(2, '0')}`,
+        sigungucode: '5',
+      }),
+    )
+
+    const result = transformExtraSpots(
+      [...jungguRestaurants, ...dongguCafes.reverse(), ...jungguCafes.reverse()],
+      new Set(),
+    )
+    const junggu = result.filter((spot) => spot.district === '중구')
+    const donggu = result.filter((spot) => spot.district === '동구')
+
+    expect(junggu).toHaveLength(FOOD_SPOTS_PER_DISTRICT_LIMIT)
+    expect(donggu).toHaveLength(FOOD_SPOTS_PER_DISTRICT_LIMIT)
+    expect(junggu.filter((spot) => spot.category === '카페')).toHaveLength(
+      FOOD_SPOTS_PER_DISTRICT_LIMIT - 1,
+    )
+    expect(junggu.filter((spot) => spot.category === '음식점').map((spot) => spot.name)).toEqual([
+      'A 식당',
+    ])
+  })
+
+  it('음식점 출력 순서는 입력 순서와 무관하게 결정적이다', () => {
+    const pois = [
+      areaPoi({ contentid: '401', contenttypeid: '39', title: 'Z 식당' }),
+      areaPoi({ contentid: '402', contenttypeid: '39', cat3: 'A05020900', title: 'B 카페' }),
+      areaPoi({ contentid: '403', contenttypeid: '39', cat3: 'A05020900', title: 'A 카페' }),
+      areaPoi({ contentid: '404', contenttypeid: '39', title: 'A 식당' }),
+    ]
+
+    const forward = transformExtraSpots(pois, new Set()).map((spot) => spot.contentId)
+    const backward = transformExtraSpots([...pois].reverse(), new Set()).map((spot) => spot.contentId)
+
+    expect(forward).toEqual(['403', '402', '404', '401'])
+    expect(backward).toEqual(forward)
+  })
+
+  it('관광지와 문화시설에는 음식점 구당 상한을 적용하지 않는다', () => {
+    const pois = Array.from(
+      { length: FOOD_SPOTS_PER_DISTRICT_LIMIT + 5 },
+      (_, index) => areaPoi({
+        contentid: String(5000 + index),
+        contenttypeid: index % 2 === 0 ? '12' : '14',
+        title: `기존 명소 ${index}`,
+      }),
+    )
+
+    expect(transformExtraSpots(pois, new Set())).toHaveLength(FOOD_SPOTS_PER_DISTRICT_LIMIT + 5)
   })
 })
 

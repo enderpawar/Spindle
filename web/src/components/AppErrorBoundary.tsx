@@ -101,7 +101,7 @@ const styles = {
   title: {
     margin: '0 0 10px',
     fontSize: 20,
-    fontWeight: 800,
+    fontWeight: 700,
     color: '#17347f',
     letterSpacing: '-0.01em',
   },
@@ -116,7 +116,7 @@ const styles = {
   primary: {
     padding: '14px 18px',
     fontSize: 15,
-    fontWeight: 700,
+    fontWeight: 600,
     color: '#ffffff',
     background: '#2f6bff',
     border: 'none',
@@ -126,7 +126,7 @@ const styles = {
   secondary: {
     padding: '13px 18px',
     fontSize: 14.5,
-    fontWeight: 600,
+    fontWeight: 500,
     color: '#3a4c78',
     background: 'transparent',
     border: '1px solid #dbe6fa',

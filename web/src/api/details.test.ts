@@ -6,15 +6,20 @@ import {
   fetchPoiDetailCached,
   fetchPoiGalleryImagesCached,
   fetchPoiImageCached,
+  fetchPoiImageFallback,
+  fetchPoiImageResultCached,
+  fetchPoiThumbCached,
   firstSentence,
   knownPoiImageUrl,
+  knownPoiThumbUrl,
   normalizeIntroValue,
   poiImageProxyUrl,
+  primeOperationInfo,
   selectPrimaryVisitFacts,
   stripHtml,
   visitFactsFromIntro,
 } from "./details";
-import { TourApiError, clearSessionCache, fetchAreaPois } from "./tourapi";
+import { TourApiError, clearSessionCache, fetchAreaPois, fetchAreaPoisCached } from "./tourapi";
 
 /** TourAPI 목록 응답 봉투 — item이 null이면 빈 결과("") */
 function envelope(item: unknown): unknown {
@@ -291,7 +296,7 @@ describe("fetchPoiDetailCached — 상세 3종 결합", () => {
     await fetchPoiImageCached("105", fetchMock as typeof fetch);
     await fetchPoiDetailCached("105", fetchMock as typeof fetch);
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
-    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(1);
   });
 });
 
@@ -373,7 +378,90 @@ describe("fetchPoiGalleryImagesCached — 관광지 이미지 슬라이드", () 
   });
 });
 
+describe("이미지 요청 순서와 상태", () => {
+  it("공통정보가 응답하지 않아도 먼저 온 사진을 즉시 반환한다", async () => {
+    const fetchMock = vi.fn((url: string | URL) => String(url).includes("detailCommon2")
+      ? new Promise<Response>(() => {})
+      : Promise.resolve(jsonResponse(envelope({ originimgurl: "https://img/fast.jpg" }))));
+    await expect(fetchPoiImageResultCached("fast", "full", fetchMock as typeof fetch))
+      .resolves.toEqual({ status: "ready", url: "https://img/fast.jpg" });
+  });
+
+  it("먼저 온 빈 사진 결과가 늦게 도착하는 대표 사진을 가리지 않는다", async () => {
+    let resolveCommon!: (response: Response) => void;
+    const fetchMock = vi.fn((url: string | URL) => String(url).includes("detailCommon2")
+      ? new Promise<Response>((resolve) => { resolveCommon = resolve; })
+      : Promise.resolve(jsonResponse(envelope(null))));
+    const pending = fetchPoiImageResultCached("later", "full", fetchMock as typeof fetch);
+    await vi.waitFor(() => expect(resolveCommon).toBeTypeOf("function"));
+    resolveCommon(jsonResponse(envelope({ contentid: "later", firstimage: "https://img/later.jpg" })));
+    await expect(pending).resolves.toEqual({ status: "ready", url: "https://img/later.jpg" });
+  });
+
+  it("사진 없음과 일시적인 API 실패를 구분한다", async () => {
+    const empty = makeFetch({ common: { contentid: "empty" }, image: null });
+    await expect(fetchPoiImageResultCached("empty", "thumb", empty as typeof fetch))
+      .resolves.toEqual({ status: "empty" });
+    const fail = vi.fn(async () => { throw new Error("offline"); });
+    await expect(fetchPoiImageResultCached("error", "thumb", fail as typeof fetch))
+      .resolves.toMatchObject({ status: "error" });
+    const success = makeFetch({ common: { contentid: "error", firstimage: "https://img/retry.jpg" } });
+    await expect(fetchPoiImageResultCached("error", "thumb", success as typeof fetch))
+      .resolves.toEqual({ status: "ready", url: "https://img/retry.jpg" });
+  });
+
+  it("상세 폴백도 썸네일과 원본을 구분하고 이미지 API 호출을 공유한다", async () => {
+    const fetchMock = makeFetch({
+      common: { contentid: "shared", firstimage: "" },
+      image: { smallimageurl: "https://img/small.jpg", originimgurl: "https://img/full.jpg" },
+    });
+    const [thumb, full, gallery, fallback] = await Promise.all([
+      fetchPoiThumbCached("shared", fetchMock as typeof fetch),
+      fetchPoiImageCached("shared", fetchMock as typeof fetch),
+      fetchPoiGalleryImagesCached("shared", fetchMock as typeof fetch),
+      fetchPoiImageFallback("shared", ["https://img/broken.jpg"], "thumb", fetchMock as typeof fetch),
+    ]);
+    expect(thumb).toBe("https://img/small.jpg");
+    expect(full).toBe("https://img/full.jpg");
+    expect(gallery).toEqual(["https://img/full.jpg"]);
+    expect(fallback).toBe(thumb);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("detailImage2"))).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("detailCommon2"))).toHaveLength(1);
+  });
+
+  it("상세 공통 응답의 firstimage2도 썸네일로 사용한다", async () => {
+    const fetchMock = makeFetch({ common: {
+      contentid: "common-thumb", firstimage: "https://img/full.jpg", firstimage2: "http://img/small.jpg",
+    } });
+    await expect(fetchPoiThumbCached("common-thumb", fetchMock as typeof fetch)).resolves.toBe("https://img/small.jpg");
+    await expect(fetchPoiImageCached("common-thumb", fetchMock as typeof fetch)).resolves.toBe("https://img/full.jpg");
+  });
+
+  it("갤러리 부분 실패를 빈 목록으로 고정하지 않아 다음 조회에서 복구한다", async () => {
+    const fail = makeFetch({ common: { contentid: "gallery-retry", firstimage: "https://img/cover.jpg" }, imageReject: true });
+    await expect(fetchPoiGalleryImagesCached("gallery-retry", fail as typeof fetch)).resolves.toEqual(["https://img/cover.jpg"]);
+    const success = makeFetch({ common: {}, image: { originimgurl: "https://img/next.jpg" } });
+    await expect(fetchPoiGalleryImagesCached("gallery-retry", success as typeof fetch))
+      .resolves.toEqual(["https://img/cover.jpg", "https://img/next.jpg"]);
+  });
+});
+
 describe("fetchPoiImageCached — 썸네일 경량 이미지", () => {
+  it("공통정보 실패 시에도 병렬 이미지 조회가 성공하면 사진을 표시한다", async () => {
+    const fetchMock = vi.fn((url: string | URL) => String(url).includes("detailCommon2")
+      ? Promise.reject(new Error("temporary failure"))
+      : Promise.resolve(jsonResponse(envelope({ originimgurl: "https://img/recovered.jpg" }))));
+    await expect(fetchPoiImageCached("partial-failure", fetchMock as typeof fetch))
+      .resolves.toBe("https://img/recovered.jpg");
+  });
+
+  it("일시적인 썸네일 조회 실패를 캐싱하지 않아 다음 조회에서 복구한다", async () => {
+    const fail = vi.fn(() => Promise.reject(new Error("offline")));
+    await expect(fetchPoiThumbCached("retry", fail as typeof fetch)).resolves.toBeNull();
+    const success = makeFetch({ common: { contentid: "retry", firstimage: "https://img/retry.jpg" } });
+    await expect(fetchPoiThumbCached("retry", success as typeof fetch)).resolves.toBe("https://img/retry.jpg");
+  });
+
   it("detailCommon2 firstimage를 https로 정규화해 반환한다", async () => {
     const common = {
       contentid: "200",
@@ -398,17 +486,109 @@ describe("fetchPoiImageCached — 썸네일 경량 이미지", () => {
     expect(url).toBeNull();
   });
 
-  it("firstimage가 있으면 detailImage2는 호출하지 않는다 (호출 1회)", async () => {
+  it("공통정보에서 유효 사진을 받으면 빈 이미지 결과와 무관하게 세션에서 재사용한다", async () => {
     const common = { contentid: "203", contenttypeid: "12", title: "W", firstimage: "https://i.jpg" };
     const fetchMock = makeFetch({ common });
     await fetchPoiImageCached("203", fetchMock as typeof fetch);
     await fetchPoiImageCached("203", fetchMock as typeof fetch); // 캐시 히트
     expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailCommon2"))).toHaveLength(1);
-    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(0);
+    expect(fetchMock.mock.calls.filter((c) => String(c[0]).includes("detailImage2"))).toHaveLength(1);
+  });
+
+  it("detailCommon2와 detailImage2를 동시에 시작해 firstimage가 비면 이미지 결과를 쓴다", async () => {
+    let resolveCommon!: (response: Response) => void;
+    const calls: string[] = [];
+    const fetchMock = vi.fn((url: string | URL) => {
+      const value = String(url);
+      calls.push(value);
+      if (value.includes("detailCommon2")) {
+        return new Promise<Response>((resolve) => {
+          resolveCommon = resolve;
+        });
+      }
+      if (value.includes("detailImage2")) {
+        return Promise.resolve(
+          jsonResponse(envelope({ originimgurl: "https://img/parallel.jpg" })),
+        );
+      }
+      return Promise.reject(new Error(`unexpected url ${value}`));
+    });
+
+    const imagePending = fetchPoiImageCached("parallel", fetchMock as unknown as typeof fetch);
+    await Promise.resolve();
+    expect(calls.some((url) => url.includes("detailCommon2"))).toBe(true);
+    expect(calls.some((url) => url.includes("detailImage2"))).toBe(true);
+    resolveCommon(
+      jsonResponse(
+        envelope({ contentid: "parallel", contenttypeid: "12", title: "P", firstimage: "" }),
+      ),
+    );
+
+    await expect(imagePending).resolves.toBe("https://img/parallel.jpg");
+  });
+
+  it("병렬 detailImage2에서도 화장실·주차장류 사진을 대표 이미지에서 제외한다", async () => {
+    const common = { contentid: "filtered", contenttypeid: "12", title: "F", firstimage: "" };
+    const image = [
+      { imgname: "주차장", originimgurl: "https://img/parking.jpg" },
+      { imgname: "외관", originimgurl: "https://img/front.jpg" },
+    ];
+
+    await expect(
+      fetchPoiImageCached("filtered", makeFetch({ common, image }) as typeof fetch),
+    ).resolves.toBe("https://img/front.jpg");
   });
 
   it("poiImageProxyUrl은 contentId로 프록시 이미지 경로를 만든다", () => {
     expect(poiImageProxyUrl("126122")).toBe("/api/img?contentId=126122");
+  });
+});
+
+describe("깨진 사진 주소 복구", () => {
+  it("깨진 썸네일 대신 목록 원본을 추가 API 호출 없이 사용한다", async () => {
+    await fetchAreaPois("15", vi.fn(async () => jsonResponse(envelope({
+      contentid: "fallback", firstimage: "http://img/full.jpg", firstimage2: "http://img/thumb.jpg",
+    }))) as typeof fetch);
+    const fetchMock = vi.fn();
+    await expect(fetchPoiImageFallback("fallback", ["https://img/thumb.jpg"], "thumb", fetchMock as typeof fetch))
+      .resolves.toBe("https://img/full.jpg");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("원본까지 깨지면 시설 사진과 실패 주소를 제외하고 다음 썸네일을 선택한다", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(envelope([
+      { imgname: "주차장", smallimageurl: "https://img/parking.jpg" },
+      { imgname: "해변", smallimageurl: "http://img/next-small.jpg", originimgurl: "http://img/next.jpg" },
+    ])));
+    const failed = ["https://img/broken.jpg"];
+    await expect(fetchPoiImageFallback("next", failed, "thumb", fetchMock as typeof fetch))
+      .resolves.toBe("https://img/next-small.jpg");
+    await expect(fetchPoiImageFallback("next", [...failed, "https://img/next-small.jpg"], "thumb", fetchMock as typeof fetch))
+      .resolves.toBe("https://img/next.jpg");
+    await expect(fetchPoiImageFallback("next", [...failed, "https://img/next-small.jpg", "https://img/next.jpg"], "thumb", fetchMock as typeof fetch))
+      .resolves.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("사진이 없는 장소는 대체 주소를 만들지 않고 빈 결과를 재사용한다", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(envelope(null)));
+    await expect(fetchPoiImageFallback("empty", ["https://img/broken.jpg"], "thumb", fetchMock as typeof fetch)).resolves.toBeNull();
+    await expect(fetchPoiImageFallback("empty", ["https://img/broken.jpg"], "thumb", fetchMock as typeof fetch)).resolves.toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("대체 사진 API의 일시적 실패도 다음 호출에서 복구할 수 있다", async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(jsonResponse(envelope({ originimgurl: "https://img/recovered.jpg" })));
+    await expect(fetchPoiImageFallback("retry", [], "full", fetchMock as typeof fetch)).rejects.toThrow();
+    await expect(fetchPoiImageFallback("retry", [], "full", fetchMock as typeof fetch)).resolves.toBe("https://img/recovered.jpg");
+  });
+
+  it("시설 사진만 있는 것으로 제외한 장소는 대체 사진도 요청하지 않는다", async () => {
+    const fetchMock = vi.fn();
+    await expect(fetchPoiImageFallback("3083767", [], "thumb", fetchMock as typeof fetch)).resolves.toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
@@ -433,6 +613,119 @@ describe("썸네일 이미지 — 세션 목록 firstimage 재사용", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("진행 중인 목록이 이미지를 알려주면 상세 폴백 없이 그 URL을 쓴다", async () => {
+    let resolveList!: (response: Response) => void;
+    const listFetch = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveList = resolve;
+        }),
+    );
+    const listPending = fetchAreaPoisCached("15", listFetch as unknown as typeof fetch);
+    const detailFetch = makeFetch({
+      common: { contentid: "warm-race", contenttypeid: "12", title: "T" },
+    });
+
+    const imagePending = fetchPoiImageCached("warm-race", detailFetch as typeof fetch);
+    resolveList(
+      jsonResponse(
+        envelope([
+          {
+            contentid: "warm-race",
+            contenttypeid: "12",
+            title: "T",
+            firstimage: "http://tong.visitkorea.or.kr/warmed.jpg",
+          },
+        ]),
+      ),
+    );
+
+    await expect(listPending).resolves.toHaveLength(1);
+    await expect(imagePending).resolves.toBe("https://tong.visitkorea.or.kr/warmed.jpg");
+    expect(detailFetch).not.toHaveBeenCalled();
+  });
+
+  it("진행 중인 목록이 없으면 타이머 대기 없이 즉시 상세 폴백을 시작한다", async () => {
+    vi.useFakeTimers();
+    try {
+      const detailFetch = makeFetch({
+        common: { contentid: "no-list", contenttypeid: "12", title: "T", firstimage: "https://img/fallback.jpg" },
+      });
+
+      const imagePending = fetchPoiImageCached("no-list", detailFetch as typeof fetch);
+      await expect(imagePending).resolves.toBe("https://img/fallback.jpg");
+      expect(detailFetch.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("목록이 300ms 안에 끝나지 않으면 상세 폴백을 시작한다", async () => {
+    vi.useFakeTimers();
+    try {
+      const listFetch = vi.fn(() => new Promise<Response>(() => {}));
+      void fetchAreaPoisCached("15", listFetch as unknown as typeof fetch);
+      const detailFetch = makeFetch({
+        common: { contentid: "list-timeout", contenttypeid: "12", title: "T", firstimage: "https://img/timeout.jpg" },
+      });
+
+      const imagePending = fetchPoiImageCached("list-timeout", detailFetch as typeof fetch);
+      await vi.advanceTimersByTimeAsync(299);
+      expect(detailFetch).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(imagePending).resolves.toBe("https://img/timeout.jpg");
+      expect(detailFetch.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("필요한 사진이 한 페이지에 도착하면 다른 지역·다음 페이지를 기다리지 않는다", async () => {
+    vi.useFakeTimers();
+    try {
+      let resolvePage!: (response: Response) => void;
+      const listFetch = vi.fn()
+        .mockImplementationOnce(() => new Promise<Response>((resolve) => { resolvePage = resolve; }))
+        .mockImplementation(() => new Promise<Response>(() => {}));
+      void fetchAreaPoisCached("15", listFetch as typeof fetch);
+      void fetchAreaPoisCached("10", vi.fn(() => new Promise<Response>(() => {})) as typeof fetch);
+      const detailFetch = vi.fn();
+      const pending = fetchPoiThumbCached("early-page", detailFetch as typeof fetch);
+      resolvePage(jsonResponse({ response: {
+        header: { resultCode: "0000" },
+        body: { totalCount: "2", items: { item: [{ contentid: "early-page", contenttypeid: "12", firstimage2: "https://img/early.jpg" }] } },
+      } }));
+      // 타이머를 전진하지 않아도 해당 페이지의 색인 갱신만으로 사진이 준비된다.
+      await expect(pending).resolves.toBe("https://img/early.jpg");
+      expect(detailFetch).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("진행 중인 목록이 실패해도 reject하지 않고 상세 폴백으로 간다", async () => {
+    let rejectList!: (reason: unknown) => void;
+    const listFetch = vi.fn(
+      () =>
+        new Promise<Response>((_resolve, reject) => {
+          rejectList = reject;
+        }),
+    );
+    const listPending = fetchAreaPoisCached("15", listFetch as unknown as typeof fetch);
+    listPending.catch(() => {});
+    const detailFetch = makeFetch({
+      common: { contentid: "list-failure", contenttypeid: "12", title: "T", firstimage: "https://img/failure.jpg" },
+    });
+
+    const imagePending = fetchPoiImageCached("list-failure", detailFetch as typeof fetch);
+    rejectList(new Error("list down"));
+
+    await expect(imagePending).resolves.toBe("https://img/failure.jpg");
+    expect(detailFetch.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+  });
+
   it("목록 firstimage가 비어 있으면 상세 경로로 폴백한다", async () => {
     await warmImageIndex("402", ""); // 이미지 없는 POI — 인덱스에 남지 않는다
     const fetchMock = makeFetch({
@@ -449,6 +742,88 @@ describe("썸네일 이미지 — 세션 목록 firstimage 재사용", () => {
   it("knownPoiImageUrl은 시설 사진뿐인 POI를 계속 제외한다", async () => {
     await warmImageIndex("3083767", "http://tong.visitkorea.or.kr/restroom.jpg");
     expect(knownPoiImageUrl("3083767")).toBeNull();
+  });
+});
+
+describe("목록 썸네일 firstimage2", () => {
+  async function warmThumbIndex(
+    contentid: string,
+    firstimage: string,
+    firstimage2?: string,
+  ): Promise<void> {
+    const listFetch = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(
+          envelope([{ contentid, contenttypeid: "12", title: "T", firstimage, firstimage2 }]),
+        ),
+      ),
+    );
+    await fetchAreaPois("15", listFetch as unknown as typeof fetch);
+  }
+
+  it("목록 응답의 firstimage2를 색인해 경량 URL을 돌려준다", async () => {
+    await warmThumbIndex("thumb-index", "https://img/full.jpg", "https://img/thumb.jpg");
+
+    expect(knownPoiThumbUrl("thumb-index")).toBe("https://img/thumb.jpg");
+  });
+
+  it("firstimage2가 비어 있으면 firstimage로 폴백한다", async () => {
+    await warmThumbIndex("thumb-fallback", "https://img/full.jpg", "");
+
+    expect(knownPoiThumbUrl("thumb-fallback")).toBe("https://img/full.jpg");
+  });
+
+  it("목록 인덱스만으로 응답하고 detailCommon2를 부르지 않는다", async () => {
+    await warmThumbIndex("thumb-no-detail", "https://img/full.jpg", "https://img/thumb.jpg");
+    const fetchMock = makeFetch({
+      common: { contentid: "thumb-no-detail", contenttypeid: "12", title: "T" },
+    });
+
+    await expect(fetchPoiThumbCached("thumb-no-detail", fetchMock as typeof fetch)).resolves.toBe(
+      "https://img/thumb.jpg",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("원본 경로는 firstimage를 유지해 썸네일 캐시에 오염되지 않는다", async () => {
+    await warmThumbIndex("full-isolated", "https://img/full.jpg", "https://img/thumb.jpg");
+    const fetchMock = makeFetch({
+      common: { contentid: "full-isolated", contenttypeid: "12", title: "T" },
+    });
+
+    await expect(fetchPoiThumbCached("full-isolated", fetchMock as typeof fetch)).resolves.toBe(
+      "https://img/thumb.jpg",
+    );
+    await expect(fetchPoiImageCached("full-isolated", fetchMock as typeof fetch)).resolves.toBe(
+      "https://img/full.jpg",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("목록에 없는 contentId는 상세 원본 폴백 경로를 탄다", async () => {
+    const fetchMock = makeFetch({
+      common: {
+        contentid: "thumb-detail-fallback",
+        contenttypeid: "12",
+        title: "T",
+        firstimage: "https://img/detail-full.jpg",
+      },
+    });
+
+    await expect(
+      fetchPoiThumbCached("thumb-detail-fallback", fetchMock as typeof fetch),
+    ).resolves.toBe("https://img/detail-full.jpg");
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes("detailCommon2"))).toBe(true);
+  });
+
+  it("firstimage2의 http URL을 https로 정규화한다", async () => {
+    await warmThumbIndex(
+      "thumb-https",
+      "http://tong.visitkorea.or.kr/full.jpg",
+      "http://tong.visitkorea.or.kr/thumb.jpg",
+    );
+
+    expect(knownPoiThumbUrl("thumb-https")).toBe("https://tong.visitkorea.or.kr/thumb.jpg");
   });
 });
 
@@ -518,5 +893,48 @@ describe("detailIntro2 병렬 발사 (세션 목록 contentTypeId 인덱스)", (
     releaseCommon();
     const detail = await pending;
     expect(detail.visitFactsStatus).toBe("ready");
+  });
+});
+
+describe("primeOperationInfo — 예열 중복 방지", () => {
+  /** 목록 응답으로 contentTypeId 인덱스를 채운다 (없으면 예열이 호출 자체를 건너뛴다) */
+  async function warmIndexFor(contentId: string): Promise<void> {
+    const listFetch = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(
+          envelope([{ contentid: contentId, contenttypeid: "12", title: "예열", addr1: "부산" }]),
+        ),
+      ),
+    );
+    await fetchAreaPois("15", listFetch as unknown as typeof fetch);
+  }
+
+  it("응답 전에 겹쳐 들어와도 detailIntro2는 한 번만 나간다", async () => {
+    // StrictMode는 이펙트를 두 번 실행한다. 색인은 응답이 와야 채워지므로 색인만으로는
+    // 이 중복을 막지 못한다 — 진행 중 목록을 따로 두는 이유.
+    await warmIndexFor("911");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(jsonResponse(envelope({ usetime: "09:00~18:00" }))),
+    );
+
+    await Promise.all([
+      primeOperationInfo(["911"], fetchMock as unknown as typeof fetch),
+      primeOperationInfo(["911"], fetchMock as unknown as typeof fetch),
+    ]);
+
+    // 예열이 내는 호출은 detailIntro2뿐이다 — 한 번만 나갔으면 중복이 막힌 것.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("이미 예열된 POI는 다시 부르지 않는다", async () => {
+    await warmIndexFor("912");
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(jsonResponse(envelope({ usetime: "10:00~19:00" }))),
+    );
+
+    await primeOperationInfo(["912"], fetchMock as unknown as typeof fetch);
+    await primeOperationInfo(["912"], fetchMock as unknown as typeof fetch);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

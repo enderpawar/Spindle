@@ -21,13 +21,13 @@ interface Props {
 export function MapFallbackNote({ placeName, visible, style }: Props) {
   if (!visible) return null
   return (
-    <p aria-live="polite" style={{ margin: '8px 0 0', fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-3)', ...style }}>
+    <p aria-live="polite" style={{ margin: '8px 0 0', fontSize: 11.5, fontWeight: 500, lineHeight: 1.5, color: 'var(--l-ink-3)', ...style }}>
       카카오맵이 열리지 않았나요?{' '}
       <a
         href={kakaoMapMobileSearchUrl(placeName)}
         target="_blank"
         rel="noreferrer"
-        style={{ color: 'var(--l-primary)', fontWeight: 800, textDecoration: 'underline' }}
+        style={{ color: 'var(--l-primary)', fontWeight: 700, textDecoration: 'underline' }}
       >
         모바일 웹으로 열기
       </a>

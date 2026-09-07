@@ -21,8 +21,8 @@ export function StampNotice({ district }: Props) {
     >
       <img src="/stamp-mark-512.png" alt="" aria-hidden style={{ width: 34, height: 34, objectFit: 'contain', flex: 'none' }} />
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 10.5, lineHeight: 1.2, fontWeight: 800, color: 'var(--l-ink-3)' }}>새로운 도장</div>
-        <div style={{ marginTop: 2, fontSize: 13, lineHeight: 1.3, fontWeight: 900, color: 'var(--l-ink)' }}>{district} 여행 도장을 받았어요</div>
+        <div style={{ fontSize: 10.5, lineHeight: 1.2, fontWeight: 700, color: 'var(--l-ink-3)' }}>새로운 도장</div>
+        <div style={{ marginTop: 2, fontSize: 13, lineHeight: 1.3, fontWeight: 800, color: 'var(--l-ink)' }}>{district} 여행 도장을 받았어요</div>
       </div>
     </div>
   )

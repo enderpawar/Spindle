@@ -12,23 +12,23 @@ const ACTIVE = '#1e4fd8'
 // 흰 내비게이션 바에서 작은 라벨도 WCAG AA 대비를 확보한다.
 const INACTIVE = '#5b7098'
 
-function Item({ label, active, icon, onClick }: { label: string; active: boolean; icon: ReactNode; onClick: () => void }) {
+function Item({ label, active, icon, onClick, spin = false }: { label: string; active: boolean; icon: ReactNode; onClick: () => void; spin?: boolean }) {
   const tone = active ? ACTIVE : INACTIVE
   return (
     <button
-      className={`nav-item${active ? ' is-active' : ''}`}
+      type="button"
+      className={`nav-item${active ? ' is-active' : ''}${spin ? ' nav-item--spin' : ''}`}
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '2px 8px', minWidth: 44 }}
+      style={{ color: tone }}
     >
-      <span className="nav-icon" key={active ? 'active' : 'idle'} style={{ color: tone, display: 'inline-flex' }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: active ? 800 : 700, color: active ? ACTIVE : INACTIVE }}>{label}</span>
+      <span className="nav-icon">{icon}</span>
+      <span className="nav-label">{label}</span>
     </button>
   )
 }
 
 export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: (tab: NavTab) => void }) {
-  const c = (tab: NavTab) => (active === tab ? ACTIVE : INACTIVE)
   const navRef = useRef<HTMLElement | null>(null)
 
   // 내비게이션이 실제로 가리는 높이를 CSS 변수로 알린다. 각 화면이 하단 여백을
@@ -63,11 +63,12 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
         maxWidth: 480,
         transform: 'translateX(-50%)',
         background: '#fff',
-        boxShadow: '0 -6px 20px -8px rgba(20,40,90,.18)',
-        display: 'flex',
+        boxShadow: '0 -3px 12px -8px rgba(20,40,90,.12)',
+        borderTop: '1px solid #e8eef8',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
         alignItems: 'flex-start',
-        justifyContent: 'space-around',
-        padding: '12px 12px max(10px, env(safe-area-inset-bottom))',
+        padding: '8px 8px max(10px, env(safe-area-inset-bottom))',
         zIndex: 20,
       }}
     >
@@ -87,40 +88,10 @@ export function BottomNav({ active, onNavigate }: { active: NavTab; onNavigate: 
           <NavSpotsIcon />
         }
       />
-      <div className="nav-spin-slot">
-        <button
-          onClick={() => onNavigate('spin')}
-          aria-label="스핀"
-          aria-current={active === 'spin' ? 'page' : undefined}
-          className={`nav-fab${active === 'spin' ? ' is-active' : ''}`}
-          style={{
-            width: 58,
-            height: 58,
-            borderRadius: '50%',
-            border: 'none',
-            cursor: 'pointer',
-            background: 'var(--l-primary)',
-            boxShadow: '0 8px 18px -8px rgba(20,50,140,.55)',
-            display: 'grid',
-            placeItems: 'center',
-          }}
-        >
-          {/* 파란 배지 위에서 로고(파란 그라디언트)가 묻히지 않도록 흰 원을 깔고 얹는다 */}
-          <span
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: '50%',
-              background: '#fff',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <img src="/brand-mark-192.png" alt="" width={32} height={32} />
-          </span>
-        </button>
-        <span style={{ fontSize: 11, fontWeight: 800, color: c('spin') }}>스핀</span>
-      </div>
+      <Item label="스핀" spin active={active === 'spin'} onClick={() => onNavigate('spin')}
+        icon={<span className="nav-spin-disc">
+          <img src="/brand-mark-192.png" alt="" width="32" height="32" />
+        </span>} />
       <Item
         label="도장"
         active={active === 'stamp'}

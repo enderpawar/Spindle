@@ -98,7 +98,7 @@ export function themeSpinResult(journey: ThemeJourney, rng: () => number): Theme
 const CATEGORY_THEMES: Record<string, ThemeId[]> = {
   '골목·시장': ['alley'],
   근현대: ['history'],
-  시장: ['alley', 'food'],
+  시장: ['alley'],
   산복도로: ['alley', 'history'],
   거리: ['alley'],
   '산업·예술': ['history'],
@@ -116,24 +116,17 @@ const CATEGORY_THEMES: Record<string, ThemeId[]> = {
 const POI_EXTRA_THEMES: Record<string, ThemeId[]> = {
   'bupyeong-market': ['food', 'night'],
   'jagalchi-market': ['food'],
-  'choryang-market': ['food'],
   'samjin-eomuk': ['food'],
   'huinnyeoul-tunnel': ['night'],
   // 2026-08-03 보강분
-  'gukje-market': ['food'],
   'gukje-food-alley': ['food'],
-  'busanjin-market': ['food'],
-  'namhang-market': ['food'],
   'gongdong-fish-market': ['food'],
-  'yongdusan-jagalchi': ['food', 'night'],
+  'yongdusan-jagalchi': ['night'],
   'yongdusan-park': ['night'],
   'kimminbu-view': ['night'],
-  'cheonmasan-view': ['night'],
-  'nuribaragi-view': ['night'],
   'taejongdae': ['sea'],
   'plaza-75': ['sea'],
   'amir-park': ['sea'],
-  'songdo-skywalk-bridge': ['sea'],
 }
 
 /** 테마 덱의 사진 히어로에 노출할 대표 장소. TourAPI 이미지는 화면 진입 때만 실시간 조회한다. */

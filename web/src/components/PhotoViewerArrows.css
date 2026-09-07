@@ -1,0 +1,12 @@
+.photo-viewer .photo-viewer-nav-btn {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  background: rgba(255, 255, 255, .55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border-color: rgba(217, 228, 250, .7);
+  touch-action: manipulation;
+}

@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import { fetchPoiCardDetailCached, fetchPoiDetailCached, primeOperationInfo } from './api/details'
 import { fetchOldTownFestivalsCached, todayYyyymmdd } from './api/festivals'
 import { fetchAllOldTownPois } from './api/tourapi'
-import { CURATED_CONTENT_IDS, recommendFromSpin } from './engine/spinRecommend'
-import { buildCourseFromAnchor, buildCourseFromSpin, type ReadyCourse } from './engine/spinCourse'
+import { transformExtraSpots, type ExtraSpot } from './api/extraSpots'
+import { failureCauseLine } from './api/failureCopy'
+import { recommendDiningSpin, type SpinCategory } from './engine/diningSpin'
+import { recommendFromSpin } from './engine/spinRecommend'
+import { buildCourseFromAnchor, type ReadyCourse } from './engine/spinCourse'
 import { DEPARTURES, DIAL_DEFAULT_MINUTES, directionOf, type Departure, type Poi, type Recommendation } from './mock/pois'
 import { IntroScreen } from './screens/IntroScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { SpotsScreen } from './screens/SpotsScreen'
-import { SpinScreen, type SpinPurpose } from './screens/SpinScreen'
+import { SpinScreen } from './screens/SpinScreen'
 import { StampScreen } from './screens/StampScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { DepartureScreen } from './screens/DepartureScreen'
@@ -36,6 +39,7 @@ import { decideExit } from './navigation/exitIntent'
 import { exitApp, useHardwareBack } from './navigation/useHardwareBack'
 import { runViewTransition } from './viewTransition'
 import { usePressFeedback } from './usePressFeedback'
+import { useNativeMotionPermissionWarmup } from './sensors/useNativeMotionPermissionWarmup'
 
 // 탭(홈·명소·스핀·도장·설정)은 라이트 테마, 스핀 의식(스핀→리빌→공유)은 밤바다 몰입 테마.
 
@@ -43,6 +47,7 @@ const ONBOARD_KEY = 'spindle.onboarded' // 온보딩 노출 여부만 저장 (AP
 
 function App() {
   usePressFeedback()
+  useNativeMotionPermissionWarmup()
 
   // 콜드 스타트 인트로 스플래시 — 앱 부팅마다 한 번 노출(세션 시작 POI 프리페치를 자연스럽게 가린다)
   const [booting, setBooting] = useState(true)
@@ -61,8 +66,11 @@ function App() {
   const [poiReturn, setPoiReturn] = useState<Screen>('home')
   const [course, setCourse] = useState<ReadyCourse | null>(null)
   const [courseReturn, setCourseReturn] = useState<Screen>('result')
-  const [spinPurpose, setSpinPurpose] = useState<SpinPurpose>('single')
-  const [spinPurposeNotice, setSpinPurposeNotice] = useState<string | null>(null)
+  const [spinCategory, setSpinCategory] = useState<SpinCategory>('전체')
+  const [diningSpots, setDiningSpots] = useState<ExtraSpot[] | null>(null)
+  const [diningError, setDiningError] = useState<string | null>(null)
+  const [diningRetry, setDiningRetry] = useState(0)
+  const [diningNotice, setDiningNotice] = useState<string | null>(null)
   const [courseFailureNotice, setCourseFailureNotice] = useState<string | null>(null)
   const [homeGuideOpen, setHomeGuideOpen] = useState(false)
   const [transitionIntent, setTransitionIntent] = useState<TransitionIntent>('tab')
@@ -122,21 +130,34 @@ function App() {
   // SPEC 6: 세션 시작 시 4개 구 areaBasedList2를 실시간 호출(메모리/세션 캐시만, 영속 저장 없음)
   // — 운영계정 호출 이력을 자연스럽게 축적한다. 실패해도 앱 동작에는 영향 없음(추천은 큐레이션 풀 기반).
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    const warmAreaLists = () => {
       fetchAllOldTownPois()
         .then((regions) => {
           const total = regions.reduce((sum, r) => sum + r.pois.length, 0)
           console.info(`[Spindle] 세션 시작 POI 실시간 로드: ${total}곳 (${regions.length}개 구)`)
-          // 목록 호출이 contentTypeId를 알려준 뒤에야 detailIntro2를 1회/POI로 부를 수 있다.
-          // 운영 상태 축(SPEC 4장)이 첫 스핀부터 실제 이용시간·휴무를 반영하도록 배경에서 예열한다.
-          // 실패해도 추천은 보수적 통과로 그대로 동작한다.
-          void primeOperationInfo(CURATED_CONTENT_IDS).catch(() => {})
+          // 여기서 큐레이션 49곳의 detailIntro2를 전부 예열하던 코드를 걷어냈다. 방향이 정해지기
+          // 전에는 어느 POI가 필요한지 알 수 없어 대부분이 버려졌고, 인덱스가 메모리 전용이라
+          // (절대 원칙 3) 새로고침마다 반복돼 오퍼레이션 트래픽만 소진했다.
+          // 예열은 대상이 정해지는 시점으로 옮겼다 — 스핀 직후 후보(onSpun)와 명소 목록.
         })
         .catch(() => {
           /* 목록 로드 실패는 추천에 영향 없음 — 결과 시점 상세 호출에서 별도 에러 UI 처리 */
         })
-    }, 1500)
-    return () => window.clearTimeout(timer)
+    }
+
+    let idleId: number | undefined
+    let timerId: number | undefined
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(warmAreaLists)
+    } else {
+      // 미지원 브라우저도 첫 페인트 직후 빠르게 워밍업을 시작한다.
+      timerId = window.setTimeout(warmAreaLists, 300)
+    }
+
+    return () => {
+      if (idleId !== undefined) window.cancelIdleCallback(idleId)
+      if (timerId !== undefined) window.clearTimeout(timerId)
+    }
   }, [])
 
   const finishOnboarding = () => {
@@ -147,14 +168,40 @@ function App() {
   // 현장 모드면 실제 현재 위치가, 여행 모드면 선택한 프리셋이 추천·코스의 출발점이다.
   const origin = fieldOrigin ?? departure
 
+  useEffect(() => {
+    if (spinCategory === '전체') return
+    let active = true
+    setDiningError(null)
+    fetchAllOldTownPois().then(regions => {
+      if (active) setDiningSpots(transformExtraSpots(regions.flatMap(region => region.pois), new Set(), Infinity))
+    }).catch((error: unknown) => {
+      if (active) setDiningError(`장소를 불러오지 못했어요 · ${failureCauseLine(error)}`)
+    })
+    return () => { active = false }
+  }, [spinCategory, diningRetry])
+
+  const changeSpinCategory = (category: SpinCategory) => {
+    setSpinCategory(category)
+    setDiningNotice(null)
+    if (category !== '전체') setThemeJourney(null)
+  }
+
   const handleSpun = (headingDeg: number) => {
-    const nextRec = recommendFromSpin({
+    const input = {
       heading: headingDeg,
       departure: origin,
       budgetMinutes: dial,
-      prevContentId: rec?.candidates[0]?.contentId,
-      themeJourney: spinPurpose === 'single' ? themeJourney ?? undefined : undefined,
-    })
+      prevContentId: rec?.candidates[candidateIndex]?.contentId,
+      themeJourney: themeJourney ?? undefined,
+    }
+    const nextRec = spinCategory !== '전체'
+      ? recommendDiningSpin({ ...input, category: spinCategory, spots: diningSpots ?? [] })
+      : recommendFromSpin(input)
+    if (nextRec.candidates.length === 0) {
+      setDiningNotice(`이 방향과 이동시간에 맞는 ${spinCategory === '카페' ? '카페가' : '음식점이'} 없어요. 방향을 바꾸거나 이동시간을 늘려보세요.`)
+      return false
+    }
+    setDiningNotice(null)
     setRec(nextRec)
     setCandidateIndex(0)
     setPoiReturn('home')
@@ -162,6 +209,10 @@ function App() {
     // 마운트 900ms 뒤 조회할 때 캐시에 이미 있어, 축제 카드가 네트워크 지연만큼 늦게
     // 튀어나오지 않고 연출 타이밍대로 뜬다. 호출 수는 그대로(세션 캐시 디듀프).
     void fetchOldTownFestivalsCached(todayYyyymmdd()).catch(() => {})
+    // 방향이 정해진 지금이 운영 원문을 부를 자리다 — 이 후보 3개가 사용자가 실제로 볼
+    // 전부이고, `다른 후보`를 누르면 어차피 나갈 호출이라 순증이 없다. 리빌 연출(3초,
+    // RevealScreen) 안에 도착하므로 체감 지연도 없다.
+    void primeOperationInfo(nextRec.candidates.map((c) => c.contentId)).catch(() => {})
     const firstContentId = nextRec.candidates[0]?.contentId
     if (firstContentId) {
       // 리빌 연출(~700ms) 동안 결과 카드가 마운트 시 다시 호출할 상세 3종을 미리 데운다.
@@ -176,27 +227,6 @@ function App() {
             }
           }, 500)
         })
-    }
-    if (spinPurpose === 'course') {
-      const anchor = nextRec.candidates[0]
-      const result = anchor ? buildCourseFromSpin({
-        departure: origin,
-        budgetMinutes: dial,
-        anchor,
-        headingDeg,
-        noteReason: nextRec.expandReason,
-      }) : null
-      if (result?.status === 'ready') {
-        setCourse(result)
-        setCourseReturn('spin')
-        setCourseFailureNotice(null)
-        goTo('course')
-      } else {
-        setPoiReturn('spin')
-        setCourseFailureNotice(`이 방향은 코스로 잇기 어려워요. ${result?.reason ?? '코스 다시 돌리기를 눌러 주세요.'}`)
-        goTo('result')
-      }
-      return
     }
     setCourseFailureNotice(null)
     goTo('reveal')
@@ -223,15 +253,16 @@ function App() {
   }
 
   const startThemeJourney = (themeId: ThemeId) => {
+    setSpinCategory('전체')
+    setDiningNotice(null)
     setThemeSeed(themeId)
     setThemeJourney({ themeId, step: 1, target: themeJourneyTarget(dial) })
     setCandidateIndex(0)
-    setSpinPurpose('single')
-    setSpinPurposeNotice(null)
     goTo('spin')
   }
 
   const changeDial = (nextDial: number) => {
+    setDiningNotice(null)
     setDial(nextDial)
     setThemeJourney((journey) => {
       if (!journey) return journey
@@ -272,17 +303,6 @@ function App() {
     return result.reason
   }
 
-  const changeSpinPurpose = (purpose: SpinPurpose) => {
-    setSpinPurpose(purpose)
-    setCourseFailureNotice(null)
-    if (purpose === 'course' && themeJourney) {
-      setThemeJourney(null)
-      setSpinPurposeNotice('코스 모드에서는 테마 여정을 잠시 마쳐요.')
-    } else {
-      setSpinPurposeNotice(null)
-    }
-  }
-
   const openDeparture = (from: Screen) => {
     setDepartureReturn(from)
     goTo('departure')
@@ -308,15 +328,18 @@ function App() {
           onDialChange={changeDial}
           onOpenDeparture={() => openDeparture('spin')}
           onSpun={handleSpun}
+          category={spinCategory}
+          onCategoryChange={changeSpinCategory}
+          categoryLoading={spinCategory !== '전체' && diningSpots === null && diningError === null}
+          categoryError={spinCategory !== '전체' ? diningError : null}
+          categoryNotice={diningNotice}
+          onRetryCategory={() => { setDiningError(null); setDiningRetry(value => value + 1) }}
           onNavigate={navigate}
           theme={themeJourney ? themeInfo(themeJourney.themeId) : undefined}
           themeStep={themeJourney?.step}
           themeTarget={themeJourney?.target}
           onOpenTheme={() => openTheme(themeJourney?.themeId ?? themeSeed, 'spin')}
           onClearTheme={() => setThemeJourney(null)}
-          purpose={spinPurpose}
-          onPurposeChange={changeSpinPurpose}
-          purposeNotice={spinPurposeNotice}
           onFieldOriginChange={setFieldOrigin}
         />
       )
@@ -365,6 +388,7 @@ function App() {
       return rec ? (
         <ResultScreen
           rec={rec}
+          departure={origin}
           candidateIndex={candidateIndex}
           onNextCandidate={() => setCandidateIndex((i) => (i + 1) % rec.candidates.length)}
           onBack={() => goTo(poiReturn)}
@@ -383,7 +407,6 @@ function App() {
           departure={origin}
           onBack={() => goTo(courseReturn)}
           onRespin={() => {
-            setSpinPurpose(courseReturn === 'spin' ? 'course' : 'single')
             goTo('spin')
           }}
         />
@@ -395,6 +418,7 @@ function App() {
         <ThemeDeckScreen
           initialTheme={themeSeed}
           journeyTarget={themeJourneyTarget(dial)}
+          departure={origin}
           onStart={startThemeJourney}
           onSelect={(poi) => {
             setThemeJourney(null)

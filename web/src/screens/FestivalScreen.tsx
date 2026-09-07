@@ -58,8 +58,8 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
           </svg>
         </button>
         <div>
-          <div style={{ fontSize: 19, fontWeight: 900, color: 'var(--l-ink)', letterSpacing: -0.4 }}>지금 원도심 축제</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+          <div style={{ fontSize: 19, fontWeight: 800, color: 'var(--l-ink)', letterSpacing: -0.4 }}>지금 원도심 축제</div>
+          <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>
             {state.kind === 'ready' && state.board.kind === 'upcoming' && state.board.festivals.length > 0
               ? '진행 중인 축제가 없어 곧 열릴 축제를 모았어요'
               : '오늘 진행 중인 축제만 모았어요'}
@@ -78,8 +78,8 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
 
         {state.kind === 'error' && (
           <div style={{ marginTop: 40, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--l-ink-2)' }}>축제 정보를 불러오지 못했어요</div>
-            <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 600, color: 'var(--l-ink-3)' }}>{failureCauseLine(state.error)}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--l-ink-2)' }}>축제 정보를 불러오지 못했어요</div>
+            <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 500, color: 'var(--l-ink-3)' }}>{failureCauseLine(state.error)}</div>
             <button
               onClick={() => setReloadKey((k) => k + 1)}
               className="btn"
@@ -93,8 +93,8 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
         {state.kind === 'ready' && state.board.festivals.length === 0 && (
           <div style={{ marginTop: 46, textAlign: 'center', padding: '0 24px' }}>
             <div aria-hidden style={{ fontSize: 40 }}>🎈</div>
-            <div style={{ marginTop: 10, fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)' }}>지금은 진행 중인 축제가 없어요</div>
-            <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 600, color: 'var(--l-ink-3)', lineHeight: 1.5 }}>
+            <div style={{ marginTop: 10, fontSize: 14.5, fontWeight: 700, color: 'var(--l-ink)' }}>지금은 진행 중인 축제가 없어요</div>
+            <div style={{ marginTop: 6, fontSize: 12.5, fontWeight: 500, color: 'var(--l-ink-3)', lineHeight: 1.5 }}>
               대신 스핀을 돌려 숨은 명소를 찾아보는 건 어때요?
             </div>
             <button
@@ -127,13 +127,13 @@ export function FestivalScreen({ onNavigate, onBack }: Props) {
                     )}
                   </div>
                   <div style={{ flex: 1, padding: '12px 14px', textAlign: 'left' }}>
-                    <div style={{ fontSize: 14.5, fontWeight: 800, color: 'var(--l-ink)', lineHeight: 1.3 }}>{f.title}</div>
-                    <div style={{ marginTop: 5, fontSize: 12, fontWeight: 600, color: 'var(--l-ink-3)' }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--l-ink)', lineHeight: 1.3 }}>{f.title}</div>
+                    <div style={{ marginTop: 5, fontSize: 12, fontWeight: 500, color: 'var(--l-ink-3)' }}>
                       {f.district ? `${f.district} · ` : ''}
                       {state.board.kind === 'upcoming' ? '곧 열려요 · ' : ''}
                       {shortDate(f.startDate)}–{shortDate(f.endDate)}
                     </div>
-                    <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 700, color: 'var(--l-primary)' }}>지도에서 보기 ›</div>
+                    <div style={{ marginTop: 4, fontSize: 11.5, fontWeight: 600, color: 'var(--l-primary)' }}>지도에서 보기 ›</div>
                   </div>
                 </a>
                 <MapFallbackNote placeName={f.title} visible={triedMapIds.includes(f.contentId)} />

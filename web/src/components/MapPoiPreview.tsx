@@ -68,7 +68,7 @@ export function MapPoiPreview({ poi, color, onOpen }: Props) {
             overflow: 'hidden',
             color: '#fff',
             fontSize: 12.5,
-            fontWeight: 800,
+            fontWeight: 700,
             lineHeight: 1.25,
             textOverflow: 'ellipsis',
             textShadow: '0 1px 4px rgba(0,0,0,.5)',

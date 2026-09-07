@@ -37,7 +37,10 @@ description: TourAPI(KorService2·관광지 집중률 예측) 호출 코드를 �
 
 - 응답은 **메모리/세션 범위**에만 보관. localStorage·IndexedDB·서버 DB·빌드 시점 정적 파일화 전부 금지.
 - 세션 시작 시 4개 구 `areaBasedList2`를 실시간 호출, 상세·이미지·축제는 결과 표시 시점에 추가 호출 — 이렇게 해야 운영계정 호출 이력이 자연스럽게 쌓인다.
-- 운영 상태 축(SPEC 4.0)을 위해 세션 시작 목록 호출 직후 큐레이션 POI의 `detailIntro2`를 1회/POI로 예열한다(`primeOperationInfo`, 동시 3). 목록이 알려준 `contentTypeId`가 있을 때만 호출해 `detailCommon2`를 추가로 태우지 않으며, 원문(`usetime`·`restdate`·`overview`)은 세션 메모리 색인에만 둔다. 예열 실패는 무시한다 — 모르는 POI는 1.0 보수 통과라 추천이 막히지 않는다.
+- **예열은 "곧 보여줄 것"만 한다.** 운영 상태 축(SPEC 4.0)용 `detailIntro2` 예열(`primeOperationInfo`, 동시 2)은 대상이 정해지는 시점에만 부른다 — 스핀 직후 후보(리빌 연출 3초 안에 도착), 명소 목록은 화면에 뜬 앞쪽 12곳. 목록이 알려준 `contentTypeId`가 있을 때만 호출해 `detailCommon2`를 추가로 태우지 않으며, 원문(`usetime`·`restdate`·`overview`)은 세션 메모리 색인에만 둔다. 예열 실패는 무시한다 — 모르는 POI는 1.0 보수 통과라 추천이 막히지 않는다.
+- **세션 시작에 큐레이션 POI 전량을 예열하지 않는다.** 방향이 정해지기 전에는 어느 POI가 필요한지 알 수 없어 49곳 중 46곳쯤이 버려졌고, 색인이 메모리 전용이라 새로고침마다 반복돼 `detailIntro2`만 오퍼레이션 트래픽을 12배 빠르게 소진했다(실제로 429 발생, 2026-09-07). 트래픽은 오퍼레이션별로 집계된다 — 한 엔드포인트를 과하게 부르면 그 엔드포인트만 먼저 죽는다.
+- `primeOperationInfo`는 진행 중인 `contentId`를 따로 들고 중복을 막는다. 색인은 응답이 와야 채워지므로, StrictMode의 이펙트 2회 실행은 색인만으로 걸러지지 않는다.
+- 429는 `callTourApi`가 엔드포인트별로 처리한다: 짧은 지수 백오프 2회(`Retry-After` 우선)로 초당 제한을 넘기고, 그래도 안 풀리면 트래픽 소진으로 보아 60초 쿨다운을 걸어 빠르게 실패시킨다. 남은 호출 예산은 사용자가 실제로 연 화면에 쓴다.
 - 운영 중단 공지가 `overview`에만 적힌 POI가 있어 상세 조회(`detailCommon2`) 결과도 같은 색인에 병합한다. 색인은 세대 번호를 올려 구독자(명소 지도)에게 알리며, 어떤 경우에도 localStorage·IndexedDB·SW 캐시에 남기지 않는다.
 - service worker가 API 응답을 캐싱하지 않도록 fetch 핸들러에서 API 경로는 network-only로 처리한다 (오프라인 셸은 정적 자산만).
 

@@ -1,0 +1,21 @@
+/* 스핀의 관광지·음식점·카페와 같은 버튼 스타일을 공유하고, 5개 테마는 가로로 스크롤한다. */
+.spin-category-switch.theme-category-switch {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  margin: 10px 16px 0;
+  padding: 3px 1px 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  z-index: 2;
+}
+
+.spin-category-switch.theme-category-switch button {
+  flex: 0 0 auto;
+  padding: 0 13px;
+  white-space: nowrap;
+}
+
+.theme-category-switch svg {
+  flex: none;
+}

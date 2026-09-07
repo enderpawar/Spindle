@@ -5,6 +5,7 @@ import {
   clearSessionCache,
   fetchAreaPois,
   fetchAreaPoisCached,
+  resetRateLimitState,
   toNumber,
 } from "./tourapi";
 import type { AreaPoi } from "./tourapi";
@@ -43,7 +44,10 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-beforeEach(() => clearSessionCache());
+beforeEach(() => {
+  clearSessionCache();
+  resetRateLimitState();
+});
 
 describe("fetchAreaPois — 페이징", () => {
   it("totalCount만큼 페이지를 이어 호출해 전체를 수집한다", async () => {
@@ -170,5 +174,60 @@ describe("callTourApi — 실패 원인 분류", () => {
   it("옵션 없이 만든 오류는 api로 취급한다", () => {
     // details.ts의 "상세 정보가 없어요"처럼 응답은 왔지만 내용이 빈 경우.
     expect(new TourApiError("상세 정보가 없어요").kind).toBe("api");
+  });
+});
+
+describe("429 호출 한도 처리", () => {
+  const params = { areaCode: "6", sigunguCode: "15" };
+
+  // Retry-After: 0 으로 실제 대기 없이 재시도 경로만 확인한다.
+  function tooManyRequests(retryAfter = "0"): Response {
+    return new Response("", { status: 429, headers: { "Retry-After": retryAfter } });
+  }
+
+  it("일시적인 429는 재시도해서 넘긴다 (초당 호출 제한)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(tooManyRequests())
+      .mockResolvedValueOnce(jsonResponse(okPage([poi(1)], 1, 1)));
+
+    const body = await callTourApi("areaBasedList2", params, fetchMock as typeof fetch);
+
+    expect(body).toBeDefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("재시도로도 안 풀리면 rateLimited로 던지고 더 두드리지 않는다", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const fetchMock = vi.fn().mockResolvedValue(tooManyRequests());
+
+    await expect(
+      callTourApi("detailIntro2", { contentId: "1", contentTypeId: "12" }, fetchMock as typeof fetch),
+    ).rejects.toMatchObject({ kind: "rateLimited", status: 429 });
+
+    // 최초 1회 + 백오프 재시도 2회
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    // 쿨다운이 걸린 뒤에는 네트워크를 아예 타지 않는다 — 남은 호출 예산을 아낀다.
+    fetchMock.mockClear();
+    await expect(
+      callTourApi("detailIntro2", { contentId: "2", contentTypeId: "12" }, fetchMock as typeof fetch),
+    ).rejects.toMatchObject({ kind: "rateLimited" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("쿨다운은 엔드포인트별이다 — 트래픽이 오퍼레이션 단위로 집계되기 때문", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const limited = vi.fn().mockResolvedValue(tooManyRequests());
+    await expect(
+      callTourApi("detailIntro2", { contentId: "1", contentTypeId: "12" }, limited as typeof fetch),
+    ).rejects.toMatchObject({ kind: "rateLimited" });
+
+    // detailIntro2가 막혔어도 areaBasedList2는 그대로 동작해야 한다.
+    const healthy = vi.fn().mockResolvedValue(jsonResponse(okPage([poi(1)], 1, 1)));
+    await expect(
+      callTourApi("areaBasedList2", params, healthy as typeof fetch),
+    ).resolves.toBeDefined();
+    expect(healthy).toHaveBeenCalledTimes(1);
   });
 });

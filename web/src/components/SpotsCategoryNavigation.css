@@ -1,0 +1,17 @@
+.spots-filter-bar.spots-filter-bar--icons { flex-wrap: wrap; }
+.spin-category-switch.spots-category-switch {
+  display: flex;
+  flex: 1 1 230px;
+  min-width: 0;
+  gap: 4px;
+  margin: 0;
+}
+.spin-category-switch.spots-category-switch button {
+  flex: 1 1 0;
+  gap: 5px;
+  padding: 0 7px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.spots-category-switch svg { flex: none; }
+.spots-filter-bar--icons .spots-region-select { margin-left: auto; }

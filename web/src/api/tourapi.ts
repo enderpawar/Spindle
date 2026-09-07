@@ -20,6 +20,7 @@ export type TourApiFailureKind =
   | "offline" // 단말이 오프라인
   | "timeout" // 요청 타임아웃
   | "network" // 그 밖의 네트워크 실패 (DNS·차단 등)
+  | "rateLimited" // TourAPI 호출 한도 초과 (HTTP 429)
   | "http" // 프록시/업스트림이 비정상 상태 코드로 응답
   | "api"; // 응답은 왔지만 TourAPI가 오류를 알림
 
@@ -61,7 +62,50 @@ const FETCH_FAILURE_MESSAGES: Readonly<Record<string, string>> = {
   offline: "네트워크 연결 없음",
   timeout: "요청 시간 초과",
   network: "네트워크 요청 실패",
+  rateLimited: "TourAPI 호출 한도 초과",
 };
+
+// ── 429 처리 ──
+// TourAPI 트래픽은 오퍼레이션별로 집계된다 — 한 엔드포인트가 429를 내도 나머지는 멀쩡하다.
+// 그래서 재시도도 쿨다운도 엔드포인트 단위로 건다.
+//
+// 429에는 성질이 다른 두 가지가 섞여 있다:
+//   - 초당 호출 제한 → 잠깐 쉬면 풀린다. 짧은 지수 백오프로 넘긴다.
+//   - 일일 트래픽 소진 → 재시도해도 안 풀린다. 계속 두드리면 나머지 호출까지 낭비하므로
+//     쿨다운을 걸어 빠르게 실패시키고, 남은 예산을 사용자가 실제로 연 화면에 쓴다.
+const RETRY_DELAYS_MS: readonly number[] = [600, 1_800];
+const RATE_LIMIT_COOLDOWN_MS = 60_000;
+const RETRY_AFTER_CAP_MS = 30_000;
+const rateLimitedUntil = new Map<string, number>();
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 429의 `Retry-After`(초 또는 HTTP-date)를 ms로 읽는다. 없거나 해석 불가면 null. */
+function retryAfterMs(res: Response): number | null {
+  const raw = res.headers.get("retry-after");
+  if (!raw) return null;
+  const seconds = Number(raw.trim());
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(seconds * 1_000, RETRY_AFTER_CAP_MS);
+  }
+  const at = Date.parse(raw);
+  if (Number.isNaN(at)) return null;
+  return Math.min(Math.max(at - Date.now(), 0), RETRY_AFTER_CAP_MS);
+}
+
+function rateLimitError(): TourApiError {
+  return new TourApiError(FETCH_FAILURE_MESSAGES.rateLimited, {
+    kind: "rateLimited",
+    status: 429,
+  });
+}
+
+/** 테스트·진단용 — 엔드포인트별 429 쿨다운을 지운다. */
+export function resetRateLimitState(): void {
+  rateLimitedUntil.clear();
+}
 
 /** TourAPI 응답 필드는 숫자·좌표 포함 전부 문자열로 온다 — 변환은 이 유틸로만 */
 export function toNumber(value: string | undefined): number | undefined {
@@ -74,9 +118,11 @@ export function toNumber(value: string | undefined): number | undefined {
 export interface AreaPoi {
   contentid: string;
   contenttypeid: string;
+  cat3?: string;
   title: string;
   addr1: string;
   firstimage: string;
+  firstimage2?: string;
   sigungucode: string;
   mapx: string; // guard-allow: TourAPI 응답의 POI 경도 읽기 — 사용자 좌표 아님, 요청 파라미터로 쓰지 않음
   mapy: string; // guard-allow: TourAPI 응답의 POI 위도 읽기 — 단말 내 방향·거리 계산 전용
@@ -103,37 +149,55 @@ export async function callTourApi<B>(
   params: Record<string, string>,
   fetchImpl: FetchLike,
 ): Promise<B> {
-  const qs = new URLSearchParams(params);
-  let res: Response;
-  try {
-    res = await fetchImpl(`${API_BASE}/${endpoint}?${qs.toString()}`, {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (err) {
-    // 오프라인·타임아웃·차단을 구분해 실어 보낸다 — 에러 UI가 사유를 알려주고
-    // 재시도 버튼을 띄운다 (빈 화면 금지).
-    const kind = classifyFetchFailure(err);
-    throw new TourApiError(FETCH_FAILURE_MESSAGES[kind], { kind });
-  }
-  if (!res.ok) {
-    throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`, {
-      kind: "http",
-      status: res.status,
-    });
-  }
+  // 이미 한도에 걸린 엔드포인트는 두드리지 않고 즉시 실패시킨다.
+  if (Date.now() < (rateLimitedUntil.get(endpoint) ?? 0)) throw rateLimitError();
 
-  const data = (await res.json()) as TourApiEnvelope<B>;
-  const header = data.response?.header;
-  const body = data.response?.body;
-  if (header?.resultCode !== "0000" || body === undefined) {
-    // 규약: resultCode !== "0000"이면 콘솔에 resultMsg 로깅 + 사용자 재시도 UI
-    console.error("TourAPI 오류:", header?.resultCode, header?.resultMsg);
-    throw new TourApiError(header?.resultMsg ?? "TourAPI 응답 형식 오류", {
-      kind: "api",
-      resultCode: header?.resultCode,
-    });
+  const qs = new URLSearchParams(params);
+  const url = `${API_BASE}/${endpoint}?${qs.toString()}`;
+
+  for (let attempt = 0; ; attempt += 1) {
+    let res: Response;
+    try {
+      res = await fetchImpl(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    } catch (err) {
+      // 오프라인·타임아웃·차단을 구분해 실어 보낸다 — 에러 UI가 사유를 알려주고
+      // 재시도 버튼을 띄운다 (빈 화면 금지).
+      const kind = classifyFetchFailure(err);
+      throw new TourApiError(FETCH_FAILURE_MESSAGES[kind], { kind });
+    }
+
+    if (res.status === 429) {
+      if (attempt >= RETRY_DELAYS_MS.length) {
+        // 재시도로도 안 풀렸다 = 초당 제한이 아니라 트래픽 소진에 가깝다.
+        rateLimitedUntil.set(endpoint, Date.now() + RATE_LIMIT_COOLDOWN_MS);
+        console.error(`TourAPI 호출 한도: ${endpoint} — ${RATE_LIMIT_COOLDOWN_MS}ms 쉬어갑니다`);
+        throw rateLimitError();
+      }
+      // 지터를 섞어 동시에 튕긴 요청들이 같은 순간에 다시 몰리지 않게 한다.
+      await sleep(retryAfterMs(res) ?? RETRY_DELAYS_MS[attempt] + Math.random() * 300);
+      continue;
+    }
+
+    if (!res.ok) {
+      throw new TourApiError(`프록시 응답 오류 (HTTP ${res.status})`, {
+        kind: "http",
+        status: res.status,
+      });
+    }
+
+    const data = (await res.json()) as TourApiEnvelope<B>;
+    const header = data.response?.header;
+    const body = data.response?.body;
+    if (header?.resultCode !== "0000" || body === undefined) {
+      // 규약: resultCode !== "0000"이면 콘솔에 resultMsg 로깅 + 사용자 재시도 UI
+      console.error("TourAPI 오류:", header?.resultCode, header?.resultMsg);
+      throw new TourApiError(header?.resultMsg ?? "TourAPI 응답 형식 오류", {
+        kind: "api",
+        resultCode: header?.resultCode,
+      });
+    }
+    return body;
   }
-  return body;
 }
 
 export function extractItems<T>(body: ListBody<T>): T[] {
@@ -150,11 +214,15 @@ export function extractItems<T>(body: ListBody<T>): T[] {
 //   - firstimage: 썸네일이 detailCommon2(실측 4~5초)를 건너뛰고 바로 이미지를 띄우는 데 사용
 const contentTypeIndex = new Map<string, string>();
 const firstImageIndex = new Map<string, string>();
+// 세션 메모리 전용 인덱스. 영속 저장하지 않는다 (절대 원칙 3).
+const thumbImageIndex = new Map<string, string>();
+const imageIndexListeners = new Set<() => void>();
 
 function rememberContentTypeId(poi: AreaPoi): void {
   if (!poi.contentid) return;
   if (poi.contenttypeid) contentTypeIndex.set(poi.contentid, poi.contenttypeid);
   if (poi.firstimage) firstImageIndex.set(poi.contentid, poi.firstimage);
+  if (poi.firstimage2) thumbImageIndex.set(poi.contentid, poi.firstimage2);
 }
 
 /** 세션 목록 호출로 이미 알고 있는 contentTypeId (모르면 undefined) */
@@ -165,6 +233,11 @@ export function getKnownContentTypeId(contentId: string): string | undefined {
 /** 세션 목록 호출로 이미 알고 있는 대표 이미지 URL (모르면 undefined — 호출부가 상세로 폴백) */
 export function getKnownFirstImage(contentId: string): string | undefined {
   return firstImageIndex.get(contentId);
+}
+
+/** 세션 목록 호출로 이미 알고 있는 경량 썸네일 URL (모르면 undefined) */
+export function getKnownThumbImage(contentId: string): string | undefined {
+  return thumbImageIndex.get(contentId);
 }
 
 /** 한 구의 POI 전체를 페이징으로 수집 */
@@ -187,6 +260,7 @@ export async function fetchAreaPois(
     );
     const items = extractItems(body);
     for (const item of items) rememberContentTypeId(item);
+    for (const listener of imageIndexListeners) listener();
     all.push(...items);
     const totalCount = toNumber(String(body.totalCount)) ?? 0;
     if (all.length >= totalCount || items.length === 0) return all;
@@ -196,6 +270,35 @@ export async function fetchAreaPois(
 
 // 세션 범위 메모리 캐시 — 탭이 닫히면 사라진다. 영속화 금지 (절대 원칙 3).
 const sessionCache = new Map<string, Promise<AreaPoi[]>>();
+
+/**
+ * 이미 시작된 구군 목록 호출만 기다린다. 호출 시점의 Promise 스냅샷을 사용하므로
+ * 새 목록 요청을 만들지 않으며, 진행 중인 호출이 없으면 즉시 끝난다.
+ * 필요한 장소가 한 페이지에 도착하면 isReady로 나머지 목록 대기를 종료한다.
+ */
+export async function whenAreaListsSettled(
+  timeoutMs: number,
+  isReady: () => boolean = () => false,
+): Promise<void> {
+  if (isReady()) return;
+  const pending = [...sessionCache.values()];
+  if (pending.length === 0) return;
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let onIndexChange: (() => void) | undefined;
+  await Promise.race([
+    Promise.allSettled(pending).then(() => undefined),
+    new Promise<void>((resolve) => {
+      onIndexChange = () => { if (isReady()) resolve(); };
+      imageIndexListeners.add(onIndexChange);
+    }),
+    new Promise<void>((resolve) => {
+      timeoutId = setTimeout(resolve, Math.max(0, timeoutMs));
+    }),
+  ]);
+  if (timeoutId !== undefined) clearTimeout(timeoutId);
+  if (onIndexChange) imageIndexListeners.delete(onIndexChange);
+}
 
 /** 세션 캐시를 거치는 구별 POI 조회. 실패한 Promise는 캐시에서 제거해 재시도 가능하게 한다. */
 export function fetchAreaPoisCached(
@@ -217,6 +320,7 @@ export function clearSessionCache(): void {
   sessionCache.clear();
   contentTypeIndex.clear();
   firstImageIndex.clear();
+  thumbImageIndex.clear();
 }
 
 /**

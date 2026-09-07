@@ -4,7 +4,7 @@
  */
 import { ShakeMeter } from "../engine/shake";
 
-export type MotionPermission = "granted" | "denied" | "unsupported";
+export type MotionPermission = "granted" | "denied" | "unsupported" | "retryable";
 
 /** iOS 13+ 에만 존재하는 정적 권한 요청 (표준 타입에는 없어 별도 선언) */
 interface DeviceMotionEventStatic {
@@ -38,6 +38,11 @@ export function knownMotionPermission(): MotionPermission | null {
   return sessionPermission;
 }
 
+/** 테스트 사이에서 페이지 세션 권한 상태를 격리한다. */
+export function clearMotionPermissionForTest(): void {
+  sessionPermission = null;
+}
+
 /**
  * iOS 13+ 모션 권한 요청 — 나침반과 마찬가지로 **사용자 제스처 핸들러 안에서** 호출한다.
  * 모션 권한은 방위 권한과 별개라 `requestOrientationPermission`을 통과했어도 따로 물어야 한다.
@@ -48,12 +53,18 @@ export async function requestMotionPermission(): Promise<MotionPermission> {
   if (typeof ctor.requestPermission === "function") {
     try {
       const res = await ctor.requestPermission();
-      sessionPermission = res === "granted" ? "granted" : "denied";
+      if (res === "granted" || res === "denied") {
+        sessionPermission = res;
+        return sessionPermission;
+      }
+      // default는 사용자의 명시적 거부가 아니다. 다음 사용자 제스처에서 다시 시도한다.
+      sessionPermission = null;
+      return "retryable";
     } catch {
-      // 제스처 밖 호출 등으로 예외 → 거부로 처리하고 드래그 스핀만 남긴다
-      sessionPermission = "denied";
+      // 제스처 밖 호출 등은 실제 거부가 아니므로 세션에 확정하지 않는다.
+      sessionPermission = null;
+      return "retryable";
     }
-    return sessionPermission;
   }
   sessionPermission = "granted";
   return sessionPermission;
@@ -61,12 +72,18 @@ export async function requestMotionPermission(): Promise<MotionPermission> {
 
 /**
  * 흔들기 구독. 콜백에는 데드존을 넘은 흔들림 세기만 전달하며, 해제 함수를 반환한다.
+ * onSample은 값 없는 생존 신호일 뿐이며 devicemotion 이벤트가 올 때마다 호출한다.
+ * C9 런타임은 권한 결과로 구독 시점을 정해 이 신호에 의존하지 않지만 진단·호환성을 위해 유지한다.
  * 가속도 원값은 이 모듈 밖으로 나가지 않는다.
  */
-export function subscribeShake(onShake: (energy: number) => void): () => void {
+export function subscribeShake(
+  onShake: (energy: number) => void,
+  onSample?: () => void,
+): () => void {
   if (typeof window === "undefined") return () => {};
   const meter = new ShakeMeter();
   const handler = (event: DeviceMotionEvent): void => {
+    onSample?.();
     const a = event.accelerationIncludingGravity ?? event.acceleration;
     if (!a || a.x === null || a.y === null || a.z === null) return;
     const energy = meter.push({ x: a.x, y: a.y, z: a.z }, performance.now());

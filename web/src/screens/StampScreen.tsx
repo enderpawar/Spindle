@@ -16,12 +16,12 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       {/* 블루 헤더 패널 */}
       <div style={{ background: 'linear-gradient(160deg,#3b7bf5,#1e4fd8)', borderRadius: '0 0 36px 36px', padding: '26px 20px 20px', position: 'relative', zIndex: 2 }}>
-        <div style={{ fontSize: 24, fontWeight: 900, color: '#fff' }}>원도심 도장깨기</div>
-        <div style={{ marginTop: 4, fontSize: 13, fontWeight: 600, color: '#cfe0ff' }}>사라져가는 동네를 하나씩 채워보세요</div>
-        <img src={locateImg} alt="" style={{ position: 'absolute', right: 16, top: 12, width: 78, filter: 'drop-shadow(0 8px 14px rgba(0,10,40,.35))', animation: 'bobsm 3.2s ease-in-out infinite' }} />
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>원도심 도장깨기</div>
+        <div style={{ marginTop: 4, fontSize: 13, fontWeight: 500, color: '#cfe0ff' }}>부산의 동네를 하나씩 발견해 보세요</div>
+        <img src={locateImg} alt="" className="stamp-header-mascot" style={{ position: 'absolute', right: 16, top: 12, width: 78, filter: 'drop-shadow(0 8px 14px rgba(0,10,40,.35))' }} />
 
         <div style={{ marginTop: 18, padding: 16, background: 'rgba(255,255,255,.16)', border: '1px solid rgba(255,255,255,.28)', borderRadius: 20, backdropFilter: 'blur(6px)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 800, color: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#fff' }}>
             <span>{zone.label}</span>
             <span>
               {collected} / {zone.slots.length}
@@ -34,9 +34,9 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
       </div>
 
       {/* 존 탭 */}
-      <div className="no-scrollbar" style={{ display: 'flex', gap: 8, padding: '16px 20px 0', overflowX: 'auto', zIndex: 2 }}>
+      <div className="no-scrollbar spots-category-tabs stamp-region-tabs" role="group" aria-label="도장 지역" style={{ display: 'flex', gap: 8, padding: '10px 20px 0', overflowX: 'auto', zIndex: 2 }}>
         {zones.map((z) => (
-          <button key={z.id} className={`l-zone-chip ${z.id === activeZoneId ? 'on' : ''}`} onClick={() => setActiveZoneId(z.id)}>
+          <button key={z.id} className={z.id === activeZoneId ? 'is-active' : ''} aria-pressed={z.id === activeZoneId} onClick={() => setActiveZoneId(z.id)}>
             {z.label}
           </button>
         ))}
@@ -45,28 +45,31 @@ export function StampScreen({ onNavigate }: { onNavigate: (tab: NavTab) => void 
       {/* 도장 그리드 */}
       <div className="no-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '18px 20px calc(110px + env(safe-area-inset-bottom))' }}>
         {collected === 0 && (
-          <div style={{ marginBottom: 16, padding: '13px 15px', background: 'var(--l-soft)', borderRadius: 14, fontSize: 12.5, fontWeight: 600, lineHeight: 1.5, color: 'var(--l-ink-2)', textAlign: 'center' }}>
-            아직 도장이 없어요. 스핀을 돌려 이 동네를 방문하면 도장이 하나씩 채워져요.
+          <div className="stamp-first-visit">
+            <strong>첫 발견을 도장으로 남겨보세요</strong>
+            <p>어디부터 갈지 고민된다면 스핀으로 골라보세요.</p>
+            <button type="button" onClick={() => onNavigate('spin')}>스핀으로 장소 찾기 <span aria-hidden>›</span></button>
           </div>
         )}
-        <div key={zone.id} className="motion-card-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+        <div key={zone.id} className="stamp-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 14 }}>
           {zone.slots.map((slot) => {
             const isCollected = visited.has(slot.poi.id)
             return (
-            <div key={slot.poi.id} className="motion-card-enter" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div key={slot.poi.id} className="stamp-slot" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               {isCollected ? (
                 <img src="/stamp-mark-512.png" alt="획득한 참 잘했어요 도장" style={{ width: 82, height: 82, objectFit: 'contain' }} />
               ) : (
-                <div style={{ width: 82, height: 82, borderRadius: '50%', border: '2.5px dashed #c3d3ee', display: 'grid', placeItems: 'center' }}>
+                <div className="stamp-unvisited" style={{ width: 82, height: 82, borderRadius: '50%', border: '2px dashed #c3d3ee', display: 'grid', placeItems: 'center' }}>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c3d3ee" strokeWidth={2} aria-hidden>
-                    <rect x="5" y="11" width="14" height="9" rx="2" />
-                    <path d="M8 11 V8 a4 4 0 0 1 8 0 v3" />
+                    <path d="M12 21s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12Z" />
+                    <circle cx="12" cy="9" r="2" />
                   </svg>
                 </div>
               )}
-              <span style={{ fontSize: 11, fontWeight: 700, color: isCollected ? 'var(--l-ink-2)' : '#aebdd8', textAlign: 'center' }}>
-                {isCollected ? slot.shortName : '???'}
+              <span className="stamp-slot-name" style={{ fontSize: 11, fontWeight: 600, color: 'var(--l-ink-2)', textAlign: 'center' }}>
+                {slot.shortName}
               </span>
+              <span className={`stamp-slot-status ${isCollected ? 'is-collected' : ''}`}>{isCollected ? '방문 완료' : '방문 전'}</span>
             </div>
             )
           })}
