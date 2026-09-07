@@ -160,6 +160,7 @@ export function KakaoMapView({
   departure,
   selectedId,
   compactOverview = false,
+  interactionLocked = false,
   statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
@@ -191,6 +192,8 @@ export function KakaoMapView({
   const routeStyleRef = useRef<string | null>(null)
   const initialDepartureRef = useRef(departure)
   const onPickRef = useRef(onPick)
+  // 지도 생성 시점의 잠금 상태 — 이후 변경은 setDraggable/setZoomable effect가 따라간다.
+  const interactionLockedRef = useRef(interactionLocked)
   const [ready, setReady] = useState(false)
   const [level, setLevel] = useState(7)
   const [layoutRevision, setLayoutRevision] = useState(0)
@@ -279,14 +282,13 @@ export function KakaoMapView({
     if (!maps || !container) return
 
     const initialDeparture = initialDepartureRef.current
-    // 결과 카드 안의 작은 지도는 한 손가락 드래그·휠을 지도가 먹지 않게 둔다 — 그래야
-    // 지도 위에서 위아래로 쓸어도 카드가 그대로 스크롤된다. 확대·축소·전체 보기 버튼과
-    // 두 손가락 핀치는 그대로 동작한다.
+    // 잠긴 채로 열리는 지도(결과 카드)는 처음부터 드래그·휠을 먹지 않게 만든다 —
+    // 잠금 해제는 아래 별도 effect가 setDraggable/setZoomable로 처리한다.
     const map = new maps.Map(container, {
       center: new maps.LatLng(initialDeparture.lat, initialDeparture.lon),
       level: navigationMode ? 5 : pickMode ? 4 : 7,
-      draggable: !compactOverview,
-      scrollwheel: !compactOverview,
+      draggable: !interactionLockedRef.current,
+      scrollwheel: !interactionLockedRef.current,
     })
     mapRef.current = map
     setLevel(map.getLevel())
@@ -323,7 +325,15 @@ export function KakaoMapView({
       if (mapRef.current === map) mapRef.current = null
       container.replaceChildren()
     }
-  }, [compactOverview, navigationMode, pickMode])
+  }, [navigationMode, pickMode])
+
+  // 탭으로 잠금이 풀리면 그 자리에서 드래그·줌을 열어준다 (지도를 새로 만들지 않는다).
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map) return
+    map.setDraggable(!interactionLocked)
+    map.setZoomable(!interactionLocked)
+  }, [interactionLocked, ready])
 
   useEffect(() => {
     if (!ready) return

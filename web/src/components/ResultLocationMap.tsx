@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { bearingDeg, haversineMeters } from '../engine/geo'
 import { directionFromHeading, type Departure, type Poi } from '../mock/pois'
 import { MapView } from '../map/MapView'
@@ -28,6 +28,11 @@ export function ResultLocationMap({ poi, departure }: { poi: Poi; departure: Dep
   const pois = useMemo(() => [poi], [poi])
   const [provider, setProvider] = useState<'kakao' | 'local' | null>(null)
   const [attempt, setAttempt] = useState(0)
+  // 지도는 잠긴 채로 열린다 — 탭하기 전에는 세로 스와이프가 결과 카드 스크롤로 간다.
+  const [unlocked, setUnlocked] = useState(false)
+
+  // 다른 후보로 넘어가면 다시 잠근다. 새 지도를 스크롤로 지나갈 수 있어야 한다.
+  useEffect(() => setUnlocked(false), [poi.id])
 
   const originOk = isMappablePoint(departure.lat, departure.lon)
   const targetOk = isMappablePoint(poi.lat, poi.lon)
@@ -61,6 +66,7 @@ export function ResultLocationMap({ poi, departure }: { poi: Poi; departure: Dep
         <>
           <div
             className="result-location-map"
+            data-locked={unlocked ? undefined : 'true'}
             role="region"
             aria-label={`${departure.name}에서 ${poi.name}까지의 위치 지도`}
           >
@@ -72,14 +78,34 @@ export function ResultLocationMap({ poi, departure }: { poi: Poi; departure: Dep
               onPick={keepSelection}
               showSelectedPreview={false}
               compactOverview
+              interactionLocked={!unlocked}
               onProviderChange={setProvider}
             />
             {provider === null && (
               <div className="result-location-loading" role="status">지도를 불러오는 중이에요</div>
             )}
+            {provider !== null && !unlocked && (
+              <button
+                type="button"
+                className="result-location-unlock"
+                aria-label="지도 조작 켜기"
+                onClick={() => setUnlocked(true)}
+              >
+                <span>지도를 탭하면 움직일 수 있어요</span>
+              </button>
+            )}
+            {unlocked && (
+              <button type="button" className="result-location-lock" onClick={() => setUnlocked(false)}>
+                지도 잠그기
+              </button>
+            )}
           </div>
           {/* 출처 표기는 결과 화면 하단 SourceLine 하나로 유지한다 (중복 표기 방지). */}
-          <p className="result-location-caption">점선은 방향 표시예요. 실제 길은 길찾기에서 확인하세요</p>
+          <p className="result-location-caption">
+            {unlocked
+              ? '지도를 잠그면 화면을 다시 위아래로 넘길 수 있어요'
+              : '점선은 방향 표시예요. 실제 길은 길찾기에서 확인하세요'}
+          </p>
           {provider === 'local' && (
             <p className="result-location-fallback" role="status">
               카카오맵 연결이 어려워 기본 지도로 보여드려요

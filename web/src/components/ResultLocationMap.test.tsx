@@ -43,6 +43,14 @@ describe('ResultLocationMap', () => {
     expect(markup).toContain('점선은 방향 표시예요')
   })
 
+  it('지도는 잠긴 채로 열려 세로 스와이프를 결과 카드 스크롤에 넘긴다', () => {
+    const markup = renderToStaticMarkup(<ResultLocationMap poi={poi} departure={NAMPO} />)
+
+    // data-locked가 붙어 있는 동안만 touch-action:pan-y 규칙이 걸린다 (index.css).
+    expect(markup).toContain('data-locked="true"')
+    expect(markup).not.toContain('지도 잠그기')
+  })
+
   it('좌표가 없는 장소는 지도 대신 안내 문구를 보여준다', () => {
     const markup = renderToStaticMarkup(
       <ResultLocationMap poi={{ ...poi, lat: 0, lon: 0 }} departure={NAMPO} />,

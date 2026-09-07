@@ -29,10 +29,14 @@ export interface MapViewProps {
   selectedId: string | null
   /**
    * 스크롤되는 카드 안에 박히는 작은 개관 지도. 선택 핀으로 팬하지 않고 출발점과 목적지를
-   * 항상 함께 맞추며, 한 손가락 드래그·휠을 받지 않아 세로 스크롤을 카드에 넘긴다
-   * (확대·축소·전체 보기 버튼과 두 손가락 핀치는 그대로).
+   * 항상 함께 맞춘다.
    */
   compactOverview?: boolean
+  /**
+   * 제스처 잠금. 드래그·휠·핀치를 모두 무시해 세로 스와이프를 카드 스크롤에 넘긴다.
+   * 결과 카드 지도는 이 상태로 열리고, 사용자가 지도를 탭하면 풀린다.
+   */
+  interactionLocked?: boolean
   /** 혼잡·쾌적 화면 상태. 추천 계산에는 사용하지 않는다. */
   statusByPoiId?: ReadonlyMap<string, CongestionVisualStatus>
   /** 운영 중단·운영시간 외로 확인된 POI id — 핀을 흐리게 그린다 (선택·열기는 그대로 가능). */
@@ -132,6 +136,7 @@ export function LocalMapView({
   departure,
   selectedId,
   compactOverview = false,
+  interactionLocked = false,
   statusByPoiId,
   closedPoiIds,
   extraSpots = EMPTY_EXTRA_SPOTS,
@@ -401,10 +406,10 @@ export function LocalMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, compactOverview])
 
-  // 휠 줌 (passive:false 필요). 결과 카드의 작은 지도는 휠을 넘겨 페이지가 스크롤되게 둔다.
+  // 휠 줌 (passive:false 필요). 잠긴 지도는 휠을 넘겨 페이지가 스크롤되게 둔다.
   useEffect(() => {
     const el = wrapRef.current
-    if (!el || compactOverview) return
+    if (!el || interactionLocked) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       stopPan()
@@ -423,11 +428,10 @@ export function LocalMapView({
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zMin, size, compactOverview])
+  }, [zMin, size, interactionLocked])
 
   // ── 포인터 제스처: 드래그 팬 + 두 손가락 핀치 ──
-  // 결과 카드의 작은 지도(compactOverview)는 제스처를 받지 않는다 — 지도 위에서 세로로
-  // 쓸었을 때 카드가 그대로 스크롤돼야 하고, 보여줄 범위는 이미 맞춰져 있다.
+  // 잠긴 동안에는 아예 붙이지 않는다 — 지도 위에서 세로로 쓸었을 때 카드가 스크롤돼야 한다.
   const onPointerDown = (e: ReactPointerEvent) => {
     cancelAnimationFrame(anim.current)
     stopPan() // 진행 중 팬을 현재 보이는 위치에서 확정 → 드래그가 이어서 시작
@@ -591,11 +595,11 @@ export function LocalMapView({
     // 출처 표기(.spots-source-overlay z-10) 위에 그려진다.
     <div
       ref={wrapRef}
-      style={{ position: 'absolute', inset: 0, isolation: 'isolate', overflow: 'hidden', background: 'linear-gradient(180deg, #cde3fb, #b7d4f6)', touchAction: compactOverview ? 'pan-y' : 'none', cursor: compactOverview ? 'default' : 'grab', userSelect: 'none' }}
-      onPointerDown={compactOverview ? undefined : onPointerDown}
-      onPointerMove={compactOverview ? undefined : onPointerMove}
-      onPointerUp={compactOverview ? undefined : onPointerUp}
-      onPointerCancel={compactOverview ? undefined : onPointerUp}
+      style={{ position: 'absolute', inset: 0, isolation: 'isolate', overflow: 'hidden', background: 'linear-gradient(180deg, #cde3fb, #b7d4f6)', touchAction: interactionLocked ? 'pan-y' : 'none', cursor: interactionLocked ? 'default' : 'grab', userSelect: 'none' }}
+      onPointerDown={interactionLocked ? undefined : onPointerDown}
+      onPointerMove={interactionLocked ? undefined : onPointerMove}
+      onPointerUp={interactionLocked ? undefined : onPointerUp}
+      onPointerCancel={interactionLocked ? undefined : onPointerUp}
     >
       {/* ── 지형 레이어 (canvas 래스터) ── */}
       <canvas

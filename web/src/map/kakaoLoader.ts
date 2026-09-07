@@ -36,6 +36,10 @@ export interface KakaoMap {
   setCenter(position: KakaoLatLng): void
   getLevel(): number
   setLevel(level: number, options?: { animate?: boolean }): void
+  /** 드래그 팬 허용 여부를 런타임에 바꾼다 (결과 카드 지도의 탭 잠금 해제). */
+  setDraggable(draggable: boolean): void
+  /** 휠·핀치 줌 허용 여부를 런타임에 바꾼다 (위와 같은 용도). */
+  setZoomable(zoomable: boolean): void
   relayout(): void
 }
 
@@ -60,9 +64,9 @@ export interface KakaoMapsNs {
     options: {
       center: KakaoLatLng
       level: number
-      /** 드래그 팬 허용 여부. 결과 카드 안의 작은 지도는 꺼서 카드 스크롤을 뺏지 않는다. */
+      /** 드래그 팬 허용 여부. 결과 카드 지도는 잠긴 채로 열려 카드 스크롤을 뺏지 않는다. */
       draggable?: boolean
-      /** 휠 줌 허용 여부. 위와 같은 이유로 작은 지도에서만 끈다 (핀치 줌은 남는다). */
+      /** 휠 줌 허용 여부. 위와 같은 이유로 잠긴 동안 끈다. */
       scrollwheel?: boolean
     },
   ) => KakaoMap

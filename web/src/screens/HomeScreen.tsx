@@ -199,7 +199,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         </div>
 
         {/* 테마로 떠나기 */}
-        <div style={{ padding: '16px 20px 10px', fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>테마로 떠나기</div>
+        <div style={{ padding: '20px 20px 12px', fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>테마로 떠나기</div>
         <div className="home-theme-grid motion-card-list" data-guide="themes">
           {THEMES.map((theme) => (
             <button

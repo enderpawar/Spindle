@@ -421,7 +421,8 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
-  padding: 18px 10px 4px;
+  /* 아래 섹션 제목과 붙어 보이지 않도록 바로가기 줄 아래에 여백을 남긴다. */
+  padding: 18px 10px 12px;
 }
 
 .home-quick-button {
@@ -2035,6 +2036,60 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   border-radius: 16px;
   isolation: isolate;
   background: #c3dcf9;
+}
+
+/*
+ * 잠긴 동안에는 지도 위에서 손가락을 위아래로 쓸면 결과 카드가 그대로 스크롤돼야 한다.
+ * 카카오 SDK는 내부 div에 touch-action:none을 인라인으로 박아 세로 스와이프를 먹으므로
+ * 후손 전체를 pan-y로 덮어쓴다 (인라인 스타일을 이겨야 해서 !important).
+ * 사용자가 지도를 탭해 잠금을 풀면 이 규칙이 빠지고 원래 제스처가 살아난다.
+ */
+.result-location-map[data-locked],
+.result-location-map[data-locked] * {
+  touch-action: pan-y !important;
+}
+
+/* 잠금 안내 겸 해제 버튼 — 지도를 가리지 않도록 아주 옅은 막과 아래쪽 알약만 둔다. */
+.result-location-unlock {
+  position: absolute;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 12px;
+  border: 0;
+  background: rgba(15, 37, 64, 0.05);
+  cursor: pointer;
+}
+
+.result-location-unlock span {
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: rgba(15, 37, 64, 0.78);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  backdrop-filter: blur(6px);
+}
+
+.result-location-lock {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 250;
+  min-height: 44px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 37, 64, 0.78);
+  color: #fff;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
 }
 
 .result-location-loading {
