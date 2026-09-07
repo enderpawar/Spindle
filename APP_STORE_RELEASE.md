@@ -28,7 +28,8 @@
 | CI | `.github/workflows/ios-release.yml` (수동 실행 전용) |
 | 스토어 등록정보 | `fastlane/metadata/ios/ko/` — 이름·부제·설명·키워드·심사 노트 |
 | 지원 페이지 | `web/public/support.html` → `https://spindle-6vp.pages.dev/support` |
-| 스크린샷 | `fastlane/screenshots/ios/ko/` 5장 (1320x2868, RGB, **iOS 상태바**). `npm run capture:ios && npm run export:ios`로 재생성 |
+| 스크린샷 | `fastlane/screenshots/ios/ko/` 5장 (1320x2868, RGB, **iOS 상태바**). `npm run capture:ios && npm run export:ios`로 재생성. ⚠ 1.0.6 이전 UI라 결과 카드 지도가 없다 |
+| 버전 관리 | ⚠ 저장소에 현재 버전이 없다 — fastlane이 워크플로 입력값으로 주입한다. 0절 "버전 이력" 참조 |
 
 ### 출시 완료 상태
 
@@ -40,6 +41,36 @@
   precheck 9개 항목을 통과했다.
 - **2026-09-06:** App Store 공개 완료 — 버전 1.0.0, 무료, 4+.
   <https://apps.apple.com/kr/app/spindle/id6807658917>
+
+### 버전 이력
+
+> ⚠ **저장소에는 현재 버전이 기록되지 않는다.** `project.pbxproj`의 `MARKETING_VERSION = 1.0`은
+> 자리표시자이고, fastlane이 워크플로 입력값(`version`)으로 덮어쓴다(`Fastfile:110`
+> `resolve_marketing_version`). 그래서 코드만 보고는 다음 버전 번호를 알 수 없다.
+> **다음 번호를 정할 때는 이 표의 마지막 행이나 App Store Connect를 본다.**
+> 빌드 번호(`CFBundleVersion`)는 TestFlight 최신값 +1로 자동 결정되므로 사람이 정하지 않는다.
+>
+> 이 표는 `beta`/`release` 레인을 돌릴 때마다 갱신한다. run 목록에서 버전을 다시 뽑으려면:
+> ```bash
+> gh run list --workflow ios-release.yml --limit 30 --json databaseId,headSha,conclusion,createdAt
+> gh api repos/enderpawar/Spindle/actions/runs/<id>/jobs --jq '.jobs[0].name'   # "iOS beta (v1.0.6)"
+> ```
+> (`gh`는 `C:\Program Files\GitHub CLI\gh.exe`에 있고 PATH에는 없다)
+
+| 버전 | 날짜 | 커밋 | Actions run | 이 빌드에 들어간 것 |
+|---|---|---|---|---|
+| 1.0.0 | 2026-09-02 | `0245b6c` | `33607578270` (release) | 최초 출시. 9/06 App Store 공개 |
+| 1.0.1 | 2026-09-06 | `0648f11` | `34027088099` | 네이티브 흔들기 스핀 권한, 이미지 폴백 병렬화·워밍업 레이스 제거, 프록시 타임아웃 |
+| 1.0.2 | 2026-09-06 | `af20a0f` | `34028551285` | 명소 지도에 카페·음식점 합류, 골목시장/먹거리 테마 분리, 탭 없이 흔들기 |
+| 1.0.3 | 2026-09-06 | `39496d0` | `34029482381` | 앱 최초 제스처에서 모션 권한 취득 (0절 "1.0.2 권한 거부 상시 표시" 대응) |
+| 1.0.4 | 2026-09-06 | `9211595` | `34032195306` | 먹거리 덱 실시간 카페, 프록시 업스트림 재시도. 아카이브 서명 고정 시도는 되돌림 |
+| 1.0.5 | 2026-09-06 | `622ede9` | `34035207845` | 명소 탭 음식점·카페 필터, 썸네일 `firstimage2`, 네이티브 롱프레스 차단 |
+| 1.0.6 | 2026-09-07 | `be13370` | `34119346051` | 명소 종류 탭·테마 히어로·사진 뷰어 리프레시, TourAPI 이미지 재시도, 이미지 없는 명소 7곳 제외 |
+| 1.0.7 | 2026-09-07 | `1e043a3` | `34128533160` (빌드 15) | 홈 미션 카드 복원, 결과 카드 위치 지도(탭 잠금 해제), **운영 원문 예열을 스핀 후보 시점으로 이전 — 세션당 `detailIntro2` 54회→5~7회** |
+
+1.0.1 이후는 전부 `fix/tourapi-image-warmup` 브랜치에서 dispatch했다. **`main`은 `0245b6c`(9/02)에서
+멈춰 있으므로 워크플로를 돌릴 때 `Use workflow from`을 반드시 이 브랜치로 바꾼다** — 기본값 `main`으로
+돌리면 1.0.0 시점 코드가 빌드된다.
 
 ### 2026-09-02 실행 기록 — 파이프라인이 TestFlight까지 완주했다
 
@@ -274,8 +305,20 @@ npm run export:ios
 | 입력 | 설명 |
 |---|---|
 | `lane` | `build` / `beta` / `metadata` / `release` |
-| `version` | 마케팅 버전. 첫 출시는 `1.0.0` |
+| `version` | 마케팅 버전. **0절 "버전 이력" 마지막 행 + 1** (저장소에는 기록되지 않는다) |
 | `submit_for_review` | `release`일 때만 의미가 있다. 켜면 심사까지 제출 |
+
+**`Use workflow from`은 `fix/tourapi-image-warmup`이다.** 기본값 `main`은 `0245b6c`(9/02)에서
+멈춰 있어 1.0.0 시점 코드가 빌드된다.
+
+CLI로 돌릴 수도 있다 (`gh`는 PATH에 없다):
+
+```bash
+GH="/c/Program Files/GitHub CLI/gh.exe"
+"$GH" workflow run ios-release.yml --ref fix/tourapi-image-warmup \
+  -f lane=beta -f version=1.0.8 -f submit_for_review=false
+"$GH" run watch <run-id> --exit-status --interval 30
+```
 
 빌드 번호(`CFBundleVersion`)는 자동이다 — TestFlight의 최신 빌드 번호 + 1을 쓰고,
 조회에 실패하면 워크플로 실행 번호로 폴백한다. 직접 정하고 싶으면 `BUILD_NUMBER`
@@ -290,7 +333,8 @@ npm run export:ios
 
 **2) `beta` — TestFlight 업로드**
 
-처리에 5~15분 걸린다. 완료되면 App Store Connect → TestFlight에서 보인다.
+워크플로 자체는 **약 4분**이면 끝난다(1.0.7 실측 3분 55초). 그 뒤 Apple 처리에 5~15분
+걸리고, 완료되면 App Store Connect → TestFlight에서 보인다.
 **본인 기기에 설치해 반드시 실기기 확인을 한다:**
 
 - [ ] 동작 권한을 따로 설정하지 않은 상태에서, 스핀 화면에 들어가 바로 흔들면 원판이 도는가
@@ -304,6 +348,16 @@ npm run export:ios
       문제가 있으면 `web/capacitor.config.ts`에 `ios: { scheme: 'https' }`를 주어
       오리진을 Android와 맞추는 것을 먼저 검토한다.
 - [ ] 공유 카드 생성과 공유 시트가 동작하는가
+
+**1.0.7에서 새로 볼 것** (브라우저로는 확인이 안 되는 것만)
+
+- [ ] 결과 카드 지도 위를 세로로 쓸면 **카드가 스크롤되는가** (지도가 스와이프를 삼키지 않는가)
+- [ ] 지도를 탭하면 드래그·줌이 열리고, `지도 잠그기`로 되돌아가는가
+- [ ] 다른 후보로 넘기면 지도가 **자동으로 다시 잠기는가**
+- [ ] 앱을 여러 번 완전히 종료·재시작해도 결과 카드의 **방문 정보(관람시간·휴무일)가 계속 뜨는가**
+      — 1.0.6까지는 `detailIntro2` 트래픽이 몇 세션 만에 소진돼 429로 사라졌다
+- [ ] 명소 탭에서 **운영 중단 흐린 핀**이 여전히 나오는가 (전량 예열을 앞쪽 12곳으로 줄인 뒤에도)
+- [ ] 결과 카드 지도의 카카오 베이스맵이 뜨는가 (네이티브 Referer 차단 위에 새로 얹은 지도다)
 
 **3) `release`, `submit_for_review` 끄고 실행 — 스토어에 바이너리와 등록정보 업로드**
 
@@ -418,10 +472,33 @@ grep -o '"/screenshots/[a-z]*/phone' tools/store-screenshots/app-store-screensho
 
 # 4) 지원 페이지가 프로덕션에 배포됐는지 — 200이 나와야 한다
 curl -s -o /dev/null -w "%{http_code}\n" https://spindle-6vp.pages.dev/support
+
+# 5) 최신 TestFlight 버전 확인 — 저장소에 기록이 없으므로 Actions에서 뽑는다
+GH="/c/Program Files/GitHub CLI/gh.exe"
+"$GH" run list --workflow ios-release.yml --limit 5 \
+  --json databaseId,headSha,conclusion,createdAt
+"$GH" api repos/enderpawar/Spindle/actions/runs/<id>/jobs --jq '.jobs[0].name'
+
+# 6) main이 작업 브랜치보다 뒤처져 있는지 — 웹 배포는 main만 따라간다
+git fetch origin && git log --oneline origin/main..origin/fix/tourapi-image-warmup | wc -l
 ```
 
 4번이 404라면 `support.html`이 든 커밋이 `origin/main`에 푸시되지 않아
 `deploy.yml`이 돌지 않은 것이다 (Play 때 `privacy.html`에서 똑같은 일이 있었다).
+
+### 2026-09-07 점검 결과 — 아래 2026-09-02 표에서 바뀐 것만
+
+| 항목 | 결과 |
+|---|---|
+| 최신 TestFlight 버전 | **1.0.7** (run `34128533160`, 커밋 `1e043a3`) — 다음은 `1.0.8` |
+| 빌드 브랜치 | ⚠ `fix/tourapi-image-warmup`. `main`은 `0245b6c`(9/02)에서 멈춰 있다 |
+| 웹 프로덕션(`spindle-6vp.pages.dev`) | ⚠ **`main` 기준이라 9/02 버전.** `deploy.yml`은 main push만 트리거한다 — 심사 URL이므로 마감 전 머지 필요 |
+| 스크린샷 | ⚠ `fastlane/screenshots/ios/ko/` 5장은 1.0.6 이전 UI. 결과 카드 지도(`여기에 있어요`)가 없다 |
+| `gh` CLI | ✅ `C:\Program Files\GitHub CLI\gh.exe` (PATH에는 없음). `enderpawar` 인증됨, 스코프에 `workflow` 포함 |
+
+나머지 항목(파이프라인 파일, 메타데이터, 지원 페이지, `Package.swift`, `Info.plist`,
+`PrivacyInfo.xcprivacy`, `TARGETED_DEVICE_FAMILY`, secrets, 러너, 등록 기기)은
+2026-09-02 이후 변경 없이 아래 표 그대로다.
 
 ### 2026-09-02 점검 결과 — 저장소 쪽은 전부 통과
 
@@ -438,7 +515,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://spindle-6vp.pages.dev/support
 | `capacitor.config.ts`의 `server.url` | ✅ 없음 (원격 코드 로드 금지 유지) |
 | GitHub Actions 워크플로 | ✅ "iOS Release" 등록됨 (기본 브랜치 main에 존재) |
 | GitHub secrets | ✅ Apple 4개(`ASC_KEY_ID`·`ASC_ISSUER_ID`·`ASC_KEY_P8_BASE64`·`APPLE_TEAM_ID`) 등록·검증 완료 |
-| iOS 워크플로 실행 이력 | ✅ `build` 성공(IPA 10.1MB), `beta` 성공(TestFlight `1.0.0` 업로드) |
+| iOS 워크플로 실행 이력 | ✅ `build` 성공(IPA 10.1MB), `beta` 성공(TestFlight `1.0.0` 업로드) — 이후 이력은 0절 "버전 이력" |
 | 러너 | ✅ `macos-26` — Xcode 26.6 / **iOS 26.5 SDK**. `macos-15`는 업로드가 409로 거부된다 |
 | 등록 기기 | ✅ 1대 — 없으면 프로비저닝 프로파일 발급이 거부된다 |
 
