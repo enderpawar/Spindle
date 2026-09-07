@@ -142,7 +142,24 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 
 - [x] **웹 프로덕션 배포 완료** (2026-09-07, `cf49159`, Actions `34130879541` 3잡 성공) — 앱과 같은 번들이다
 - [x] **`versionCode 5` / `versionName "1.0.8"` 상향 완료** (2026-09-07) — iOS와 버전 표기를 통일했다
-- [ ] **AAB 빌드** — 아래 두 파일이 필요하고 현재 이 머신에 **없다**:
+> **⚠ 2026-09-07 조사 결과 — Android 릴리스는 이 머신에서 할 수 없다.**
+>
+> | 확인한 것 | 결과 |
+> |---|---|
+> | `web/android/spindle-release.jks` | 없음 |
+> | `web/android/keystore.properties` | 없음 |
+> | `.jks`·`.keystore` 전체 검색 (C: 단일 드라이브, 사용자 프로필 전체) | **0건** |
+> | JDK / `JAVA_HOME` / Android Studio | **전부 없음.** `keytool`도 없다 |
+>
+> JDK가 없으면 `gradlew bundleRelease`가 시작조차 못 한다. **vc1~vc4 빌드는 다른 머신에서
+> 한 것**이고, 키스토어도 그 머신에 있을 가능성이 가장 크다. 재발급을 요청하기 전에 그쪽을
+> 먼저 확인한다 — 재발급은 Google 승인에 1~2 영업일이 걸리지만 파일을 찾는 건 몇 분이다.
+>
+> **분실해도 복구된다.** Play Console 앱을 2026-08-17에 생성했고, 2021-08 이후 생성 앱은
+> **Play 앱 서명이 필수**라 자동 등록된다. 따라서 `spindle-release.jks`는 **업로드 키**이고
+> 실제 앱 서명 키는 Google이 보관한다. 업로드 키는 재발급 대상이다 (아래 "업로드 키 재발급").
+
+- [ ] **AAB 빌드** — 아래 두 파일과 JDK 21이 필요하다:
       `web/android/keystore.properties`, `web/android/spindle-release.jks`.
       없으면 `hasReleaseSigning`이 false가 되어 **서명 없는 번들**이 나오고 Play가 거부한다
       (`app/build.gradle:35-52`). `web/.env.local`(카카오 JS 키)은 있다.
@@ -162,6 +179,55 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 - [ ] Android 실기기에서 결과 카드 지도 탭 잠금 해제를 확인한다 (iOS와 웹뷰가 다르다)
 - [ ] Android 실기기에서 스핀 버튼·사진 롱프레스에 드래그 고스트가 없는지 확인
       (`-webkit-user-drag: none` — iOS Live Text 수정과 같은 규칙이 Android도 덮는다)
+
+### 업로드 키 재발급 (키스토어를 정말 못 찾을 때)
+
+**먼저 이전 빌드 머신을 확인한다.** 재발급은 Google 승인에 1~2 영업일이 걸린다.
+
+Play 앱 서명이 등록돼 있어 업로드 키는 교체 가능하다. 앱 서명 키는 Google이 갖고 있으므로
+기존 사용자의 업데이트 경로는 끊기지 않는다.
+
+**1) JDK 설치** — 이 머신에는 `keytool`이 없다. AAB 빌드에도 JDK 21이 필요하니 어차피 깔아야 한다.
+
+```powershell
+winget install EclipseAdoptium.Temurin.21.JDK   # 또는 Android Studio (JBR 번들)
+```
+
+**2) 새 업로드 키 생성** — 유효기간은 **2033-10-22 이후**여야 한다는 Play 요건이 있다(`-validity 10000`이면 충족).
+
+```bash
+keytool -genkeypair -v -keystore spindle-upload.jks -alias spindle-upload \
+  -keyalg RSA -keysize 2048 -validity 10000
+```
+
+비밀번호와 별칭은 기록해 둔다. 파일은 `web/android/`에 두고 `keystore.properties`를 만든다:
+
+```properties
+storeFile=app/spindle-upload.jks
+storePassword=<위에서 정한 값>
+keyAlias=spindle-upload
+keyPassword=<위에서 정한 값>
+```
+
+`storeFile`은 `rootProject.file()` 기준 상대경로다(`app/build.gradle:38`).
+
+**3) 인증서를 PEM으로 내보낸다** — 요청 양식에 첨부할 파일이다.
+
+```bash
+keytool -export -rfc -keystore spindle-upload.jks -alias spindle-upload -file upload_certificate.pem
+```
+
+**4) Play Console에서 재설정 요청**
+
+`테스트 및 출시` → `설정` → `앱 서명` → 업로드 키 인증서 항목의 **업로드 키 재설정 요청**.
+(메뉴에서 못 찾으면 Play Console 하단 `도움말/지원` → 문의 → 앱 서명 → 업로드 키 재설정)
+2)에서 만든 `upload_certificate.pem`을 첨부한다.
+
+**5) 승인 후** 새 키로 서명한 AAB를 올린다. 승인 전에 올리면 지문 불일치로 거부된다.
+승인되면 2절의 기존 지문(`SHA256:8B:45:7A:99:...`)은 무효가 되므로 **새 지문으로 갱신**한다.
+
+**6) 새 키를 즉시 백업한다** — 이번 일이 반복되지 않게. OneDrive 단독은 삭제도 동기화되므로
+별도 저장소를 함께 쓴다(아래 "보안 금지사항" 절과 같은 방침).
 
 ### 과거 기록 — 비공개 테스트 기간에 해야 했던 일 (2026-08-25 기준)
 
