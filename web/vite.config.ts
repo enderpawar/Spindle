@@ -137,7 +137,11 @@ export default defineConfig(({ mode }) => {
   server: {
     // 로컬 개발: /api → wrangler dev (proxy/) — 클라이언트는 TourAPI를 직접 호출하지 않는다
     proxy: {
-      '/api': 'http://127.0.0.1:8787',
+      '/api': {
+        target: process.env.VITE_DEV_PROXY_TARGET ?? 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
   build: {
