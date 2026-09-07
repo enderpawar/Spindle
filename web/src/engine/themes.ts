@@ -124,12 +124,9 @@ const POI_EXTRA_THEMES: Record<string, ThemeId[]> = {
   'yongdusan-jagalchi': ['night'],
   'yongdusan-park': ['night'],
   'kimminbu-view': ['night'],
-  'cheonmasan-view': ['night'],
-  'nuribaragi-view': ['night'],
   'taejongdae': ['sea'],
   'plaza-75': ['sea'],
   'amir-park': ['sea'],
-  'songdo-skywalk-bridge': ['sea'],
 }
 
 /** 테마 덱의 사진 히어로에 노출할 대표 장소. TourAPI 이미지는 화면 진입 때만 실시간 조회한다. */
