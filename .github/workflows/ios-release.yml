@@ -28,7 +28,8 @@ on:
           - build     # 서명된 IPA만 생성 (업로드 없음) — 파이프라인 점검용
           - beta      # TestFlight 업로드
           - metadata  # 스토어 등록정보·스크린샷만 갱신
-          - release   # App Store 업로드
+          - release   # App Store 업로드 (빌드함 — 인증서 한도 주의)
+          - submit    # 이미 올라간 빌드로 심사 제출 (빌드 없음 → 인증서 불필요)
       version:
         description: "마케팅 버전 (CFBundleShortVersionString, 예: 1.0.0)"
         type: string
@@ -36,6 +37,16 @@ on:
         default: "1.0.0"
       submit_for_review:
         description: "release 레인에서 심사 제출까지 진행할지 (다른 레인에서는 무시됨)"
+        type: boolean
+        required: false
+        default: false
+      build_number:
+        description: "submit 레인에서 심사에 넣을 빌드 번호 (App Store Connect 기준. submit 외에는 무시됨)"
+        type: string
+        required: false
+        default: ""
+      automatic_release:
+        description: "submit 레인에서 승인 즉시 공개할지. 끄면 공개 시점을 사람이 정한다 (submit 외에는 무시됨)"
         type: boolean
         required: false
         default: false
@@ -98,6 +109,10 @@ jobs:
         run: |
           if [ "${{ inputs.lane }}" = "release" ]; then
             bundle exec fastlane ios release submit:${{ inputs.submit_for_review }}
+          elif [ "${{ inputs.lane }}" = "submit" ]; then
+            bundle exec fastlane ios submit \
+              build:"${{ inputs.build_number }}" \
+              auto:${{ inputs.automatic_release }}
           else
             bundle exec fastlane ios "${{ inputs.lane }}"
           fi

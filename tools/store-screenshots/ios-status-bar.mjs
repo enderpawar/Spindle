@@ -18,7 +18,11 @@ import path from "node:path";
 import sharp from "sharp";
 
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
-const SRC_DIR = path.join(TOOL_DIR, "public", "screenshots", "android", "phone");
+// 소스는 기본적으로 Android 에뮬레이터 캡처지만, capture-web.mjs가 만든 디렉터리를
+// 인자로 넘길 수도 있다 (에뮬레이터 없이 최신 화면을 뽑는 경로).
+const SRC_DIR = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.join(TOOL_DIR, "public", "screenshots", "android", "phone");
 const OUT_DIR = path.join(TOOL_DIR, "public", "screenshots", "ios", "phone");
 
 /** 소스 캡처 해상도 (Pixel 7). 다른 값이 들어오면 좌표가 어긋나므로 검사한다. */

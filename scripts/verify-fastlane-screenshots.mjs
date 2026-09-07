@@ -9,9 +9,11 @@ function laneBody(name, nextLane) {
   return fastfile.slice(start, end);
 }
 
+// Fastfile의 레인 정의 순서대로 짝을 맞춘다 (다음 레인 이름이 본문의 끝 경계다).
 for (const [name, nextLane] of [
   ["release", "metadata"],
-  ["metadata", null],
+  ["metadata", "submit"],
+  ["submit", null],
 ]) {
   const body = laneBody(name, nextLane);
   if (!body.includes("skip_screenshots: !screenshots_ready?")) {

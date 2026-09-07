@@ -258,4 +258,42 @@ platform :ios do
 
     UI.success("스토어 등록정보 갱신 완료.")
   end
+
+  desc "이미 올라간 빌드로 심사에 제출한다 (빌드 없음 → 인증서 불필요)."
+  lane :submit do |options|
+    build = options[:build].to_s.strip
+    UI.user_error!("build: 옵션이 필요하다 (App Store Connect의 빌드 번호)") if build.empty?
+    version = resolve_marketing_version(options)
+    # 승인 즉시 공개할지. 기본은 끔 — 공개 시점은 사람이 정한다는 1절 결정을 유지한다.
+    auto = options[:auto].to_s == "true"
+
+    UI.important("제출: 버전 #{version} 빌드 #{build}#{auto ? ' (승인 시 자동 공개)' : ''}")
+
+    # 아카이브를 만들지 않으므로 Apple Development 인증서를 발급하지 않는다 —
+    # `release` 레인이 빌드마다 인증서를 새로 발급해 계정 한도에 걸리는 문제를 피한다
+    # (0절 "반복되는 실패"). 같은 커밋의 바이너리가 이미 ASC에 있을 때 쓴다.
+    upload_to_app_store(
+      api_key: asc_api_key,
+      app_identifier: APP_IDENTIFIER,
+      app_version: version,
+      build_number: build,
+      metadata_path: METADATA_PATH,
+      screenshots_path: SCREENSHOTS_PATH,
+      skip_binary_upload: true,
+      skip_screenshots: !screenshots_ready?,
+      overwrite_screenshots: true,
+      force: true,
+      submit_for_review: true,
+      automatic_release: auto,
+      precheck_include_in_app_purchases: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: true,
+        content_rights_has_rights: true,
+      },
+    )
+
+    UI.success("심사 제출 완료#{auto ? ' — 승인되면 자동 공개된다.' : ' — 승인 후 공개는 직접 누른다.'}")
+  end
 end
