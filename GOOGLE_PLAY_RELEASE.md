@@ -1,5 +1,7 @@
 # Spindle Google Play 출시 인계 문서
 
+> **2026-09-07 사용자 확인:** Google Play 출시 완료. 다음 Android 업데이트에는 iOS에서 수정·추가한 기능(음식점·카페 탐색 포함)을 반영한다. 현재 localhost에서 명소 필터 디자인을 검토 중이며, 최종 확정 후 iOS와 Google Play 배포 예정. 아래 이전 일정과 진행 상태는 과거 기록이다.
+
 > 다음 세션에서 Google Play 등록 또는 Doply 비공개 테스트를 진행하기 전에 이 문서를 먼저 읽는다.
 >
 > 마지막 갱신: 2026-08-25 (Asia/Seoul)
