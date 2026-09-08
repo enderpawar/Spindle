@@ -1,20 +1,27 @@
 # Spindle Google Play 출시 인계 문서
 
-> **2026-09-07 사용자 확인:** Google Play 출시 완료. 다음 Android 업데이트에는 iOS에서 수정·추가한 기능(음식점·카페 탐색 포함)을 반영한다. 현재 localhost에서 명소 필터 디자인을 검토 중이며, 최종 확정 후 iOS와 Google Play 배포 예정. 아래 이전 일정과 진행 상태는 과거 기록이다.
+> **2026-09-08 사용자 확인:** vc5(`versionName 1.0.9`)를 **프로덕션 100%로 검토 제출 완료.**
+> 승인되면 자동 공개된다(관리형 게시 꺼짐). 아래 이전 일정과 진행 상태는 과거 기록이다.
 
 > 다음 세션에서 Google Play 등록 또는 Doply 비공개 테스트를 진행하기 전에 이 문서를 먼저 읽는다.
 >
-> 마지막 갱신: 2026-09-07 (Asia/Seoul)
+> 마지막 갱신: 2026-09-08 (Asia/Seoul)
 
-## 0. 지금 상황 요약 (2026-09-07)
+## 0. 지금 상황 요약 (2026-09-08)
 
-**프로덕션 공개 완료.** 아래 0절 나머지와 1~3절은 그 과정의 기록이다 — 앱 생성부터
-프로덕션 액세스까지의 관문은 모두 통과했다(2절 체크리스트).
+**vc5(1.0.9) 검토 제출 완료 — 승인 대기 중.** 아래 0절 나머지와 1~3절은 그 과정의 기록이다.
 
-남은 것은 **업데이트뿐**이다. Android는 `versionCode 4` / `versionName 1.0`(2026-08-25 vc4)에
-멈춰 있고, iOS는 TestFlight 1.0.7까지 올라가 있다 — 1.0.1~1.0.7의 7개 빌드 분량이 아직
-Android에 반영되지 않았다. 무엇이 들어가야 하는지는 `APP_STORE_RELEASE.md` 0절 "버전 이력"에 있다.
-할 일 목록은 2절 "다음 Android 릴리스에서 할 일".
+| | |
+|---|---|
+| 검토 중 | **vc5 / `1.0.9`** — 2026-09-08 제출, 프로덕션 100% |
+| 현재 사용자에게 서비스되는 버전 | **vc4 / `1.0`** — Play Console 기준 게시일 **2026-09-03** |
+| 비공개 테스트(alpha) 최신 | vc4 (2026-08-25) |
+
+> ⚠ **프로덕션 게시일을 2026-09-07로 적어두었으나 Play Console 실제 값은 2026-09-03이었다**
+> (2026-09-08 콘솔에서 직접 확인). 날짜가 필요한 판단은 문서가 아니라 콘솔을 본다.
+
+vc5에는 iOS 1.0.1~1.0.9 분량이 한꺼번에 들어갔다. 무엇이 들어갔는지는
+`APP_STORE_RELEASE.md` 0절 "버전 이력"에 있다. 다음 릴리스 절차는 2절 "다음 Android 릴리스에서 할 일".
 
 ### 이하 과거 기록 — 최초 등록 과정 (2026-08-17 시점 기준)
 
@@ -133,33 +140,38 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
 > 위 세 항목은 프로덕션 공개가 완료됐다는 사실에서 역으로 확정한 것이다(공개 없이는 통과할 수
 > 없는 관문이다). 신청일·승인일·테스터 수 같은 세부 값은 Play Console에만 있다.
 
-### 다음 Android 릴리스에서 할 일 (2026-09-07 기준)
+### 다음 Android 릴리스에서 할 일 (2026-09-08 갱신)
 
-프로덕션 공개는 끝났고, 남은 것은 **iOS에 먼저 들어간 변경을 Android에 반영하는 업데이트**다.
-현재 iOS는 TestFlight 1.0.7까지 올라가 있고 Android는 `versionCode 4` / `versionName 1.0`
-(2026-08-25 vc4)에서 멈춰 있다 — 1.0.1~1.0.7의 7개 빌드 분량이 아직 Android에 없다.
+**vc5 제출로 이 절의 릴리스 작업은 끝났다.** 아래 체크리스트는 그 과정의 기록이고, 남은
+미체크 항목은 공개 후 Android 실기기에서 볼 것들이다. vc5(`versionName 1.0.9`)에는
+iOS 1.0.1~1.0.9 분량이 한꺼번에 들어갔고, 이때 `web/` 소스는 iOS 1.0.9 바이너리(`ee2031a`)와
+동일함을 `git diff ee2031a..HEAD -- web/`(변경 0건)로 확인했다.
 버전 대응은 `APP_STORE_RELEASE.md` 0절 "버전 이력" 표를 본다.
 
 - [x] **웹 프로덕션 배포 완료** (2026-09-07, `cf49159`, Actions `34130879541` 3잡 성공) — 앱과 같은 번들이다
 - [x] **`versionCode 5` / `versionName "1.0.8"` 상향 완료** (2026-09-07) — iOS와 버전 표기를 통일했다
-> **⚠ 2026-09-07 조사 결과 — Android 릴리스는 이 머신에서 할 수 없다.**
+> **✅ 2026-09-08 해소 — 이 머신에서 Android 릴리스가 가능해졌다.**
+> (2026-09-07에는 키스토어도 JDK도 없어 "이 머신에서 불가"로 기록돼 있었다. 아래가 현재 상태다.)
 >
-> | 확인한 것 | 결과 |
+> | 항목 | 상태 |
 > |---|---|
-> | `web/android/spindle-release.jks` | 없음 |
-> | `web/android/keystore.properties` | 없음 |
-> | `.jks`·`.keystore` 전체 검색 (C: 단일 드라이브, 사용자 프로필 전체) | **0건** |
-> | JDK / `JAVA_HOME` / Android Studio | **전부 없음.** `keytool`도 없다 |
+> | `web/android/spindle-release.jks` · `keystore.properties` | **확보.** 이전 빌드 머신(집 PC)에서 받아 배치했다. `.gitignore`가 둘 다 막는 것을 확인했다 |
+> | 서명 지문 | vc2~vc4와 **일치**. `keytool -printcert -jarfile`, `jarsigner -verify` → `jar verified` |
+> | JDK 21 | `C:\Users\user\devtools\jdk21\jdk-21.0.12.1+1` (Temurin zip 해제 — 관리자 권한 불필요) |
+> | Android SDK | `C:\Users\user\devtools\android-sdk` (cmdline-tools + `platforms;android-36` + `build-tools;36.0.0`) |
+> | `web/android/local.properties` | `sdk.dir=C:/Users/user/devtools/android-sdk` |
 >
-> JDK가 없으면 `gradlew bundleRelease`가 시작조차 못 한다. **vc1~vc4 빌드는 다른 머신에서
-> 한 것**이고, 키스토어도 그 머신에 있을 가능성이 가장 크다. 재발급을 요청하기 전에 그쪽을
-> 먼저 확인한다 — 재발급은 Google 승인에 1~2 영업일이 걸리지만 파일을 찾는 건 몇 분이다.
+> **⚠ `local.properties`는 슬래시로 쓴다.** 백슬래시를 하나만 쓰면 Java Properties가 `\U`를
+> 유니코드 이스케이프로 읽어 `Malformed \uxxxx encoding`으로 빌드가 죽는다(2026-09-08 실제 발생).
+> 백슬래시를 쓰려면 `C\:\\Users\\user\\...`처럼 전부 이중으로 써야 한다.
 >
-> **분실해도 복구된다.** Play Console 앱을 2026-08-17에 생성했고, 2021-08 이후 생성 앱은
-> **Play 앱 서명이 필수**라 자동 등록된다. 따라서 `spindle-release.jks`는 **업로드 키**이고
-> 실제 앱 서명 키는 Google이 보관한다. 업로드 키는 재발급 대상이다 (아래 "업로드 키 재발급").
+> 아래 "업로드 키 재발급" 절은 키를 **정말로** 잃었을 때를 위한 것이고 지금은 해당하지 않는다.
+> 다만 키스토어는 이 머신과 집 PC 두 곳에만 있다 — **둘 다 잃으면 재발급 외에 길이 없다.**
+> (분실해도 앱 자체는 살아 있다: Play 앱 서명이 필수 등록돼 있어 `spindle-release.jks`는
+> **업로드 키**일 뿐이고 실제 앱 서명 키는 Google이 보관한다.)
 
-- [ ] **AAB 빌드** — 아래 두 파일과 JDK 21이 필요하다:
+- [x] **AAB 빌드 완료** (2026-09-08) — vc5 / 1.0.9, 8.22 MB, `BUILD SUCCESSFUL in 2m 12s`.
+      아래 두 파일과 JDK 21이 필요하다:
       `web/android/keystore.properties`, `web/android/spindle-release.jks`.
       없으면 `hasReleaseSigning`이 false가 되어 **서명 없는 번들**이 나오고 Play가 거부한다
       (`app/build.gradle:35-52`). `web/.env.local`(카카오 JS 키)은 있다.
@@ -172,10 +184,14 @@ Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트한다. `
       `capacitor.settings.gradle`·`app/capacitor.build.gradle`은 **커밋된 파일**이고 현재 슬래시
       경로다. Windows에서 백슬래시가 박히면 되돌린다:
       `git diff web/android/capacitor.settings.gradle web/android/app/capacitor.build.gradle`
-- [ ] 서명 지문이 vc2~vc4와 같은지 확인 — `jarsigner -verify` +
-      `SHA256:8B:45:7A:99:...:50:1C` (2절). 바뀌면 업로드가 거부된다
-- [ ] **iOS 1.0.8 실기기 검증 통과 후** 프로덕션 트랙 100% 게시 —
-      웹·앱이 같은 번들이고 Play 프로덕션 100%는 롤백 수단이 없다. TestFlight 검증이 유일한 안전망이다
+- [x] 서명 지문이 vc2~vc4와 같음을 확인했다 (2026-09-08) — `jarsigner -verify` → `jar verified`,
+      `SHA256:8B:45:7A:99:...:50:1C` (2절) 일치. 바뀌면 업로드가 거부된다
+- [x] **프로덕션 트랙 100% 제출 완료** (2026-09-08 오후) — 실기기 검증을 마친 뒤 진행했다.
+      Play Console에 수동 업로드했다(서비스 계정 API 경로는 이 콘솔에서 `API 액세스` 메뉴를
+      찾지 못해 접었다). **업로드만으로는 심사에 안 들어간다** — `게시 개요`에서
+      **`검토를 위해 변경사항 N개 제출`** 버튼을 눌러야 `검토 중인 변경사항`으로 바뀐다.
+      관리형 게시가 꺼져 있어 승인되면 자동 공개된다.
+      웹·앱이 같은 번들이고 Play 프로덕션 100%는 롤백 수단이 없다 — 다음 업데이트에서도 실기기 검증이 유일한 안전망이다
 - [ ] Android 실기기에서 결과 카드 지도 탭 잠금 해제를 확인한다 (iOS와 웹뷰가 다르다)
 - [ ] Android 실기기에서 스핀 버튼·사진 롱프레스에 드래그 고스트가 없는지 확인
       (`-webkit-user-drag: none` — iOS Live Text 수정과 같은 규칙이 Android도 덮는다)
