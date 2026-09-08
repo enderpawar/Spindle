@@ -1,0 +1,8 @@
+flowchart LR
+    S[GPS·나침반 센서] -->|단말 내부 입력| C[PWA 클라이언트]
+    C --> L[단말 내 계산: 존 판정·방향 매칭·거리·필터·코스]
+    C -->|지역코드·contentId·날짜만| P[Cloudflare Workers 프록시]
+    P -->|환경변수 인증키 주입·요청 중계| T[TourAPI]
+    T -->|실시간 관광 데이터| P
+    P -->|no-store 응답| C
+    C -. 사용자 좌표·방위각 전송 없음 .-> P
