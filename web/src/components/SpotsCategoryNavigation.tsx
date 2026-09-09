@@ -14,7 +14,7 @@ export function SpotsCategoryNavigation({ value, onChange }: {
               : category === '음식점' ? <><path d="M5 3v6a3 3 0 0 0 6 0V3M8 3v18M19 21V3c-4 3-4 8 0 9" /></>
                 : <><path d="M4 8h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5ZM17 9h2a3 3 0 0 1 0 6h-2M7 3v2M12 3v2" /></>}
           </svg>
-          <span>{category === '전체' ? '명소' : category}</span>
+          <span>{category === '전체' ? '관광지' : category}</span>
         </button>
       ))}
     </div>
