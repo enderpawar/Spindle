@@ -1,3 +1,4 @@
+import styles from './HomeScreen.module.css'
 import pointingImg from '../assets/poses/별이_pointing.webp'
 import winkImg from '../assets/poses/별이_wink.webp'
 import { BottomNav, type NavTab } from '../components/BottomNav'
@@ -18,8 +19,8 @@ interface Props {
   onNavigate: (tab: NavTab) => void
 }
 
-// 오늘의 스핀 추천 — 숨은 명소(T3) 위주 픽 (목 단계 고정, Phase 2에서 추천 엔진 연동)
-const todayPicks = ['kangkangee', 'ibagu-skyway', 'color-village', 'dongsam-shell']
+// 숨은 부산을 소개하는 고정 큐레이션. 날짜·개인화 추천으로 표시하지 않는다.
+const discoveryPicks = ['kangkangee', 'ibagu-skyway', 'color-village', 'dongsam-shell']
   .map((id) => POI_POOL.find((p) => p.id === id))
   .filter((p): p is Poi => Boolean(p))
 
@@ -153,16 +154,16 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
         </button>
       </header>
 
-      <div className="home-scroll no-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
+      <div className={`home-scroll no-scrollbar ${styles.content}`} style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         {/* 히어로 배너 */}
-        <div className="home-hero" data-guide="spin">
+        <div className={`home-hero ${styles.hero}`} data-guide="spin">
           <div className="home-hero-copy">
             <div style={{ fontSize: 13, fontWeight: 600, color: '#cfe0ff' }}>붐비는 해변 말고,</div>
-            <div className="home-hero-title">
+            <h1 className={`home-hero-title ${styles.heroTitle}`}>
               숨은 부산을
               <br />
               발견하세요
-            </div>
+            </h1>
             <button
               onClick={() => onNavigate('spin')}
               className="btn"
@@ -182,6 +183,8 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           />
         </div>
 
+        <p className={styles.spinHint}>방향을 돌려 다음 여행지를 만나보세요.</p>
+
         {/* 퀵 메뉴 */}
         <div className="home-quick-grid motion-card-list">
           {quickMenu.map((item) => (
@@ -198,8 +201,42 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           ))}
         </div>
 
+        <section className={styles.discovery} aria-labelledby="home-discovery-title">
+          <div className={styles.sectionHeading}>
+            <h2 id="home-discovery-title">발견해볼 부산</h2>
+            <button type="button" onClick={() => onNavigate('spots')} className={styles.sectionLink}>
+              전체 명소 <span aria-hidden>›</span>
+            </button>
+          </div>
+          <p className={styles.sectionDescription}>익숙한 여행지 너머, 이런 곳도 있어요</p>
+          <div className={styles.pickList}>
+            {discoveryPicks.map((poi, i) => {
+              const dir = directionOf(poi.direction)
+              const featured = i === 0
+              return (
+                <button type="button" key={poi.id} onClick={() => onSelectPoi(poi)}
+                  className={featured ? styles.featuredCard : styles.placeRow} aria-label={`${poi.name} 자세히 보기`}>
+                  <span className={featured ? styles.featuredImage : styles.thumbnail}
+                    style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>
+                    <SketchArt variant={i} />
+                    <PoiPhoto contentId={poi.contentId} alt="" variant={featured ? 'full' : 'thumb'} />
+                  </span>
+                  <span className={styles.placeBody}>
+                    {featured && <span className={styles.featuredEyebrow}>골목에서 만나는 예술</span>}
+                    <span className={styles.placeTitle}>{poi.name}</span>
+                    <span className={styles.placeMeta}>{poi.category} · {poi.district}</span>
+                    {featured && <span className={styles.placeStory}>{poi.story}</span>}
+                  </span>
+                  {!featured && <span className={styles.rowArrow} aria-hidden>›</span>}
+                </button>
+              )
+            })}
+          </div>
+          <p className={styles.credit}>출처: ⓒ한국관광공사</p>
+        </section>
+
         {/* 테마로 떠나기 */}
-        <div style={{ padding: '20px 20px 12px', fontSize: 15, fontWeight: 800, color: 'var(--l-ink)' }}>테마로 떠나기</div>
+        <h2 className={styles.themeHeading}>어떤 부산을 만나볼까요?</h2>
         <div className="home-theme-grid motion-card-list" data-guide="themes">
           {THEMES.map((theme) => (
             <button
@@ -239,32 +276,6 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           </svg>
         </button>
 
-        {/* 오늘의 스핀 추천 */}
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '18px 20px 12px' }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--l-ink)' }}>오늘의 스핀 추천</div>
-          <button onClick={() => onNavigate('spots')} className="home-section-link">
-            더보기 ›
-          </button>
-        </div>
-        <div className="home-pick-grid motion-card-list">
-          {todayPicks.map((poi, i) => {
-            const dir = directionOf(poi.direction)
-            return (
-              <button key={poi.id} onClick={() => onSelectPoi(poi)} className="home-pick-card motion-card">
-                <div className="home-pick-image" style={{ background: `linear-gradient(150deg, ${dir.color}, #1e4fd8 130%)` }}>
-                  <SketchArt variant={i} />
-                  <PoiPhoto contentId={poi.contentId} alt={poi.name} scrim />
-                </div>
-                <div style={{ padding: '10px 2px 0' }}>
-                  <div className="home-pick-title">{poi.name}</div>
-                  <div className="home-pick-meta">
-                    {poi.category} · {poi.district}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
         <button type="button" className="home-mission-card" onClick={() => onNavigate('spin')}>
           <span className="home-mission-copy">
             <span className="home-mission-label">오늘의 미션</span>
