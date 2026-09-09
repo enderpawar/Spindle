@@ -371,13 +371,24 @@ export function ResultScreen({ rec, departure, candidateIndex, onNextCandidate, 
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--l-ink-3)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{addressText}</span>
               </div>
 
-              <ResultLocationMap poi={poi} departure={departure} />
+              {fullDetailLoading && <VisitFactsSkeleton />}
+              {!fullDetailLoading && primaryVisitFacts.length > 0 && (
+                <VisitFactsSection facts={primaryVisitFacts} />
+              )}
+              {!fullDetailLoading && fullDetailError && (
+                <p className="result-visit-error">
+                  방문 정보를 불러오지 못했어요 · {failureCauseLine(fullDetailErrorCause)}
+                  <button type="button" onClick={retryFullDetail}>다시 시도</button>
+                </p>
+              )}
 
-              <section className="result-attraction-section" aria-labelledby="result-attraction-title">
-                <h3 id="result-attraction-title">이곳의 매력</h3>
+              {/* 제목 없이 소개문과 [자세히 보기]만 둔다 — 화면에서 뺀 제목은 aria-label로 남긴다. */}
+              <section className="result-attraction-section" aria-label="이곳의 매력">
                 <p>{storyText}</p>
                 <button type="button" onClick={openInfo}>자세히 보기 ›</button>
               </section>
+
+              <ResultLocationMap poi={poi} departure={departure} />
 
               {rec.theme && (
                 <section
@@ -399,17 +410,6 @@ export function ResultScreen({ rec, departure, candidateIndex, onNextCandidate, 
                     {rec.theme.step < rec.theme.target ? '같은 테마로 다음 스핀' : '테마 여정 마치기'}
                   </button>
                 </section>
-              )}
-
-              {fullDetailLoading && <VisitFactsSkeleton />}
-              {!fullDetailLoading && primaryVisitFacts.length > 0 && (
-                <VisitFactsSection facts={primaryVisitFacts} />
-              )}
-              {!fullDetailLoading && fullDetailError && (
-                <p className="result-visit-error">
-                  방문 정보를 불러오지 못했어요 · {failureCauseLine(fullDetailErrorCause)}
-                  <button type="button" onClick={retryFullDetail}>다시 시도</button>
-                </p>
               )}
 
               {!rec.theme && !rec.diningCategory && (
@@ -605,9 +605,10 @@ function FestivalBanner({ festival }: { festival: Festival }) {
 }
 
 function VisitFactsSection({ facts }: { facts: readonly PoiVisitFact[] }) {
+  // 제목 없이 라벨–값 표만 둔다. 주소 바로 아래라 무엇인지 스스로 드러나고,
+  // 화면에서 사라진 제목은 aria-label로 남겨 스크린리더에는 그대로 읽힌다.
   return (
-    <section className="result-visit-section" aria-labelledby="result-visit-title">
-      <h3 id="result-visit-title">방문 정보</h3>
+    <section className="result-visit-section" aria-label="방문 정보">
       <div className="result-visit-facts">
         {facts.map((fact) => <InfoRow key={fact.key} label={fact.label} value={fact.value} />)}
       </div>
@@ -618,7 +619,6 @@ function VisitFactsSection({ facts }: { facts: readonly PoiVisitFact[] }) {
 function VisitFactsSkeleton({ compact = false }: { compact?: boolean }) {
   return (
     <div className={compact ? 'result-visit-skeleton result-visit-skeleton--compact' : 'result-visit-skeleton'} aria-label="방문 정보 불러오는 중">
-      {!compact && <div className="skeleton" style={{ width: 72, height: 18, borderRadius: 4 }} />}
       {[0, 1, 2].map((index) => (
         <div key={index} className="result-visit-skeleton-row">
           <div className="skeleton" />

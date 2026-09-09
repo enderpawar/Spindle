@@ -10,7 +10,6 @@ interface ShareCardInput {
   poiName: string
   districtLine: string
   message: string
-  directionLabel: string
   color: string
   imageUrl?: string
 }
@@ -119,7 +118,7 @@ function drawSeascape(ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
 
 export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
   // Canvas text does not trigger unicode-range font downloads like DOM text does.
-  const fontText = `${input.poiName} ${input.message} ${input.districtLine} ${input.directionLabel} Spindle BUSAN TODAY’S PICK 오늘의 방향이 데려다준 곳 쪽으로 만난 부산 정해준 출처: ⓒ한국관광공사`
+  const fontText = `${input.poiName} ${input.message} ${input.districtLine} Spindle BUSAN TODAY’S PICK 오늘의 방향이 데려다준 곳 정해준 출처: ⓒ한국관광공사`
   await document.fonts.load('800 88px "Pretendard Variable"', fontText).catch(() => [])
   await document.fonts.ready
   const [photo, brand] = await Promise.all([loadCardImage(input.imageUrl), loadCardImage('/brand-mark-192.png')])
@@ -160,7 +159,7 @@ export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
   ctx.fillText(metadata.lines[0] ?? '', 104, metadataY)
 
   const photoY = Math.max(570, metadataY + 57)
-  const photoH = 1264 - photoY
+  const photoH = 1400 - photoY
   ctx.save()
   ctx.beginPath()
   ctx.roundRect(100, photoY, 880, photoH, 36)
@@ -173,15 +172,11 @@ export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
   } else drawSeascape(ctx, 100, photoY, 880, photoH)
   ctx.restore()
 
-  const chip = input.directionLabel + '쪽으로 만난 부산'
-  ctx.font = '700 32px ' + FONT
-  const chipWidth = ctx.measureText(chip).width + 68
-  roundedRect(ctx, 104, 1332, chipWidth, 70, 35, '#e8f0ff')
-  ctx.fillStyle = BLUE
-  ctx.fillText(chip, 138, 1379)
+  // 방위 배지를 없앤 자리는 사진이 흡수했다(photoH). 메시지는 사진 아래 68px에서 시작해
+  // 3줄일 때 구분선까지 여백이 배지가 있던 때와 같게 유지된다.
   ctx.fillStyle = INK
   const message = fitLines(ctx, input.message, 864, 3, 46, 36, 700)
-  message.lines.forEach((line, i) => ctx.fillText(line, 104, 1486 + i * 64))
+  message.lines.forEach((line, i) => ctx.fillText(line, 104, 1504 + i * 64))
 
   ctx.strokeStyle = '#dbe6fa'
   ctx.lineWidth = 2

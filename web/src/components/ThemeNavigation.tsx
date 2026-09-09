@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { THEMES, type ThemeId } from '../engine/themes'
+import { ThemeIcon } from './ThemeIcon'
 import './ThemeNavigation.css'
 
 export function ThemeNavigation({ value, onChange }: {
@@ -24,13 +25,7 @@ export function ThemeNavigation({ value, onChange }: {
       {THEMES.map((theme) => (
         <button key={theme.id} type="button" aria-pressed={value === theme.id}
           className={value === theme.id ? 'is-active' : ''} onClick={() => onChange(theme.id)}>
-          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            {theme.id === 'sea' && <><path d="M3 8c3-4 6 4 9 0s6 4 9 0M3 13c3-4 6 4 9 0s6 4 9 0M3 18c3-4 6 4 9 0s6 4 9 0" /></>}
-            {theme.id === 'alley' && <><path d="M3 10l2-6h14l2 6M3 10c0 4 6 4 6 0 0 4 6 4 6 0 0 4 6 4 6 0M5 13v7h14v-7M10 20v-5h4v5" /></>}
-            {theme.id === 'history' && <><path d="M3 8l9-5 9 5H3ZM5 11v7M10 11v7M14 11v7M19 11v7M3 21h18" /></>}
-            {theme.id === 'night' && <><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" /><path d="M17 3v4M15 5h4" /></>}
-            {theme.id === 'food' && <><path d="M5 3v6a3 3 0 0 0 6 0V3M8 3v18M19 21V3c-4 3-4 8 0 9" /></>}
-          </svg>
+          <ThemeIcon id={theme.id} />
           <span>{theme.label}</span>
         </button>
       ))}

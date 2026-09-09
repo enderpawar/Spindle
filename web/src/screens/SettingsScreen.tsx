@@ -1,5 +1,7 @@
+import { useRef, useState } from 'react'
 import { BottomNav, type NavTab } from '../components/BottomNav'
 import { DialSlider } from '../components/DialSlider'
+import { PrivacySheet } from '../components/PrivacySheet'
 import { ScreenFrame } from '../components/ScreenFrame'
 import type { Departure } from '../mock/pois'
 
@@ -14,6 +16,13 @@ interface Props {
 }
 
 export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture, onReplayGuide, onNavigate }: Props) {
+  const [privacyOpen, setPrivacyOpen] = useState(false)
+  const privacyTrigger = useRef<HTMLButtonElement>(null)
+  const closePrivacy = () => {
+    setPrivacyOpen(false)
+    privacyTrigger.current?.focus()
+  }
+
   return (
     <ScreenFrame style={{ background: 'var(--l-bg)' }}>
       <header style={{ padding: '18px 20px 0' }}>
@@ -68,27 +77,34 @@ export function SettingsScreen({ departure, dial, onDialChange, onOpenDeparture,
           </div>
           {/*
             스토어 심사 요건: 개인정보처리방침을 앱 안에서 열 수 있어야 한다.
-            public/privacy.html은 빌드가 그대로 복사하므로 웹·앱 양쪽에서 같은 경로로 열린다
-            (앱은 번들에 포함돼 오프라인에서도 표시된다).
+            새 탭으로 나가지 않고 앱 내부 시트로 보여준다 — 본문 원본은
+            src/content/privacyPolicy.ts 하나이고, public/privacy.html은 스토어에
+            등록된 공개 URL(/privacy)로 계속 유지한다.
           */}
-          <a
-            href="/privacy.html"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            ref={privacyTrigger}
+            type="button"
+            onClick={() => setPrivacyOpen(true)}
             style={{
               alignSelf: 'flex-start',
+              padding: 0,
+              border: 'none',
+              background: 'none',
               fontSize: 11.5,
               fontWeight: 600,
               color: 'var(--l-primary)',
               textDecoration: 'underline',
+              cursor: 'pointer',
             }}
           >
             개인정보처리방침
-          </a>
+          </button>
         </div>
       </div>
 
       <BottomNav active="settings" onNavigate={onNavigate} />
+
+      {privacyOpen && <PrivacySheet onClose={closePrivacy} />}
     </ScreenFrame>
   )
 }

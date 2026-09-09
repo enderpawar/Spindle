@@ -1865,6 +1865,52 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   margin-top: 22px;
 }
 
+/* ─── 설정 › 개인정보처리방침 시트 ─── */
+.privacy-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 20px;
+}
+
+.privacy-sheet-body > section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.privacy-sheet-body h3 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--l-primary);
+}
+
+.privacy-sheet-body p,
+.privacy-sheet-body li {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.75;
+  font-weight: 500;
+  letter-spacing: -0.05px;
+  color: var(--l-ink-2);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.privacy-sheet-body ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.privacy-sheet-body a {
+  color: var(--l-primary);
+  font-weight: 600;
+}
+
 .result-image-fallback {
   position: absolute;
   inset: 0;
@@ -2069,18 +2115,9 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   margin-top: 22px;
 }
 
-.result-attraction-section h3,
-.result-visit-section h3 {
-  margin: 0;
-  color: var(--l-ink);
-  font-size: 16px;
-  font-weight: 800;
-  letter-spacing: -0.25px;
-}
-
 .result-attraction-section p {
   display: -webkit-box;
-  margin: 9px 0 0;
+  margin: 0;
   overflow: hidden;
   color: #314b79;
   font-size: 15px;

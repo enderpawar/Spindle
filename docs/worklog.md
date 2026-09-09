@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-09-09 — 결과 카드 정보 순서·공유 카드 방위 배지 정리
+
+- 결과 카드 본문을 `주소 → 방문 정보 → 이곳의 매력 → 지도` 순으로 바꿨다. 사용자와 순서를 논의한 결과다: 길찾기 CTA가 하단 액션 바에 고정돼 있어 카드 안 지도는 확인용이고, 방문 정보와 소개문은 "갈 수 있나 → 가고 싶나"로 이어지는 한 덩어리라 그 사이에 제일 무거운 지도를 끼우지 않는다.
+- `방문 정보`·`이곳의 매력` 제목 행을 없앴다(사용자 요청). 화면에서 뺀 제목은 `aria-label`로 남겨 스크린리더에는 그대로 읽힌다. 방문 정보 스켈레톤의 제목 자리표시자와 쓰이지 않게 된 h3 CSS도 함께 제거했다.
+- 공유 카드에서 `○쪽으로 만난 부산` 둥근 방위 배지를 제거했다. `ShareCardInput.directionLabel`과 폰트 워밍 문자열에서도 뺐다. **배지를 지우기만 하면 메시지와 구분선 사이가 290px가량 비어 카드가 아래로 휑해진다** — 사진 하단을 1264→1400으로 늘리고 메시지 시작을 1504로 내려 배지가 있던 때와 같은 여백 리듬을 유지했다.
+- 검증: `npm run check` 통과(web 415 + proxy 26), `node tools/store-screenshots/verify-share-card.mjs http://localhost:<port>` PASS. 생성된 PNG를 실제로 열어 배지 제거와 공백 보정을 육안 확인했다(임시 폴더 `spindle-share-review`).
+- **함정**: 이 환경의 Vite dev 서버는 `localhost`(IPv6)에만 바인딩돼 `127.0.0.1`로는 붙지 않는다. verify 스크립트 기본값이 `http://127.0.0.1:5174`라 그대로 돌리면 `Failed to fetch .../@react-refresh`로 죽는다 — base 인자에 `http://localhost:<port>`를 넘겨야 한다.
+- 결과 화면의 실기기 확인은 대기. 특히 방문 정보가 맨 위로 오면서 `detailIntro2` 로딩 중 카드 상단이 스켈레톤으로 시작하는데, 첫인상이 괜찮은지는 실기기에서 봐야 한다.
+
+---
+
+## 2026-09-09 — 설정 › 개인정보처리방침을 앱 내부 시트로 전환
+
+- 설정의 `개인정보처리방침`이 `<a href="/privacy.html" target="_blank">`라 새 탭/외부 브라우저로 이탈했다. 사용자 요청대로 앱을 벗어나지 않는 하단 시트(`components/PrivacySheet.tsx`)로 바꿨다. 마크업·모션은 ResultScreen의 [자세히 보기] 시트를, 뒤로가기는 `useBackGuard`를 그대로 재사용했다.
+- 방침 본문의 단일 원본을 `src/content/privacyPolicy.ts`로 두고, 스토어 공개 URL의 실체인 `public/privacy.html`은 **삭제하지 않고 유지**했다 (Play/App Store에 등록된 `/privacy`). 두 본문이 갈라지면 `content/privacyPolicy.test.ts`가 `npm run check`에서 실패한다 — 실제로 한 문장을 고쳐 실패하는 것을 확인하고 되돌렸다.
+- **함정**: 오버레이 z-index를 ResultScreen 시트(13) 기준으로 잡았더니 `BottomNav`(zIndex 20) 뒤로 들어가 마지막 절(8. 문의처)이 하단 내비에 가렸다. ResultScreen에는 BottomNav가 없어서 드러나지 않던 차이다 — 탭 화면 위 오버레이는 20보다 위여야 한다(현재 30).
+- 방침 시트에는 `출처: ⓒ한국관광공사`를 넣지 않기로 했다(사용자 판단). 이 시트는 공공데이터를 그리는 화면이 아니라 방침 문서이고, 출처 표기는 실제 TourAPI 데이터를 그리는 화면(`SourceLine`)과 스토어 제출용 `public/privacy.html`이 이미 지고 있다. 후자의 출처 유지는 테스트로 고정했다.
+- 검증: `npm run check` 통과(web 415 + proxy 26, 기존 Fast Refresh lint 경고만), `npm run build` 통과하고 `dist/privacy.html`이 그대로 생성됨을 확인했다. **실기기 확인은 대기** — 안드로이드 하드웨어 뒤로가기로 시트만 닫히는지, iOS Safari에서 긴 본문 스크롤과 safe-area 여백이 맞는지는 아직 보지 않았다.
+- 브라우저 자동화는 규약대로 쓰지 않았다. dev 서버(`npm run dev`)만 띄우고 육안 확인은 사용자에게 넘겼다. 커밋·배포는 하지 않았다.
+- 다른 에이전트의 미커밋 변경(HomeScreen·ThemeNavigation·tools/store-screenshots)은 건드리지 않았다.
+
+---
+
 ## 2026-09-09 — Phase 5 홈 발견 영역·정보 위계 개선
 
 - 사용자 확정안(홈 전체 정돈, 대표 1곳+압축 3행)을 구현했다. `발견해볼 부산`을 테마 위에 배치하고 깡깡이 예술마을의 기존 큐레이션 이야기를 보여준다. 고정 목록을 일일 추천으로 표현하지 않으며 출처를 명시했다.
