@@ -8,12 +8,8 @@
 .content :global(.home-quick-icon svg) { width: 27px; height: 27px; }
 .content :global(.home-quick-button) { gap: 8px; }
 .discovery {
-  margin: 26px 20px 0;
-  padding: 20px 16px 10px;
-  border: 1px solid rgba(255, 255, 255, .95);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, .82);
-  box-shadow: 0 12px 36px -24px #285e9838, 0 0 0 1px #dce8f466;
+  /* 사진·제목·목록은 같은 정렬선으로 묶고, 테마와는 여백으로 구분한다. */
+  margin: 32px 20px 0;
 }
 /* 제목과 [전체 명소]를 한 줄씩 쌓되, 링크의 44px 터치 영역이 그대로 여백이 되지 않게
    음수 마진으로 상하를 걷어낸다 — 히트 박스는 44px, 눈에 보이는 간격은 제목 8px·목록 16px. */
@@ -51,10 +47,9 @@
   .content .heroTitle { font-size: 22px; }
   .content :global(.home-hero-copy) { max-width: 75%; }
   .content :global(.home-hero-mascot) { width: 34%; opacity: .9; }
-  .discovery { margin-inline: 16px; padding: 18px 12px 10px; border-radius: 20px; }
+  .discovery { margin-inline: 16px; }
   .sectionHeading h2 { font-size: 18px; }
-  .placeRow { gap: 10px; }
-  .placeRow { grid-template-columns: 64px minmax(0, 1fr) 10px; }
+  .placeRow { gap: 10px; grid-template-columns: 64px minmax(0, 1fr) 10px; }
   .thumbnail { width: 64px; height: 64px; }
   .placeTitle { font-size: 13px; }
   .content :global(.home-theme-card) { padding: 10px 8px; }
