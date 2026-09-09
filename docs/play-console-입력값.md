@@ -111,8 +111,9 @@ https://spindle-6vp.pages.dev/privacy
 
 > Cloudflare Pages가 `.html`을 벗겨 `/privacy`로 308 리다이렉트합니다.
 > `.html`을 넣어도 결국 도달하지만, 심사에는 리다이렉트 없이 200을 주는 위 URL을 씁니다.
-> 앱 내부 링크(`SettingsScreen`)는 `/privacy.html` 그대로 둡니다 — Capacitor WebView는
-> 로컬 파일을 직접 열기 때문에 실제 파일명이 필요합니다.
+> 앱 내부에서는 이 URL로 이동하지 않고 `SettingsScreen`이 하단 시트로 같은 본문을 보여줍니다
+> (본문 원본 `web/src/content/privacyPolicy.ts`). 위 공개 URL은 심사 제출용으로 계속 유지하며,
+> 그 실체인 `web/public/privacy.html`은 삭제하지 않습니다.
 
 ### 앱 액세스 권한
 

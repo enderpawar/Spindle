@@ -34,7 +34,7 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       if (cancelled) return
       const blob = await buildShareCardBlob({
         poiName: poi.name, districtLine, message: direction.message,
-        directionLabel: direction.label, color: direction.color,
+        color: direction.color,
         imageUrl: detail?.imageUrl ? poiImageProxyUrl(poi.contentId) : undefined,
       })
       if (cancelled) return
@@ -46,7 +46,7 @@ export function ShareScreen({ rec, poi, onBack }: Props) {
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [cardKey, poi.contentId, poi.name, districtLine, direction.message, direction.label, direction.color, attempt])
+  }, [cardKey, poi.contentId, poi.name, districtLine, direction.message, direction.color, attempt])
 
   const handleSave = () => {
     if (!readyCard) return

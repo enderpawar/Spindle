@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "export:ios": "node export-ios.mjs",
+    "export:android": "node export-android.mjs",
     "capture:ios": "node ios-status-bar.mjs",
+    "capture:android": "node android-status-bar.mjs",
     "capture:web": "node capture-web.mjs",
     "capture:doc": "node capture-doc.mjs"
   },

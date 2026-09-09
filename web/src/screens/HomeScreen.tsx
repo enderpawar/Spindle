@@ -133,7 +133,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
   ]
 
   return (
-    <ScreenFrame style={{ background: 'var(--l-bg)' }}>
+    <ScreenFrame className="home-screen">
       {/* 앱 바 */}
       <header className="home-header">
         <div className="home-brand">
@@ -146,7 +146,6 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           data-guide="departure"
           style={{ cursor: 'pointer', minHeight: 44, border: 'none', background: 'transparent', padding: '8px 0 8px 12px', color: 'var(--l-ink-2)', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700 }}
         >
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#1fa971', flex: 'none' }} />
           <span className="home-origin-label">{departure.name} 기준</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" aria-hidden>
             <path d="M7 10 l5 5 5-5" />
@@ -183,8 +182,6 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           />
         </div>
 
-        <p className={styles.spinHint}>방향을 돌려 다음 여행지를 만나보세요.</p>
-
         {/* 퀵 메뉴 */}
         <div className="home-quick-grid motion-card-list">
           {quickMenu.map((item) => (
@@ -201,14 +198,33 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
           ))}
         </div>
 
+        {/* 테마로 떠나기 — 화면에서 뺀 제목은 aria-label로 남겨 스크린리더에는 그대로 읽힌다. */}
+        <div className="home-theme-grid motion-card-list" data-guide="themes" role="group" aria-label="어떤 부산을 만나볼까요?">
+          {THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => onOpenTheme(theme.id)}
+              className="home-theme-card motion-card"
+              data-theme={theme.id}
+              style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
+            >
+              <div aria-hidden className="home-theme-symbol">
+                {theme.emoji}
+              </div>
+              <div className="home-theme-title">{theme.label}</div>
+              <div className="home-theme-tagline">{theme.tagline}</div>
+            </button>
+          ))}
+        </div>
+
+        {/* 고정 큐레이션 — 일일·개인화 추천이 아니라 서비스가 고른 목록임이 드러나는 제목을 쓴다. */}
         <section className={styles.discovery} aria-labelledby="home-discovery-title">
           <div className={styles.sectionHeading}>
-            <h2 id="home-discovery-title">발견해볼 부산</h2>
+            <h2 id="home-discovery-title">추천 여행지</h2>
             <button type="button" onClick={() => onNavigate('spots')} className={styles.sectionLink}>
               전체 명소 <span aria-hidden>›</span>
             </button>
           </div>
-          <p className={styles.sectionDescription}>익숙한 여행지 너머, 이런 곳도 있어요</p>
           <div className={styles.pickList}>
             {discoveryPicks.map((poi, i) => {
               const dir = directionOf(poi.direction)
@@ -232,28 +248,8 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
               )
             })}
           </div>
-          <p className={styles.credit}>출처: ⓒ한국관광공사</p>
+          <p className={styles.source}>출처: ⓒ한국관광공사</p>
         </section>
-
-        {/* 테마로 떠나기 */}
-        <h2 className={styles.themeHeading}>어떤 부산을 만나볼까요?</h2>
-        <div className="home-theme-grid motion-card-list" data-guide="themes">
-          {THEMES.map((theme) => (
-            <button
-              key={theme.id}
-              onClick={() => onOpenTheme(theme.id)}
-              className="home-theme-card motion-card"
-              data-theme={theme.id}
-              style={{ background: `linear-gradient(145deg, ${theme.color}, #1e4fd8 150%)` }}
-            >
-              <div aria-hidden className="home-theme-symbol">
-                {theme.emoji}
-              </div>
-              <div className="home-theme-title">{theme.label}</div>
-              <div className="home-theme-tagline">{theme.tagline}</div>
-            </button>
-          ))}
-        </div>
 
         {/* 도장깨기 진행 카드 */}
         <button
