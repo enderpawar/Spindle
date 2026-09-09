@@ -323,6 +323,68 @@
             "zIndex": 4
           }
         }
+      },
+      {
+        "id": "android_6",
+        "layout": "device-bottom",
+        "label": {},
+        "headline": {
+          "ko": "바다·골목·야간"
+        },
+        "headlineAccent": {
+          "ko": "취향대로 골라서!"
+        },
+        "screenshot": "/screenshots/android/phone/6_theme.png",
+        "inverted": false,
+        "transforms": {
+          "device": {
+            "x": 160,
+            "y": 490,
+            "width": 760,
+            "height": 1647,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 86,
+            "y": 140,
+            "width": 908,
+            "height": 420,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "android_7",
+        "layout": "device-bottom",
+        "label": {},
+        "headline": {
+          "ko": "장소마다 사진 여러 장"
+        },
+        "headlineAccent": {
+          "ko": "크게 넘겨 보기!"
+        },
+        "screenshot": "/screenshots/android/phone/7_photo.png",
+        "inverted": false,
+        "transforms": {
+          "device": {
+            "x": 160,
+            "y": 490,
+            "width": 760,
+            "height": 1647,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 86,
+            "y": 140,
+            "width": 908,
+            "height": 420,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
       }
     ],
     "ipad": [

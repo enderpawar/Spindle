@@ -57,6 +57,29 @@ const SHOTS = [
   { file: "3_home.png", tab: "홈" },
   { file: "4_stamp.png", tab: "도장" },
   { file: "5_settings.png", tab: "설정" },
+  // 아래 둘은 하단 탭만으로 못 가는 화면이라 탭 클릭 뒤 이동 단계를 더 밟는다.
+  // steps는 캡처 직전에 실행되고, 여기서 기다린 만큼이 그대로 화면에 담긴다.
+  {
+    file: "6_theme.png",
+    tab: "홈",
+    async steps(page) {
+      // 테마 그리드의 첫 카드(바다). data-theme는 engine/themes.ts의 id다.
+      await page.locator('.home-theme-card[data-theme="sea"]').click();
+      await page.waitForTimeout(3_000);
+    },
+  },
+  {
+    file: "7_photo.png",
+    tab: "홈",
+    async steps(page) {
+      // 추천 여행지의 대표 카드 → 상세 → 사진 뷰어. 이름을 박으면 큐레이션이 바뀔 때
+      // 조용히 깨지므로 "자세히 보기" 패턴의 첫 항목을 집는다.
+      await page.getByRole("button", { name: /자세히 보기$/ }).first().click();
+      await page.waitForTimeout(4_000);
+      await page.getByRole("button", { name: /사진 더 보기$/ }).first().click();
+      await page.waitForTimeout(3_000);
+    },
+  },
 ];
 
 function log(msg) {
@@ -115,11 +138,12 @@ async function main() {
   await page.waitForLoadState("networkidle").catch(() => {});
   await page.waitForTimeout(2_500);
 
-  for (const { file, tab } of SHOTS) {
+  for (const { file, tab, steps } of SHOTS) {
     await nav.getByRole("button", { name: tab, exact: true }).click();
     await page.waitForLoadState("networkidle").catch(() => {});
     // 사진·지도 타일이 채워질 시간. 지도는 특히 늦게 온다.
     await page.waitForTimeout(tab === "명소" ? 6_000 : 3_000);
+    if (steps) await steps(page);
 
     const raw = await page.screenshot({ type: "png" });
     await writeFile(path.join(OUT_DIR, file), await padForStatusBar(raw));
