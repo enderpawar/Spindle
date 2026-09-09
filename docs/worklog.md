@@ -6,6 +6,23 @@
 
 ---
 
+## 2026-09-09 — 1.1.0 배포·TestFlight·스토어 자산 (웹 배포 완료, iOS 심사 제출)
+
+- PR #19 머지(`ab5235b`) 후 Cloudflare 프로덕션 배포를 확인했다. 배포된 CSS에 리뷰 수정본(`.result-visit-skeleton`의 `margin-top:34px`·`min-height:50px`)이 들어 있는 것으로 검증했다 — **번들 해시 비교는 쓸 수 없다.** CI가 `VITE_KAKAO_JS_KEY`를 주입해 로컬 빌드와 해시가 항상 다르다.
+- TestFlight v1.1.0 **빌드 19** 업로드 성공(run `34324537761`). 인증서 한도에 걸리지 않았다 — 9/9 새벽 정리 이후로는 재발이 없다. 사용자가 실기기 점검을 마쳤다.
+- Android **vc6 / 1.1.0** AAB를 이 머신에서 빌드했다(8.62 MB, `jar verified`, 지문이 vc2~vc5와 동일). **Play Console 업로드·`검토를 위해 변경사항 제출`은 사람이 한다** — 이 콘솔에 API 액세스가 없고 fastlane에도 Android 레인이 없다.
+- **함정 1 — `export:ios`가 900초 타임아웃으로 죽고 있었다.** 진짜 원인은 `tools/store-screenshots/tailwind.config.ts`가 ESM으로 로드되는데 `plugins: [require("tailwindcss-animate")]`를 쓴 것. Node 24부터 `ReferenceError: require is not defined`가 나고 **루트 페이지 CSS 컴파일이 통째로 실패**한다 → 에디터가 프로젝트 파일을 못 읽고 기본값(locale `en`, 없는 샘플 이미지)으로 떨어짐 → 20개 렌더 전부 실패 → 다운로드 이벤트가 안 옴. 헤드리스라 그 토스트가 안 보여 증상은 타임아웃으로만 나타났다. **다음에 export가 조용히 타임아웃하면 `next dev` 로그부터 본다.**
+- **함정 2 — 스크린샷 캡션이 `원도심 55곳`이었는데 실제는 48곳이다** (영도구 14 + 동구 11 + 서구 10 + 중구 13). `mock/stamps.ts`의 `zones`가 `POI_POOL`을 이 4개 구로 걸러 만들고, 앱 홈에도 `0/48`로 뜬다. iOS·Android 덱 양쪽을 고쳤다.
+- 스크린샷을 프로덕션 기준으로 다시 구웠다. 하단 내비 라벨이 목업 프레임에 잘리던 기존 이슈도 해소됐다 — `capture-web`이 홈 인디케이터 여백 34px를 주입하기 때문이다.
+- 홈 캡처에서 `추천 여행지`는 제목만 보이고 카드가 접힌다. 테마 그리드가 위로 들어와 한 화면에 히어로·테마·추천을 다 넣을 수 없고, 스크롤을 주면 히어로가 통째로 날아간다 — 히어로+빠른진입+테마를 보여주는 쪽을 골랐다.
+
+### 다음 대기
+
+- **Android**: `web/android/app/build/outputs/bundle/release/app-release.aab`를 Play Console 프로덕션에 올리고 `게시 개요 → 검토를 위해 변경사항 제출`. 릴리스 노트는 `fastlane/metadata/android/ko-KR/changelogs/6.txt`.
+- **iOS**: **심사 제출 완료** (run `34357709903`, 빌드 19). 스크린샷 5장 교체·precheck 무경고 통과·승인 시 자동 공개. 결과만 확인하면 된다.
+
+---
+
 ## 2026-09-09 — Phase 5 추천 여행지 패널 제거 확정
 
 - 사용자 확정 방향으로 추천 영역의 반투명 흰 패널·테두리·그림자·내부 패딩을 제거했다. 테마와 32px 간격, 좌우 20px(360px 미만 16px) 정렬선으로 묶고 사진·본문을 배경 위에 직접 배치한다. 390px 기준 대표 사진의 CSS 가용 폭은 316px에서 350px로 넓어진다.
