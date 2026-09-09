@@ -44,6 +44,7 @@ export function PhotoViewer({ name, district, src, images, count, index, loading
   useEffect(() => {
     const node = dialog.current
     node?.showModal()
+    node?.focus()
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {

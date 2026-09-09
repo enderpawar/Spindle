@@ -619,68 +619,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   border: 2px dashed #c3d3ee;
 }
 
-.home-pick-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 14px;
-  padding: 0 20px 8px;
-}
-
-.home-pick-card {
-  width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-}
-
-.home-pick-image {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 14 / 9;
-  overflow: hidden;
-  border-radius: 20px;
-}
-
-.home-pick-title {
-  display: -webkit-box;
-  min-height: 2.7em;
-  overflow: hidden;
-  color: var(--l-ink);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.35;
-  word-break: keep-all;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.home-section-link {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  padding: 0 2px 0 12px;
-  border: 0;
-  background: transparent;
-  color: var(--l-ink-2);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.home-pick-meta {
-  margin-top: 6px;
-  overflow: hidden;
-  color: var(--l-ink-3);
-  font-size: 12px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .home-mission-card {
   position: relative;
   display: block;
@@ -835,15 +773,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
     gap: 8px;
   }
 
-  .home-pick-grid {
-    padding-inline: 16px;
-    gap: 16px 10px;
-  }
-
-  .home-pick-title {
-    font-size: 14px;
-  }
-
   .home-mission-card {
     width: calc(100% - 24px);
     min-height: 146px;
@@ -858,10 +787,6 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 }
 
 @media (max-width: 299px) {
-  .home-pick-grid {
-    grid-template-columns: 1fr;
-  }
-
   .home-mission-card {
     padding-right: 72px;
   }
@@ -3976,10 +3901,6 @@ button.is-pressing:not(:disabled) {
 .home-stamp-card { padding-block: 12px; border-radius: 16px; }
 .home-stamp-progress { height: 4px; margin-top: 9px; border-radius: 4px; overflow: hidden; background: #e8effb; }
 .home-stamp-progress > span { display: block; height: 100%; border-radius: inherit; background: var(--l-primary); }
-.home-pick-grid { gap: 16px 12px; }
-.home-pick-image { border-radius: 16px; }
-.home-pick-title { font-size: 14px; min-height: 2.6em; line-height: 1.3; }
-.home-pick-meta { margin-top: 2px; font-size: 11px; }
 .stamp-region-tabs button { flex: 1; }
 .stamp-first-visit { margin-bottom: 20px; padding: 16px; border: 1px solid #dce7fb; border-radius: 18px; background: #fff; color: var(--l-ink); }
 .stamp-first-visit strong { font-size: 14px; }
