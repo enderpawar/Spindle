@@ -1,11 +1,17 @@
 # Spindle Google Play 출시 인계 문서
 
+> **2026-09-09:** **vc6(`versionName 1.1.0`) AAB 빌드 완료 — 업로드는 사람이 한다.**
+> 산출물 `web/android/app/build/outputs/bundle/release/app-release.aab` (8.62 MB),
+> `jarsigner -verify` → `jar verified`, 지문 `SHA256:8B:45:7A:99:…:50:1C` (vc2~vc5와 동일).
+> 릴리스 노트는 `fastlane/metadata/android/ko-KR/changelogs/6.txt`.
+> **업로드 후 `게시 개요`에서 `검토를 위해 변경사항 제출`을 눌러야 심사에 들어간다.**
+>
 > **2026-09-08 사용자 확인:** vc5(`versionName 1.0.9`)를 **프로덕션 100%로 검토 제출 완료.**
 > 승인되면 자동 공개된다(관리형 게시 꺼짐). 아래 이전 일정과 진행 상태는 과거 기록이다.
 
 > 다음 세션에서 Google Play 등록 또는 Doply 비공개 테스트를 진행하기 전에 이 문서를 먼저 읽는다.
 >
-> 마지막 갱신: 2026-09-08 (Asia/Seoul)
+> 마지막 갱신: 2026-09-09 (Asia/Seoul)
 
 ## 0. 지금 상황 요약 (2026-09-08)
 
@@ -192,6 +198,21 @@ iOS 1.0.1~1.0.9 분량이 한꺼번에 들어갔고, 이때 `web/` 소스는 iOS
       **`검토를 위해 변경사항 N개 제출`** 버튼을 눌러야 `검토 중인 변경사항`으로 바뀐다.
       관리형 게시가 꺼져 있어 승인되면 자동 공개된다.
       웹·앱이 같은 번들이고 Play 프로덕션 100%는 롤백 수단이 없다 — 다음 업데이트에서도 실기기 검증이 유일한 안전망이다
+### vc6 / 1.1.0 (2026-09-09)
+
+iOS 1.1.0(빌드 19)과 같은 `web/` 소스다 — 커밋 `ab5235b`. 들어간 내용은
+`APP_STORE_RELEASE.md` 0절 "버전 이력"의 1.1.0 행을 본다.
+
+- [x] `versionCode 6` / `versionName "1.1.0"` 상향
+- [x] 릴리스 노트 `changelogs/6.txt` 작성
+- [x] AAB 빌드 (8.62 MB) — `web/android/app/build/outputs/bundle/release/app-release.aab`
+- [x] 서명 지문이 vc2~vc5와 같음을 확인 (`jar verified`, `SHA256:8B:45:7A:99:…:50:1C`)
+- [x] `cap sync android` 후 gradle 경로에 백슬래시 없음을 확인
+- [ ] **Play Console에 업로드하고 `검토를 위해 변경사항 제출`을 누른다** ← 사람이 하는 일
+- [ ] 승인·공개 확인
+
+### 남은 Android 실기기 확인 (버전 무관)
+
 - [ ] Android 실기기에서 결과 카드 지도 탭 잠금 해제를 확인한다 (iOS와 웹뷰가 다르다)
 - [ ] Android 실기기에서 스핀 버튼·사진 롱프레스에 드래그 고스트가 없는지 확인
       (`-webkit-user-drag: none` — iOS Live Text 수정과 같은 규칙이 Android도 덮는다)
