@@ -44,6 +44,7 @@ export function PhotoViewer({ name, district, src, images, count, index, loading
   useEffect(() => {
     const node = dialog.current
     node?.showModal()
+    node?.focus()
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
@@ -53,7 +54,7 @@ export function PhotoViewer({ name, district, src, images, count, index, loading
     }
   }, [])
 
-  return <dialog ref={dialog} className="photo-viewer" aria-labelledby="photo-viewer-title"
+  return <dialog ref={dialog} className="photo-viewer motion-dialog" aria-labelledby="photo-viewer-title"
     onCancel={event => { event.preventDefault(); onClose() }}
     onClick={event => {
       if (event.target !== event.currentTarget) return
@@ -68,7 +69,7 @@ export function PhotoViewer({ name, district, src, images, count, index, loading
     }}>
     <header className="photo-viewer-header">
       <div><span>{district} · 사진</span><h2 id="photo-viewer-title">{name}</h2></div>
-      <button autoFocus type="button" aria-label="사진 닫기" onClick={onClose}>
+      <button type="button" aria-label="사진 닫기" onClick={onClose}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
       </button>
     </header>
