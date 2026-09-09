@@ -1,9 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import worker, {
-  UPSTREAM_ATTEMPT_TIMEOUT_MS,
-  fetchUpstream,
-  type Env,
-} from "../src/index";
+import worker, { type Env } from "../src/index";
+import { UPSTREAM_ATTEMPT_TIMEOUT_MS, fetchUpstream } from "../src/upstream";
 
 const env: Env = {
   TOURAPI_SERVICE_KEY: "test-key",
