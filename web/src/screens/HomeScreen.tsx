@@ -248,6 +248,7 @@ export function HomeScreen({ departure, onOpenDeparture, onSelectPoi, onOpenThem
               )
             })}
           </div>
+          <p className={styles.source}>출처: ⓒ한국관광공사</p>
         </section>
 
         {/* 도장깨기 진행 카드 */}

@@ -320,6 +320,8 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
 .home-screen {
   background-color: var(--l-bg);
   background-image:
+    /* 항해도의 등거리 곡선: 정적인 가는 선으로 방향 탐색의 인상을 잇는다. */
+    radial-gradient(ellipse 310px 240px at 115% 28%, transparent 69%, rgba(73, 132, 186, .08) 69.2%, transparent 69.6%, transparent 82%, rgba(73, 132, 186, .06) 82.2%, transparent 82.6%),
     /* 방안지 같은 점 결 — 텍스처만 남고 무늬로는 읽히지 않는 세기 */
     radial-gradient(rgba(47, 92, 255, 0.05) 1px, transparent 1.4px),
     /* 오른쪽 위: 히어로의 바다빛을 화면 밖까지 잇는다 */
@@ -330,8 +332,8 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
     radial-gradient(82% 36% at 86% 100%, rgba(255, 196, 118, 0.16), transparent 72%),
     /* 바탕: 위는 희게, 아래로 갈수록 푸르게 */
     linear-gradient(180deg, #fbfdff 0%, #f2f7ff 48%, #e9f1ff 100%);
-  background-size: 26px 26px, auto, auto, auto, auto;
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size: auto, 26px 26px, auto, auto, auto, auto;
+  background-repeat: no-repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
 }
 
 /* ─── 홈: 좁은 기기에서도 카드가 잘리지 않는 반응형 레이아웃 ─── */
