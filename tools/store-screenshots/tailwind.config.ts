@@ -1,4 +1,8 @@
 import type { Config } from "tailwindcss";
+// ESM으로 로드된다 — Node 24부터 여기서 require()를 쓰면 ReferenceError가 나고
+// 그 여파로 루트 페이지의 CSS 컴파일이 통째로 실패한다 (에디터가 기본값으로 떨어져
+// "All 20 renders failed"가 된다).
+import tailwindcssAnimate from "tailwindcss-animate";
 
 const config: Config = {
   darkMode: ["class"],
@@ -62,6 +66,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 };
 export default config;
