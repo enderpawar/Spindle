@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react'
 
-export function ScreenFrame({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+export function ScreenFrame({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
   return (
-    <div className="screen" style={style}>
+    <div className={className ? `screen ${className}` : 'screen'} style={style}>
       {children}
     </div>
   )
