@@ -1,9 +1,10 @@
-// 공유 이미지 카드 — 인스타 스토리 비율(1080×1920) PNG를 Canvas로 그린다 (ui.md S5).
-// 공공데이터 출처는 기관명을 텍스트로 표기하고 공식 CI/BI 로고 이미지는 사용하지 않는다 (절대 원칙 6).
-
+// Shared 1080×1920 light-theme travel postcard, used for both preview and delivery.
 const W = 1080
 const H = 1920
-const FONT = `'Pretendard Variable', Pretendard, -apple-system, sans-serif`
+const FONT = "'Pretendard Variable', Pretendard, -apple-system, sans-serif"
+const INK = '#17347f'
+const BLUE = '#2f5cff'
+const MUTED = '#5b7098'
 
 interface ShareCardInput {
   poiName: string
@@ -14,172 +15,187 @@ interface ShareCardInput {
   imageUrl?: string
 }
 
-/** 한글은 어절 단위 줄바꿈이 자주 실패하므로 글자 단위로 감싼다 */
-function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+function wrapText(ctx: CanvasRenderingContext2D, text: string, width: number): string[] {
   const lines: string[] = []
   let line = ''
   for (const ch of text) {
-    if (ctx.measureText(line + ch).width > maxWidth && line !== '') {
+    if (ch === '\n') {
+      lines.push(line.trimEnd())
+      line = ''
+    } else if (ctx.measureText(line + ch).width > width && line !== '') {
       lines.push(line.trimEnd())
       line = ch === ' ' ? '' : ch
-    } else {
-      line += ch
-    }
+    } else line += ch
   }
   if (line) lines.push(line.trimEnd())
   return lines
 }
 
-function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, fill: string) {
-  ctx.save()
-  ctx.translate(cx, cy)
-  ctx.fillStyle = fill
-  ctx.beginPath()
-  ctx.moveTo(0, -size)
-  ctx.lineTo(size * 0.25, -size * 0.25)
-  ctx.lineTo(size, 0)
-  ctx.lineTo(size * 0.25, size * 0.25)
-  ctx.lineTo(0, size)
-  ctx.lineTo(-size * 0.25, size * 0.25)
-  ctx.lineTo(-size, 0)
-  ctx.lineTo(-size * 0.25, -size * 0.25)
-  ctx.closePath()
-  ctx.fill()
-  ctx.restore()
+function fitLines(ctx: CanvasRenderingContext2D, text: string, width: number, maxLines: number, size: number, minSize: number, weight: number) {
+  let lines: string[]
+  do {
+    ctx.font = weight + ' ' + size + 'px ' + FONT
+    lines = wrapText(ctx, text, width)
+    if (lines.length <= maxLines || size <= minSize) break
+    size -= 2
+  } while (size >= minSize)
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines)
+    let last = lines[maxLines - 1]
+    while (last && ctx.measureText(last + '…').width > width) last = last.slice(0, -1)
+    lines[maxLines - 1] = last + '…'
+  }
+  return { lines, size }
 }
 
-function loadCardImage(url: string | undefined): Promise<HTMLImageElement | null> {
+function loadCardImage(url?: string): Promise<HTMLImageElement | null> {
   if (!url) return Promise.resolve(null)
   return new Promise((resolve) => {
     const img = new Image()
+    const timer = window.setTimeout(() => finish(null), 12000)
+    const finish = (image: HTMLImageElement | null) => {
+      window.clearTimeout(timer)
+      img.onload = null
+      img.onerror = null
+      resolve(image)
+    }
     img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => resolve(null)
+    img.onload = () => finish(img.naturalWidth > 0 ? img : null)
+    img.onerror = () => finish(null)
     img.src = url
   })
 }
 
-function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number, fill: string) {
+  ctx.fillStyle = fill
   ctx.beginPath()
-  ctx.roundRect(x, y, w, h, r)
+  ctx.roundRect(x, y, w, h, radius)
+  ctx.fill()
 }
 
-function drawCoverImage(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
-  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
-  const sw = w / scale
-  const sh = h / scale
-  const sx = (img.naturalWidth - sw) / 2
-  const sy = (img.naturalHeight - sh) / 2
-  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h)
-}
-
-function drawImagePanel(ctx: CanvasRenderingContext2D, img: HTMLImageElement | null) {
-  const x = 120
-  const y = 850
-  const w = 840
-  const h = 520
-  ctx.save()
-  drawRoundedRect(ctx, x, y, w, h, 48)
-  ctx.clip()
-  if (img) {
-    try {
-      drawCoverImage(ctx, img, x, y, w, h)
-      ctx.fillStyle = 'rgba(0,0,0,.18)'
-      ctx.fillRect(x, y, w, h)
-    } catch {
-      img = null
-    }
+function drawSeascape(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const sky = ctx.createLinearGradient(x, y, x + w, y + h)
+  sky.addColorStop(0, '#e6f4ff')
+  sky.addColorStop(1, '#bde7f0')
+  ctx.fillStyle = sky
+  ctx.fillRect(x, y, w, h)
+  ctx.fillStyle = '#ffffff'
+  ctx.beginPath()
+  ctx.arc(x + w * 0.77, y + h * 0.23, 61, 0, Math.PI * 2)
+  ctx.fill()
+  for (const [offset, color] of [[0.64, '#a3dae9'], [0.77, '#69c3de'], [0.91, '#3899da']] as const) {
+    const top = y + h * offset
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.moveTo(x, top)
+    ctx.bezierCurveTo(x + w * 0.3, top - 105, x + w * 0.6, top + 100, x + w, top - 30)
+    ctx.lineTo(x + w, y + h)
+    ctx.lineTo(x, y + h)
+    ctx.fill()
   }
-  if (!img) {
-    const panel = ctx.createLinearGradient(x, y, x + w, y + h)
-    panel.addColorStop(0, 'rgba(255,255,255,.18)')
-    panel.addColorStop(1, 'rgba(8,20,38,.35)')
-    ctx.fillStyle = panel
-    ctx.fillRect(x, y, w, h)
-    drawStar(ctx, x + w / 2, y + h / 2, 78, 'rgba(255,255,255,.72)')
+  // Photo fallback uses a compass, distinct from the current brand mark.
+  const cx = x + w * 0.5
+  const cy = y + h * 0.4
+  ctx.strokeStyle = 'rgba(47,92,255,.22)'
+  ctx.lineWidth = 3
+  ctx.beginPath()
+  ctx.arc(cx, cy, 128, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.save()
+  ctx.translate(cx, cy)
+  ctx.rotate(Math.PI / 6)
+  for (const [sign, color] of [[1, BLUE], [-1, '#ffffff']] as const) {
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.moveTo(0, -93 * sign)
+    ctx.lineTo(30 * sign, 18 * sign)
+    ctx.lineTo(0, 0)
+    ctx.lineTo(-30 * sign, -18 * sign)
+    ctx.closePath()
+    ctx.fill()
   }
   ctx.restore()
-
-  ctx.strokeStyle = 'rgba(255,255,255,.32)'
-  ctx.lineWidth = 2
-  drawRoundedRect(ctx, x, y, w, h, 48)
-  ctx.stroke()
 }
 
 export async function buildShareCardBlob(input: ShareCardInput): Promise<Blob> {
+  // Canvas text does not trigger unicode-range font downloads like DOM text does.
+  const fontText = `${input.poiName} ${input.message} ${input.districtLine} ${input.directionLabel} Spindle BUSAN TODAY’S PICK 오늘의 방향이 데려다준 곳 쪽으로 만난 부산 정해준 출처: ⓒ한국관광공사`
+  await document.fonts.load('800 88px "Pretendard Variable"', fontText).catch(() => [])
   await document.fonts.ready
-  const cardImage = await loadCardImage(input.imageUrl)
-
+  const [photo, brand] = await Promise.all([loadCardImage(input.imageUrl), loadCardImage('/brand-mark-192.png')])
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('공유 카드를 만들 수 없어요')
 
-  // 배경 — 방위 색이 밤바다로 가라앉는 그라디언트
-  const bg = ctx.createLinearGradient(0, 0, 0, H)
-  bg.addColorStop(0, input.color)
-  bg.addColorStop(0.42, '#16304f')
-  bg.addColorStop(1, '#081426')
-  ctx.fillStyle = bg
+  ctx.fillStyle = '#f4f8ff'
   ctx.fillRect(0, 0, W, H)
+  roundedRect(ctx, 44, 44, 992, 1832, 64, '#ffffff')
+  ctx.strokeStyle = '#dbe6fa'
+  ctx.lineWidth = 2
+  ctx.stroke()
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'alphabetic'
+  if (brand) ctx.drawImage(brand, 100, 104, 82, 82)
+  ctx.fillStyle = INK
+  ctx.font = '800 48px ' + FONT
+  ctx.fillText('Spindle', brand ? 201 : 104, 164)
+  ctx.fillStyle = MUTED
+  ctx.font = '600 27px ' + FONT
+  ctx.textAlign = 'right'
+  ctx.fillText('BUSAN · TODAY’S PICK', 976, 153)
+  ctx.textAlign = 'left'
 
-  // 별
-  const stars: [number, number, number][] = [
-    [130, 820, 4], [905, 700, 3], [540, 640, 3], [220, 1180, 3], [880, 1260, 4], [430, 1520, 3],
-  ]
-  for (const [x, y, r] of stars) {
-    ctx.fillStyle = 'rgba(255,255,255,.7)'
-    ctx.beginPath()
-    ctx.arc(x, y, r, 0, Math.PI * 2)
-    ctx.fill()
-  }
+  ctx.fillStyle = MUTED
+  ctx.font = '600 36px ' + FONT
+  ctx.fillText('오늘의 방향이 데려다준 곳', 104, 280)
+  ctx.fillStyle = INK
+  const title = fitLines(ctx, input.poiName, 872, 3, 88, 56, 800)
+  const titleLineHeight = title.size * 1.2
+  title.lines.forEach((line, i) => ctx.fillText(line, 100, 389 + i * titleLineHeight))
+  const metadataY = 389 + (title.lines.length - 1) * titleLineHeight + 70
+  ctx.fillStyle = MUTED
+  const metadata = fitLines(ctx, input.districtLine, 872, 1, 34, 26, 500)
+  ctx.fillText(metadata.lines[0] ?? '', 104, metadataY)
 
-  // 상단 로고
-  drawStar(ctx, W / 2, 190, 46, 'rgba(255,255,255,.92)')
-  ctx.textAlign = 'center'
-  ctx.fillStyle = 'rgba(255,255,255,.92)'
-  ctx.font = `900 54px ${FONT}`
-  ctx.fillText('Spindle', W / 2, 316)
-
-  // 방위 칩
-  ctx.font = `900 44px ${FONT}`
-  const chipLabel = `${input.directionLabel}쪽`
-  const chipW = ctx.measureText(chipLabel).width + 96
-  ctx.fillStyle = 'rgba(8,20,38,.55)'
+  const photoY = Math.max(570, metadataY + 57)
+  const photoH = 1264 - photoY
+  ctx.save()
   ctx.beginPath()
-  ctx.roundRect((W - chipW) / 2, 470, chipW, 100, 50)
-  ctx.fill()
-  ctx.fillStyle = '#ffffff'
-  ctx.fillText(chipLabel, W / 2, 537)
+  ctx.roundRect(100, photoY, 880, photoH, 36)
+  ctx.clip()
+  if (photo) {
+    const scale = Math.max(880 / photo.naturalWidth, photoH / photo.naturalHeight)
+    const sw = 880 / scale
+    const sh = photoH / scale
+    ctx.drawImage(photo, (photo.naturalWidth - sw) / 2, (photo.naturalHeight - sh) / 2, sw, sh, 100, photoY, 880, photoH)
+  } else drawSeascape(ctx, 100, photoY, 880, photoH)
+  ctx.restore()
 
-  // 큐레이션 메시지
-  ctx.font = `700 46px ${FONT}`
-  ctx.fillStyle = 'rgba(255,255,255,.85)'
-  const messageLines = wrapText(ctx, input.message, 860)
-  messageLines.forEach((line, i) => ctx.fillText(line, W / 2, 700 + i * 68))
+  const chip = input.directionLabel + '쪽으로 만난 부산'
+  ctx.font = '700 32px ' + FONT
+  const chipWidth = ctx.measureText(chip).width + 68
+  roundedRect(ctx, 104, 1332, chipWidth, 70, 35, '#e8f0ff')
+  ctx.fillStyle = BLUE
+  ctx.fillText(chip, 138, 1379)
+  ctx.fillStyle = INK
+  const message = fitLines(ctx, input.message, 864, 3, 46, 36, 700)
+  message.lines.forEach((line, i) => ctx.fillText(line, 104, 1486 + i * 64))
 
-  drawImagePanel(ctx, cardImage)
-
-  // 관광지명
-  ctx.font = `900 86px ${FONT}`
-  ctx.fillStyle = '#ffffff'
-  const nameLines = wrapText(ctx, input.poiName, 920).slice(0, 3)
-  const nameTop = 1510
-  nameLines.forEach((line, i) => ctx.fillText(line, W / 2, nameTop + i * 104))
-
-  ctx.font = `600 40px ${FONT}`
-  ctx.fillStyle = 'rgba(255,255,255,.6)'
-  ctx.fillText(input.districtLine, W / 2, nameTop + nameLines.length * 104 + 28)
-
-  // 푸터
-  ctx.font = `700 36px ${FONT}`
-  ctx.fillStyle = 'rgba(255,255,255,.55)'
-  ctx.fillText('Spindle이 정해준 오늘의 방향', W / 2, H - 156)
-  ctx.font = `600 28px ${FONT}`
-  ctx.fillStyle = 'rgba(255,255,255,.48)'
-  ctx.fillText('출처: ⓒ한국관광공사', W / 2, H - 92)
+  ctx.strokeStyle = '#dbe6fa'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(104, 1720)
+  ctx.lineTo(976, 1720)
+  ctx.stroke()
+  ctx.fillStyle = MUTED
+  ctx.font = '500 30px ' + FONT
+  ctx.fillText('Spindle이 정해준 오늘의 방향', 104, 1781)
+  ctx.font = '500 26px ' + FONT
+  ctx.fillText('출처: ⓒ한국관광공사', 104, 1825)
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('공유 카드 생성 실패'))), 'image/png')
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('공유 카드 생성 실패')), 'image/png')
   })
 }
