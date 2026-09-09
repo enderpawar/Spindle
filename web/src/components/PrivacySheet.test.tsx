@@ -17,6 +17,11 @@ describe('PrivacySheet', () => {
     expect(markup).toContain('mailto:' + PRIVACY_CONTACT_EMAIL)
   })
 
+  // 배경까지 버튼이면 같은 이름의 "닫기"가 스크린리더에 둘로 읽힌다.
+  it('닫기라는 이름을 가진 컨트롤은 하나뿐이다', () => {
+    expect(markup.split('aria-label="닫기"')).toHaveLength(2)
+  })
+
   // 화면 프레임(.screen) 기준 오버레이여야 한다 — viewport 기준이면 iOS 홈화면 실행에서 어긋난다.
   it('화면 프레임 안에 갇히는 하단 시트다', () => {
     expect(markup).toContain('position:absolute')

@@ -20,7 +20,8 @@ import sharp from "sharp";
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TOOL_DIR, "..", "..");
 const PROJECT_FILE = path.join(TOOL_DIR, "app-store-screenshots.json");
-const BACKUP_FILE = path.join(os.tmpdir(), "spindle-screenshots-project.backup.json");
+// 백업 파일명은 플랫폼별로 나눈다 (export-android.mjs 참고).
+const BACKUP_FILE = path.join(os.tmpdir(), "spindle-screenshots-project.backup.ios.json");
 const OUT_DIR = path.join(REPO_ROOT, "fastlane", "screenshots", "ios", "ko");
 
 const PORT = 3123;

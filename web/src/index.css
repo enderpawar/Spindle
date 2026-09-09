@@ -2248,28 +2248,32 @@ html[data-view-transition='ritual']::view-transition-new(spindle-screen) {
   font-weight: 550;
 }
 
+/* 로딩이 끝나면 이 자리에 .result-visit-section > .result-visit-facts가 들어온다.
+   그쪽의 오프셋(24px + 10px)·상단 구분선·행 높이를 맞춰야 상세가 도착할 때 카드가 밀리지 않는다. */
 .result-visit-skeleton {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 24px;
+  margin-top: 34px;
+  border-top: 1px solid var(--l-line);
 }
 
+/* 시트에서는 위 .result-info-facts 표에 이어 붙는다 — 앞 행의 구분선이 이미 있어
+   오프셋도 상단선도 두지 않는다. */
 .result-visit-skeleton--compact {
   margin-top: 0;
+  border-top: 0;
 }
 
+/* min-height는 .result-info-row의 실제 높이다 (패딩 28px + 값 줄 21px + 구분선 1px). */
 .result-visit-skeleton-row {
   display: grid;
   grid-template-columns: 86px minmax(0, 1fr);
+  align-items: center;
   gap: 14px;
+  min-height: 50px;
   padding: 14px 0;
   border-bottom: 1px solid var(--l-line);
-}
-
-.result-visit-skeleton > .skeleton + .result-visit-skeleton-row {
-  margin-top: 10px;
-  border-top: 1px solid var(--l-line);
 }
 
 .result-visit-skeleton-row .skeleton:first-child {

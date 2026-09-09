@@ -41,6 +41,7 @@ function Block({ block }: { block: PrivacyBlock }) {
  */
 export function PrivacySheet({ onClose }: { onClose: () => void }) {
   const closeButton = useRef<HTMLButtonElement>(null)
+  const sheet = useRef<HTMLDivElement>(null)
 
   // 시트가 떠 있으면 하드웨어 뒤로가기는 화면을 옮기지 않고 이것부터 닫는다 (docs/ui.md 뒤로가기 규칙).
   useBackGuard(true, onClose)
@@ -49,23 +50,55 @@ export function PrivacySheet({ onClose }: { onClose: () => void }) {
     closeButton.current?.focus()
   }, [])
 
+  useEffect(() => {
+    // Escape와 Tab은 document에서 듣는다. 오버레이 엘리먼트의 onKeyDown은 시트 안에 포커스가
+    // 있을 때만 발화해서, 본문 텍스트를 한 번 탭하면(포커스가 body로 이동) Escape가 죽는다.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const node = sheet.current
+      if (!node) return
+      const focusable = [...node.querySelectorAll<HTMLElement>('a[href], button:not([disabled])')]
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      // aria-modal 시트인데 포커스가 밖으로 나가면 뒤쪽 설정 화면·하단 내비까지 탭으로 닿는다.
+      if (!node.contains(document.activeElement)) {
+        event.preventDefault()
+        first.focus()
+        return
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [onClose])
+
   return (
     <div
       className="motion-overlay"
       // 하단 내비(BottomNav zIndex 20)보다 위여야 한다 — 아래면 8절이 내비 뒤로 잘린다.
       style={{ position: 'absolute', inset: 0, zIndex: 30 }}
-      onKeyDown={(event) => {
-        if (event.key !== 'Escape') return
-        event.stopPropagation()
-        onClose()
-      }}
     >
-      <button
-        aria-label="닫기"
+      {/* 배경은 버튼이 아니라 클릭 영역이다 — 버튼이면 실제 닫기 버튼과 같은 이름의
+          "닫기"가 스크린리더에 둘로 읽힌다. */}
+      <div
+        aria-hidden
         onClick={onClose}
-        style={{ position: 'absolute', inset: 0, border: 'none', background: 'rgba(12,26,54,.45)', cursor: 'pointer' }}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(12,26,54,.45)', cursor: 'pointer' }}
       />
       <div
+        ref={sheet}
         role="dialog"
         aria-modal="true"
         aria-labelledby="privacy-sheet-title"
