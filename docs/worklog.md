@@ -16,7 +16,10 @@
 - **함정 — Android WebView는 기본값에서 meta의 `width=`를 무시한다.** `MainActivity`에서 `setUseWideViewPort(true)`와 `setLoadWithOverviewMode(true)`를 켰다. 이 변경은 새 AAB로만 반영된다.
 - **함정 — 데스크톱 Chrome은 viewport meta를 무시한다.** 창 크기만 줄여서는 효과가 안 보인다. DevTools 기기 툴바에서 Mobile 타입 기기(320×693 사용자 지정, 360, 375)로 확인해야 한다.
 - 감수한 점: 확대 모드 사용자에게 앱 안 글자가 기본 모드와 같은 물리 크기로 보인다. 요구가 배치 유지였다.
-- 검증: `npm run check` 통과(web 428 + proxy 26), `npm run build` 통과.
+- PR #20 리뷰(서브 에이전트 medium) 지적 두 건을 반영했다.
+  - **함정 — 가로에서도 고정하면 프레임이 짓눌린다.** Android 앱(`screenOrientation` 없음)과 모바일 브라우저 탭은 가로로 돈다. 360×740을 가로로 들면 390 폭이 약 1.9배 확대되어 앱 높이가 190px 남짓이 된다. `(orientation: portrait)`일 때만 고정한다.
+  - **함정 — `getBridge()`는 null일 수 있다.** 시스템 WebView가 없으면 `BridgeActivity`가 `no_webview` 화면만 띄우고 브리지를 만들지 않는다. null 확인 없이 설정을 건드리면 그 안내 화면이 크래시로 바뀐다.
+- 검증: `npm run check` 통과(web 431 + proxy 26), `npm run build` 통과, Android `:app:compileDebugJavaWithJavac` 통과.
 
 ### 다음 대기
 
