@@ -19,14 +19,13 @@ android {
         applicationId "kr.spindle.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // 2026-09-09: vc6 — 1.1.0. vc5(1.0.9) 이후의 UI 폴리시를 담는다: 홈 배경·추천
-        // 여행지 목록 정리, 결과 카드 방문정보 스켈레톤 오프셋(도착 시 밀림 제거), 사진
-        // 뷰어 열림 모션, 명소 탭 필터 라벨 "관광지", 개인정보 시트 포커스 처리, 프록시
-        // 업스트림 재시도 분리.
+        // 2026-09-11: vc7 — 1.1.1. 짧은 변 390px 미만 세로 화면에서 viewport를 390으로
+        // 고정해 원본 배치를 유지한다(MainActivity의 useWideViewPort 포함), 지역 드롭다운이
+        // 혼잡 카드에 가려지던 쌓임 순서 수정. iOS 1.1.1 빌드 21과 같은 web/ 소스.
         // versionName은 iOS와 통일한다 — 버전 이력은 APP_STORE_RELEASE.md 0절 하나로 본다.
         // 서명키·패키지명은 vc2~vc5와 동일하게 유지한다 (바뀌면 업로드가 거부된다).
-        versionCode 6
-        versionName "1.1.0"
+        versionCode 7
+        versionName "1.1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
