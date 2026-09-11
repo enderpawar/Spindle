@@ -49,7 +49,7 @@ Spindle
 | Play 항목 | 파일 | 규격 | 상태 |
 |---|---|---|---|
 | 앱 아이콘 | `fastlane/metadata/android/ko-KR/images/icon.png` | 512×512, 32-bit PNG(알파 필요) | ✅ RGBA |
-| 그래픽 이미지 | `fastlane/metadata/android/ko-KR/images/featureGraphic.png` | 1024×500, 24-bit PNG(알파 금지) | ✅ RGB로 변환 완료 |
+| 그래픽 이미지 | `fastlane/metadata/android/ko-KR/images/featureGraphic.png` | 1024×500, 24-bit PNG(알파 금지) | ✅ 2026-09-11 교체 — 해 질 녘 부산 바다 + "어디 갈지 고민될 땐, 휴대폰만 돌리세요" (Codex 생성 배경 + Pretendard 합성, 시안 C) |
 | 휴대전화 스크린샷 | `.../images/phoneScreenshots/` 5장 | 1442×2868, 24-bit PNG | ✅ |
 | 7인치 태블릿 스크린샷 | `.../images/sevenInchScreenshots/` 5장 | 휴대전화와 같은 파일 | ✅ |
 | 10인치 태블릿 스크린샷 | `.../images/tenInchScreenshots/` 5장 | 휴대전화와 같은 파일 | ✅ |
