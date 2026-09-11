@@ -2,8 +2,17 @@ import type { Device, Orientation, SlideLayout, Theme, ThemeId } from "./types";
 
 // Google Play는 긴 변이 짧은 변의 2배를 넘는 스크린샷을 거부한다(2868 > 2×1320).
 // export-android.mjs가 이 값을 넓혀 같은 iPhone 덱을 Play 규격으로 굽는다 — 요소는 그만큼
-// 오른쪽으로 옮기고, 좌우에는 배경(사진·눈금판)만 더 드러난다. 평소에는 설정하지 않는다.
-const IPHONE_CANVAS_W = Number(process.env.NEXT_PUBLIC_IPHONE_CANVAS_W) || 1320;
+// 오른쪽으로 옮기고, 좌우에는 배경만 더 드러난다. 평소에는 설정하지 않는다.
+const IPHONE_DESIGN_W = 1320;
+const IPHONE_CANVAS_W = Number(process.env.NEXT_PUBLIC_IPHONE_CANVAS_W) || IPHONE_DESIGN_W;
+
+/**
+ * 글자·그림자·눈금판·질감 크기의 기준 폭. 캔버스 폭을 그대로 쓰면 Play용으로 넓힌 캔버스에서
+ * 캡션과 눈금판이 9% 커져 App Store 이미지와 달라진다.
+ */
+export function scaleWidth(device: Device, cW: number) {
+  return device === "iphone" ? Math.min(cW, IPHONE_DESIGN_W) : cW;
+}
 
 // ---------- Canvas dimensions (design at largest required resolution) ----------
 export const CANVAS: Record<Device, { w: number; h: number; wL?: number; hL?: number }> = {

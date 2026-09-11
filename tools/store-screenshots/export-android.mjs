@@ -5,8 +5,16 @@
  * 차이는 캔버스 폭 하나다. App Store 규격 1320x2868은 Play 규정 "긴 변이 짧은 변의 2배를
  * 넘을 수 없다"(2868 > 2640)에 걸리므로, 캔버스만 CANVAS_W로 넓혀(constants.ts
  * NEXT_PUBLIC_IPHONE_CANVAS_W) 모든 요소를 좌우 가운데로 옮겨 굽는다. 기기 틀·캡션·크기는
- * App Store 이미지와 같고, 넓어진 좌우에는 배경만 이어진다 — 이미지 가장자리를 복사해
- * 붙이면 눈금판의 방위 글자와 선이 뒤집혀 보여서 쓰지 않는다.
+ * App Store 이미지와 같고(글자·그림자·눈금판 크기는 constants.ts scaleWidth가 1320 기준으로
+ * 고정), 넓어진 좌우에는 배경만 이어진다 — 이미지 가장자리를 복사해 붙이면 눈금판의 방위
+ * 글자와 선이 뒤집혀 보여서 쓰지 않는다.
+ *
+ * 옮긴 좌표는 app-store-screenshots.json에 쓰지 않는다. 임시 사본을 만들어 next dev에
+ * SCREENSHOTS_PROJECT_FILE로 넘기고(api/project/route.ts), 자동 저장도 그 사본에 쌓인다.
+ * 원본을 고쳐 쓰면 중간에 죽었을 때 +61px이 남고, 다음 실행이 그 위에 또 더해 App Store
+ * 이미지까지 어긋난다. Playwright page.route로 /api/project를 가로채는 방법은 쓰지 않는다 —
+ * 그렇게 돌린 두 번 모두 01~03이 스핀 화면 한 장으로 똑같이 나왔다(라우팅을 켜면 HTTP 캐시가
+ * 꺼져 슬라이드 전환보다 캡처가 앞선 것으로 보인다).
  *
  * 같은 세트를 휴대전화·7인치·10인치 태블릿 슬롯에 모두 넣는다. 예전 태블릿 이미지는
  * 480px 폭 앱 양옆에 남색 여백이 찍힌 캡처였다.
@@ -14,8 +22,7 @@
  * 실행: npm run export:android   (tools/store-screenshots 에서)
  */
 import { spawn } from "node:child_process";
-import { mkdir, readFile, writeFile, copyFile, readdir, unlink } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile, readdir, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import os from "node:os";
@@ -26,9 +33,7 @@ import sharp from "sharp";
 const TOOL_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(TOOL_DIR, "..", "..");
 const PROJECT_FILE = path.join(TOOL_DIR, "app-store-screenshots.json");
-// 백업 파일명은 플랫폼별로 나눈다. export-ios.mjs와 같은 이름을 쓰면 두 스크립트가
-// 같은 프로젝트 파일을 고쳐 쓰는 사이 서로의 백업을 덮어 device 값이 잘못 복원된다.
-const BACKUP_FILE = path.join(os.tmpdir(), "spindle-screenshots-project.backup.android.json");
+const SHIFTED_PROJECT_FILE = path.join(os.tmpdir(), "spindle-screenshots-project.play.json");
 const IMAGES_DIR = path.join(REPO_ROOT, "fastlane", "metadata", "android", "ko-KR", "images");
 const OUT_DIRS = ["phoneScreenshots", "sevenInchScreenshots", "tenInchScreenshots"].map((d) =>
   path.join(IMAGES_DIR, d)
@@ -85,16 +90,6 @@ function centerOnWiderCanvas(slide) {
 
 let server = null;
 let browser = null;
-let restored = false;
-
-async function restoreProject() {
-  if (restored) return;
-  restored = true;
-  if (existsSync(BACKUP_FILE)) {
-    await copyFile(BACKUP_FILE, PROJECT_FILE);
-    log("app-store-screenshots.json 원복 완료");
-  }
-}
 
 async function cleanup() {
   if (browser) {
@@ -103,19 +98,23 @@ async function cleanup() {
   }
   if (server && !server.killed) {
     if (process.platform === "win32") {
-      spawn("taskkill", ["/pid", String(server.pid), "/f", "/t"], { stdio: "ignore" });
+      // 끝날 때까지 기다린다. 실패 경로는 곧바로 process.exit하므로, 기다리지 않으면 taskkill이
+      // 돌기 전에 끝나 next dev가 포트에 남고 다음 실행이 그 서버(다른 환경변수)에 붙는다.
+      await new Promise((resolve) => {
+        spawn("taskkill", ["/pid", String(server.pid), "/f", "/t"], { stdio: "ignore" })
+          .on("exit", resolve)
+          .on("error", resolve);
+      });
     } else {
       server.kill("SIGTERM");
     }
     server = null;
   }
-  await restoreProject();
+  await unlink(SHIFTED_PROJECT_FILE).catch(() => {});
 }
 
 async function main() {
-  const original = await readFile(PROJECT_FILE, "utf8");
-  await writeFile(BACKUP_FILE, original);
-  const project = JSON.parse(original);
+  const project = JSON.parse(await readFile(PROJECT_FILE, "utf8"));
 
   const slides = project.slidesByDevice?.iphone ?? [];
   if (slides.length === 0) throw new Error("iphone 덱에 슬라이드가 없다");
@@ -128,14 +127,23 @@ async function main() {
   slides.forEach(centerOnWiderCanvas);
   project.device = "iphone";
   project.orientation = "portrait";
-  await writeFile(PROJECT_FILE, JSON.stringify(project, null, 2));
+  await writeFile(SHIFTED_PROJECT_FILE, JSON.stringify(project, null, 2));
+
+  const stale = await fetch(BASE_URL, { signal: AbortSignal.timeout(2000) }).then(() => true, () => false);
+  if (stale) {
+    throw new Error(`:${PORT}에 이미 서버가 떠 있다 — 캔버스 폭·프로젝트 파일 환경변수가 없는 서버일 수 있어 중단한다`);
+  }
 
   log(`next dev 기동 (:${PORT}, 캔버스 폭 ${CANVAS_W})`);
   server = spawn("npx", ["next", "dev", "-p", String(PORT)], {
     cwd: TOOL_DIR,
     shell: true,
     stdio: "ignore",
-    env: { ...process.env, NEXT_PUBLIC_IPHONE_CANVAS_W: String(CANVAS_W) },
+    env: {
+      ...process.env,
+      NEXT_PUBLIC_IPHONE_CANVAS_W: String(CANVAS_W),
+      SCREENSHOTS_PROJECT_FILE: SHIFTED_PROJECT_FILE,
+    },
   });
   await waitForServer(BASE_URL);
   log("서버 응답 확인");
@@ -207,6 +215,12 @@ async function main() {
     const { width, height } = await sharp(flat).metadata();
     if (Math.max(width, height) > 2 * Math.min(width, height)) {
       throw new Error(`${name}이 ${width}x${height}로 Play 비율 규정(긴 변 ≤ 짧은 변×2)을 어긴다`);
+    }
+    // 에디터가 슬라이드를 넘기기 전에 캡처하면 앞 슬라이드와 같은 PNG가 나온다(실제로 01~03이
+    // 모두 스핀 화면으로 나온 적이 있다). 장수 검사로는 안 잡히니 내용이 겹치는지 본다.
+    const twin = images.find((image) => image.flat.equals(flat));
+    if (twin) {
+      throw new Error(`${name}이 ${twin.name}과 똑같다 — 슬라이드 전환 전에 캡처됐다. 다시 실행한다.`);
     }
     images.push({ name, flat });
   }

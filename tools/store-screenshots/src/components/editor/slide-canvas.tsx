@@ -20,6 +20,7 @@ import {
   ipadW,
   phoneW,
   phoneWSmall,
+  scaleWidth,
   tabletLW,
   tabletPW,
 } from "@/lib/constants";
@@ -542,7 +543,7 @@ function getSlideGeometry(slide: Slide, device: Device, orientation: Orientation
   const fwFrac = widthFn(cW, cH);
   const fwSmallFrac = smallWidthFn(cW, cH);
   const defaults = getDefaultRects(slide.layout, cW, cH, frameAspect, fwFrac, fwSmallFrac);
-  return { cW, cH, Frame, frameAspect, defaults };
+  return { cW, cH, sW: scaleWidth(device, cW), Frame, frameAspect, defaults };
 }
 
 export function getElementTransform(
@@ -626,7 +627,7 @@ export function SlideCanvas({
         overflow: "hidden",
       }}
     >
-      <SlideBackground slide={slide} cW={cW} cH={cH} theme={theme} />
+      <SlideBackground slide={slide} cW={scaleWidth(device, cW)} cH={cH} theme={theme} />
       <SlideElements
         slide={slide}
         device={device}
@@ -733,7 +734,7 @@ export function DeckCanvas({
               overflow: "hidden",
             }}
           >
-            <SlideBackground slide={slide} cW={cW} cH={cH} theme={theme} />
+            <SlideBackground slide={slide} cW={scaleWidth(device, cW)} cH={cH} theme={theme} />
             {showGuides && <ScreenGuide cW={cW} cH={cH} index={index} active={active} />}
           </div>
         );
@@ -1100,7 +1101,8 @@ function SlideElements({
 }) {
   const screenshot = resolveScreenshot(slide.screenshot, locale);
   const screenshotSecondary = resolveScreenshot(slide.screenshotSecondary, locale);
-  const { cW, cH, Frame, frameAspect, defaults } = getSlideGeometry(slide, device, orientation);
+  // 크기 계산은 sW 기준이다 (constants.ts scaleWidth). 위치는 저장된 transform이 정한다.
+  const { cH, sW, Frame, frameAspect, defaults } = getSlideGeometry(slide, device, orientation);
   const inverted = !!slide.inverted;
   const captionRect = rectFor("caption", slide, defaults);
   const deviceRect = rectFor("device", slide, defaults);
@@ -1121,7 +1123,7 @@ function SlideElements({
     const zIndex = saved?.zIndex ?? 4;
     const inner = (
       <Caption
-        cW={cW}
+        cW={sW}
         cH={cH}
         slide={slide}
         theme={theme}
@@ -1202,9 +1204,9 @@ function SlideElements({
               못한다. drop-shadow는 둥근 모서리를 따라가므로 사각 그림자가 생기지
               않는다. 넓고 옅은 것 + 좁고 진한 것 두 겹이라야 접지된 것처럼 보인다.
             */
-            filter: `drop-shadow(0 ${cW * 0.03}px ${cW * 0.06}px rgba(6, 22, 44, 0.26)) drop-shadow(0 ${
-              cW * 0.006
-            }px ${cW * 0.014}px rgba(6, 22, 44, 0.16))`,
+            filter: `drop-shadow(0 ${sW * 0.03}px ${sW * 0.06}px rgba(6, 22, 44, 0.26)) drop-shadow(0 ${
+              sW * 0.006
+            }px ${sW * 0.014}px rgba(6, 22, 44, 0.16))`,
             ...extraStyle,
           }}
         />
@@ -1254,7 +1256,7 @@ function SlideElements({
                 : textElement.align === "left"
                   ? "flex-start"
                   : "center",
-            padding: `${Math.min(cW, cH) * 0.012}px`,
+            padding: `${Math.min(sW, cH) * 0.012}px`,
           }}
         >
           <EditableText
@@ -1267,7 +1269,7 @@ function SlideElements({
             style={{
               width: "100%",
               color: textColor,
-              fontSize: textElement.fontSize ?? Math.min(cW, cH) * 0.06,
+              fontSize: textElement.fontSize ?? Math.min(sW, cH) * 0.06,
               fontWeight: textElement.fontWeight ?? 700,
               lineHeight: 1.05,
               textAlign: textElement.align ?? "center",
