@@ -32,7 +32,7 @@ Spindle은 이 쏠림을 **설득이 아니라 게임 구조로** 풉니다.
 
 | 홈 | 스핀 | 결과 카드 | 코스 안내 |
 |---|---|---|---|
-| <img src="docs/screenshots/a01-home.png" width="200" alt="홈 — 오늘의 스핀 추천과 테마 덱"> | <img src="docs/screenshots/a02-spin.png" width="200" alt="스핀 — 8방위 나침반 원판과 이동시간 다이얼"> | <img src="docs/screenshots/a04-result.png" width="200" alt="결과 카드 — TourAPI 사진·소개·방문정보"> | <img src="docs/screenshots/a08-course-guide.png" width="200" alt="코스 안내 — 카카오맵 위 순번 핀과 1단계 안내 카드"> |
+| <img src="docs/screenshots/a01-home.png" width="200" alt="홈 — 스핀 시작·바로가기·테마 덱·추천 여행지"> | <img src="docs/screenshots/a02-spin.png" width="200" alt="스핀 — 8방위 나침반 원판과 이동시간 다이얼"> | <img src="docs/screenshots/a04-result.png" width="200" alt="결과 카드 — TourAPI 사진·소개·방문정보"> | <img src="docs/screenshots/a08-course-guide.png" width="200" alt="코스 안내 — 카카오맵 위 순번 핀과 1단계 안내 카드"> |
 | 실시간 TourAPI 추천과 테마 덱 | 원판을 돌리거나 나침반으로 겨냥 | 이용시간·휴무·요금까지 실데이터 | 순번 핀 + 2단계 길찾기 위임 |
 
 ## 3분 시연 경로 (심사용)

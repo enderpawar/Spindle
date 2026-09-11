@@ -194,20 +194,25 @@ async function main() {
 
   if (spun) {
     // A-4 결과 카드 — 방문 정보(detailIntro2)가 실제로 렌더돼야 데이터 활용 20점 근거가 된다.
+    // 방문 정보 제목 행은 화면에서 빠지고 section의 aria-label로만 남았다(ResultScreen.tsx:611) → region으로 찾는다.
     await shot(page, 'a04-result', {
       check: async () => {
-        await page.getByRole('heading', { name: '방문 정보' }).waitFor({ state: 'visible', timeout: 40_000 })
+        await page.getByRole('region', { name: '방문 정보', exact: true }).first().waitFor({ state: 'visible', timeout: 40_000 })
         const failed = await page.getByText('방문 정보를 불러오지 못했어요').isVisible().catch(() => false)
         if (failed) throw new Error('방문 정보 조회 실패 상태로 렌더됨')
       },
       settle: 3000,
     })
 
-    // A-5 방문 정보 — 같은 결과 카드를 스크롤한 컷. detailIntro2의 이용시간·휴무·요금·주차가
-    // 실제로 보이는 유일한 장면이라, 데이터 활용 20점 근거는 A-4가 아니라 여기서 나온다.
-    await page.getByRole('heading', { name: '방문 정보' }).scrollIntoViewIfNeeded().catch(() => {})
-    await shot(page, 'a05-result-visit', {
-      check: () => page.getByRole('heading', { name: '방문 정보' }).waitFor({ state: 'visible', timeout: 20_000 }),
+    // A-5 이곳의 매력 — 같은 결과 카드를 스크롤한 컷. 2026-09-09부터 본문 순서가
+    // 주소 → 방문 정보 → 이곳의 매력 → 지도라 방문 정보 표(detailIntro2)는 A-4 첫 화면에 이미 보인다.
+    // 여기서는 detailCommon2 개요와 목적지 지도를 담는다. 매력 섹션을 화면 위쪽에 붙여 찍는다.
+    const attraction = page.getByRole('region', { name: '이곳의 매력', exact: true }).first()
+    await shot(page, 'a05-result-attraction', {
+      check: async () => {
+        await attraction.waitFor({ state: 'visible', timeout: 20_000 })
+        await attraction.evaluate((el) => el.scrollIntoView({ block: 'start' }))
+      },
       settle: 2500,
     })
 
