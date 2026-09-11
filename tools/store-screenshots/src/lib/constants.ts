@@ -1,8 +1,22 @@
 import type { Device, Orientation, SlideLayout, Theme, ThemeId } from "./types";
 
+// Google Play는 긴 변이 짧은 변의 2배를 넘는 스크린샷을 거부한다(2868 > 2×1320).
+// export-android.mjs가 이 값을 넓혀 같은 iPhone 덱을 Play 규격으로 굽는다 — 요소는 그만큼
+// 오른쪽으로 옮기고, 좌우에는 배경만 더 드러난다. 평소에는 설정하지 않는다.
+const IPHONE_DESIGN_W = 1320;
+const IPHONE_CANVAS_W = Number(process.env.NEXT_PUBLIC_IPHONE_CANVAS_W) || IPHONE_DESIGN_W;
+
+/**
+ * 글자·그림자·눈금판·질감 크기의 기준 폭. 캔버스 폭을 그대로 쓰면 Play용으로 넓힌 캔버스에서
+ * 캡션과 눈금판이 9% 커져 App Store 이미지와 달라진다.
+ */
+export function scaleWidth(device: Device, cW: number) {
+  return device === "iphone" ? Math.min(cW, IPHONE_DESIGN_W) : cW;
+}
+
 // ---------- Canvas dimensions (design at largest required resolution) ----------
 export const CANVAS: Record<Device, { w: number; h: number; wL?: number; hL?: number }> = {
-  iphone:        { w: 1320, h: 2868 },
+  iphone:        { w: IPHONE_CANVAS_W, h: 2868 },
   ipad:          { w: 2064, h: 2752 },
   android:       { w: 1080, h: 1920 },
   "android-7":   { w: 1200, h: 1920, wL: 1920, hL: 1200 },
@@ -14,12 +28,15 @@ export const CANVAS: Record<Device, { w: number; h: number; wL?: number; hL?: nu
 export type ExportSize = { label: string; w: number; h: number };
 
 export const EXPORT_SIZES: Record<Device, ExportSize[]> = {
-  iphone: [
-    { label: '6.9"', w: 1320, h: 2868 },
-    { label: '6.5"', w: 1284, h: 2778 },
-    { label: '6.3"', w: 1206, h: 2622 },
-    { label: '6.1"', w: 1125, h: 2436 },
-  ],
+  iphone:
+    IPHONE_CANVAS_W === 1320
+      ? [
+          { label: '6.9"', w: 1320, h: 2868 },
+          { label: '6.5"', w: 1284, h: 2778 },
+          { label: '6.3"', w: 1206, h: 2622 },
+          { label: '6.1"', w: 1125, h: 2436 },
+        ]
+      : [{ label: "Google Play", w: IPHONE_CANVAS_W, h: 2868 }],
   ipad: [
     { label: '13" iPad',       w: 2064, h: 2752 },
     { label: '12.9" iPad Pro', w: 2048, h: 2732 },

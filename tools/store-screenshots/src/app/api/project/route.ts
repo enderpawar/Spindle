@@ -6,8 +6,9 @@ export const dynamic = "force-dynamic";
 
 const PROJECT_FILE = "app-store-screenshots.json";
 
+// export-android.mjs가 좌표를 옮긴 사본을 임시 파일로 넘길 때 쓴다. 원본 프로젝트 파일은 건드리지 않는다.
 function filePath() {
-  return path.join(process.cwd(), PROJECT_FILE);
+  return process.env.SCREENSHOTS_PROJECT_FILE || path.join(process.cwd(), PROJECT_FILE);
 }
 
 export async function GET() {
