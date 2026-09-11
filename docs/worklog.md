@@ -21,10 +21,20 @@
   - **함정 — `getBridge()`는 null일 수 있다.** 시스템 WebView가 없으면 `BridgeActivity`가 `no_webview` 화면만 띄우고 브리지를 만들지 않는다. null 확인 없이 설정을 건드리면 그 안내 화면이 크래시로 바뀐다.
 - 검증: `npm run check` 통과(web 431 + proxy 26), `npm run build` 통과, Android `:app:compileDebugJavaWithJavac` 통과.
 
+- PR #20을 스쿼시 머지했다(`236bd1a`). Cloudflare 배포 run `34549854817` 성공.
+- TestFlight **1.1.1 빌드 20** 업로드 성공(run `34550042344`, attempt 2). 1.1.0은 9/10 App Store 공개로 버전이 닫혀 번호를 올렸다.
+  - 첫 시도는 **Development 인증서 한도**로 실패했다. 사용자가 포털에서 폐기한 뒤 재실행해 통과했다.
+  - 9/9 정리 뒤 이틀 만에 재발했다 — 근본 해결(APP_STORE_RELEASE.md 0절 후보)을 미루는 비용이 쌓이고 있다.
+
+- TestFlight 1.1.1 실기기(확대 모드)에서 두 가지를 더 발견해 고쳤다.
+  - **지역 드롭다운이 혼잡 카드에 가려졌다.** 지도 영역이 쌓임 맥락을 만들지 않아 `.map-status-stack`(z-12)이 필터 바(z-5)와 같은 층에서 경쟁했다. 지도 래퍼에 `isolation: isolate`를 줬다. 헤드리스 320px 검증에서 겹치는 지점의 최상단 요소가 수정 전 `congestion-status`, 수정 후 드롭다운이었다.
+  - **함정 — 축소 배율에서 iOS 텍스트 자동 확대가 켜진다.** 명소 시트의 메타 줄(`해안 · 영도구 · 남쪽 도보 5분`)이 열 때마다 들쭉날쭉 커졌다. `html, body`에 `text-size-adjust: 100%`를 걸었다. 헤드리스 Chromium으로는 재현되지 않아 실기기 확인이 필요하다.
+
 ### 다음 대기
 
-- 사용자 Chrome 기기 모드 확인.
-- **iPhone 확대 모드 실기기 확인이 필요하다.**
+- 사용자 Chrome 기기 모드 확인 — 완료.
+- Android는 `MainActivity` 변경이 들어간 새 AAB가 필요하다(미빌드).
+- **iPhone 확대 모드 실기기 확인이 필요하다** (TestFlight 1.1.1 빌드 20).
   - 축소 배율에서 `mobile-pwa.css`의 safe-area 보정(상단 노치·하단 홈 인디케이터)이 맞는지 본다.
   - 지도 핀 탭 위치와 입력창 포커스 확대도 본다.
   - 문제가 있으면 `main.tsx`의 호출 한 줄로 되돌린다.

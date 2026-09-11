@@ -516,7 +516,9 @@ export function SpotsScreen({ departure, onNavigate, onSelect }: Props) {
 
       {mode === 'map' ? (
         <>
-          <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.6)' }}>
+          {/* isolation: 지도 위 오버레이(혼잡 카드·시트 z-12)의 z-index를 이 영역 안에 가둔다.
+              없으면 같은 쌓임 맥락의 필터 바(z-5)보다 위로 올라와 지역 드롭다운을 가린다. */}
+          <div style={{ position: 'relative', flex: 1, borderRadius: '22px 22px 0 0', overflow: 'hidden', isolation: 'isolate', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.6)' }}>
           <MapView
             pois={list}
             departure={departure}
