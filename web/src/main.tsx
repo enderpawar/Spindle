@@ -7,7 +7,10 @@ import App from './App.tsx'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
 import { registerSpindlePwa } from './pwa/register'
 import { isNativeShell } from './native/shell'
+import { lockDesignViewport } from './native/viewport'
 
+// 첫 렌더 전에 레이아웃 폭을 정한다 — 390px보다 좁은 폰도 같은 배치로 축소해 보여 준다.
+lockDesignViewport()
 registerSpindlePwa()
 
 // 설치형 PWA와 네이티브 셸은 레이아웃 뷰포트 보고가 달라 앱 프레임 보정이 서로 다르다
