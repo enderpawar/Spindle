@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-09-11 — 좁은 폰에서 390px 배치 유지 (뷰포트 고정 폭)
+
+- 증상: iPhone `디스플레이 확대/축소 → 더 큰 텍스트`에서 명소 화면의 부제목이 두 줄로 갈라지고, 종류 탭 옆 `모든 지역`이 다음 줄로 떨어졌다. 홈도 비슷하게 흐트러진다는 제보가 있었다.
+- 원인: 확대 모드의 CSS 뷰포트는 **320px**이다. 스크린샷 수치가 320px 레이아웃과 정확히 맞았다.
+  - `index.css`의 `@media (max-width: 320px)`이 부제목을 `max-width: 116px`에 가둔다.
+  - 필터 바는 종류 스위치의 flex-basis 230px과 지역 버튼 약 94px이 합쳐 약 332px라, **360px(갤럭시)에서도 이미 줄바꿈되고 있었다.**
+- 해결: 요소별 땜질 대신 `web/src/native/viewport.ts`를 넣었다. 화면 짧은 변이 390 미만이면 viewport meta를 `width=390, viewport-fit=cover`로 바꿔 모든 화면을 390 배치 그대로 축소한다. 390 이상 기기는 변화가 없다. `main.tsx`가 첫 렌더 전에 호출한다.
+- **함정 — Android WebView는 기본값에서 meta의 `width=`를 무시한다.** `MainActivity`에서 `setUseWideViewPort(true)`와 `setLoadWithOverviewMode(true)`를 켰다. 이 변경은 새 AAB로만 반영된다.
+- **함정 — 데스크톱 Chrome은 viewport meta를 무시한다.** 창 크기만 줄여서는 효과가 안 보인다. DevTools 기기 툴바에서 Mobile 타입 기기(320×693 사용자 지정, 360, 375)로 확인해야 한다.
+- 감수한 점: 확대 모드 사용자에게 앱 안 글자가 기본 모드와 같은 물리 크기로 보인다. 요구가 배치 유지였다.
+- 검증: `npm run check` 통과(web 428 + proxy 26), `npm run build` 통과.
+
+### 다음 대기
+
+- 사용자 Chrome 기기 모드 확인.
+- **iPhone 확대 모드 실기기 확인이 필요하다.**
+  - 축소 배율에서 `mobile-pwa.css`의 safe-area 보정(상단 노치·하단 홈 인디케이터)이 맞는지 본다.
+  - 지도 핀 탭 위치와 입력창 포커스 확대도 본다.
+  - 문제가 있으면 `main.tsx`의 호출 한 줄로 되돌린다.
+- iOS·Android 앱 반영에는 새 빌드가 필요하다(웹 번들 내장).
+
+---
+
 ## 2026-09-09 — 1.1.0 배포·TestFlight·스토어 자산 (웹 배포 완료, iOS 심사 제출)
 
 - PR #19 머지(`ab5235b`) 후 Cloudflare 프로덕션 배포를 확인했다. 배포된 CSS에 리뷰 수정본(`.result-visit-skeleton`의 `margin-top:34px`·`min-height:50px`)이 들어 있는 것으로 검증했다 — **번들 해시 비교는 쓸 수 없다.** CI가 `VITE_KAKAO_JS_KEY`를 주입해 로컬 빌드와 해시가 항상 다르다.
