@@ -166,6 +166,31 @@ def screenshots_ready?
   Dir.glob(File.join(SCREENSHOTS_PATH, "*", "*.png")).any?
 end
 
+# 이미 심사 대기·심사 중인 제출물이 있으면 취소하고 끝날 때까지 기다린다.
+# 심사에 들어간 버전은 설명 같은 등록정보를 고칠 수 없어서, 문안을 바꿔 다시 제출하려면
+# App Store Connect의 "심사에서 제거"와 같은 일을 먼저 해야 한다.
+def cancel_in_progress_review
+  Spaceship::ConnectAPI.token = Spaceship::ConnectAPI::Token.create(**asc_api_key)
+  app = Spaceship::ConnectAPI::App.find(APP_IDENTIFIER)
+  UI.user_error!("App Store Connect에서 #{APP_IDENTIFIER} 앱을 찾지 못했다") unless app
+
+  platform = Spaceship::ConnectAPI::Platform::IOS
+  submission = app.get_in_progress_review_submission(platform: platform)
+  return unless submission
+
+  UI.important("진행 중인 심사 제출(#{submission.id}, #{submission.state})을 취소한다 — 등록정보를 고쳐 다시 제출한다")
+  submission.cancel_submission
+  30.times do
+    sleep(10)
+    next unless app.get_in_progress_review_submission(platform: platform).nil?
+    # 제출물이 목록에서 빠진 직후에는 버전 잠금이 아직 안 풀려 있을 수 있다.
+    sleep(20)
+    UI.success("심사 제출 취소 완료")
+    return
+  end
+  UI.user_error!("심사 제출 취소가 5분 안에 끝나지 않았다. App Store Connect에서 상태를 확인한다.")
+end
+
 # --- 레인 -------------------------------------------------------------------
 
 platform :ios do
@@ -259,7 +284,7 @@ platform :ios do
     UI.success("스토어 등록정보 갱신 완료.")
   end
 
-  desc "이미 올라간 빌드로 심사에 제출한다 (빌드 없음 → 인증서 불필요)."
+  desc "이미 올라간 빌드로 심사에 제출한다 (빌드 없음 → 인증서 불필요). 걸려 있는 심사가 있으면 취소하고 다시 낸다."
   lane :submit do |options|
     build = options[:build].to_s.strip
     UI.user_error!("build: 옵션이 필요하다 (App Store Connect의 빌드 번호)") if build.empty?
@@ -268,6 +293,9 @@ platform :ios do
     auto = options[:auto].to_s == "true"
 
     UI.important("제출: 버전 #{version} 빌드 #{build}#{auto ? ' (승인 시 자동 공개)' : ''}")
+
+    # 같은 버전을 문안만 고쳐 다시 제출하는 경우를 위해, 걸려 있는 심사부터 뺀다.
+    cancel_in_progress_review
 
     # 아카이브를 만들지 않으므로 Apple Development 인증서를 발급하지 않는다 —
     # `release` 레인이 빌드마다 인증서를 새로 발급해 계정 한도에 걸리는 문제를 피한다

@@ -14,7 +14,7 @@
 4. **인증키는 프록시 환경변수에만**: API 키를 클라이언트 코드·저장소·커밋에 절대 포함하지 않는다.
 5. **비로그인 유지**: 계정·개인정보 수집 기능을 추가하지 않는다.
 6. **출처 표기와 운영 주체 구분**: 공공데이터를 사용한 화면·문서에는 `출처: ⓒ한국관광공사` 또는 `출처: ⓒ한국관광콘텐츠랩`을 텍스트로 반드시 표기한다. 공식 CI/BI 로고 이미지를 사용하거나 서비스명·브랜딩에 기관명을 넣어 공사가 직접 개발·운영하는 것처럼 오인시키지 않는다.
-   - 예외: 앱스토어/플레이스토어 **릴리즈 노트(What's New)**에는 표기하지 않는다. 같은 스토어 화면의 앱 설명(description)에 출처가 항상 표기되어 있어 표기 요건이 그것으로 충족되기 때문이다 (`fastlane/metadata/ios/ko/description.txt`, `fastlane/metadata/android/ko-KR/full_description.txt`).
+   - 예외: 앱스토어/플레이스토어 **스토어 등록정보 문안 — 앱 설명(description)과 릴리즈 노트(What's New) — 에는 표기하지 않는다.** 사용자 결정(2026-09-11, 여러 번 반복 지시). 출처 표기는 앱 안에서 TourAPI 데이터를 그리는 화면(`SourceLine`)·공유 카드·기능설명서가 진다. `fastlane/metadata/ios/ko/description.txt`, `fastlane/metadata/android/ko-KR/full_description.txt`에 `출처` 줄을 다시 넣지 않는다.
 
 ## 구현 규약 문서 (작업 전 필독)
 
