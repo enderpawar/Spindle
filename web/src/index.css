@@ -71,6 +71,11 @@ body {
   -webkit-tap-highlight-color: transparent;
   /* 더블 탭 확대(및 비표준 제스처) 비활성화 — 스크롤·핀치 줌은 유지 (접근성) */
   touch-action: manipulation;
+  /* 텍스트 자동 확대 끄기. 390px보다 좁은 폰은 레이아웃을 390으로 고정해 축소하는데
+     (native/viewport.ts), iOS는 축소된 페이지의 일부 문단만 골라 글자를 키운다.
+     명소 시트의 `해안 · 영도구 · 남쪽 도보 5분` 줄이 열 때마다 들쭉날쭉 커졌다. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
